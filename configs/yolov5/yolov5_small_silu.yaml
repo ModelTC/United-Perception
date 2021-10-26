@@ -1,0 +1,208 @@
+num_classes: &num_classes 81
+runtime:
+   aligned: True
+
+mosaic: &mosaic
+ type: mosaic
+ kwargs:
+   extra_input: True
+   mosaic_prob: 1.0     # do not change this prob and tar_size, it's coupled with random_perspective
+   tar_size: 640
+   fill_color: 0
+
+random_perspective: &random_perspective
+  type: random_perspective
+  kwargs:
+    degrees: 0.0
+    translate: 0.1
+    scale: 0.5
+    shear: 0.0
+    perspective: 0.0
+    fill_color: 0
+    border: [-320, -320]
+
+augment_hsv: &augment_hsv
+  type: augment_hsv
+  kwargs:
+    hgain: 0.015
+    sgain: 0.7
+    vgain: 0.4
+
+flip: &flip
+ type: flip
+ kwargs:
+   flip_p: 0.5
+
+to_tensor: &to_tensor
+  type: to_tensor
+
+resize: &resize
+ type: keep_ar_resize_max
+ kwargs:
+   max_size: 640
+
+dataset: # Required.
+  train:
+    dataset:
+      type: coco
+      kwargs:
+        source: train  # dataset id
+        meta_file: coco/annotations/instances_train2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: coco/train2017
+            color_mode: RGB
+        transformer: [*mosaic, *random_perspective, *augment_hsv, *flip, *to_tensor]
+  test:
+    dataset:
+      type: coco
+      kwargs:
+        source: val
+        meta_file: &gt_file coco/annotations/instances_val2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: coco/val2017
+            color_mode: RGB
+        transformer: [*resize, *to_tensor]
+        evaluator:
+          type: COCO 
+          kwargs:
+            gt_file: *gt_file
+            iou_types: [bbox]
+  batch_sampler:
+    type: base
+    kwargs:
+      sampler:
+        type: dist
+        kwargs: {}
+      batch_size: 8             # never let batch_size smaller than 64 for yolov5 when training, or you need sync_bn
+  dataloader:
+    type: base
+    kwargs:
+      num_workers: 4
+      alignment: 32
+      pad_type: center_pad
+      pad_value: 0
+
+trainer: # Required.
+  max_epoch: 300             # total epochs for the training
+  save_freq: 5
+  test_freq: 5
+  optimizer:                 # optimizer = SGD(params,lr=0.01,momentum=0.937,weight_decay=0.0005)
+    register_type: yolov5
+    type: SGD
+    kwargs:
+      #lr: 0.000078125
+      lr: 0.00015625
+      momentum: 0.937
+      nesterov: True
+      weight_decay: 0.0005      # weight_decay = 0.0005 * batch_szie / 64
+  lr_scheduler:
+    warmup_register_type: yolov5
+    warmup_epochs: 3        # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_iter: 1000
+    warmup_type: yolov5linear
+    type: YoloV5CosineLR
+    kwargs:
+      T_max: 300
+      min_lr_scale: 0.2
+      
+saver: # Required.
+  save_dir: checkpoints/yolov5_small_silu  # dir to save checkpoints
+  results_dir: results_dir/yolov5_small_silu  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True
+
+ema:
+  enable: True
+  ema_type: exp
+  kwargs:
+    decay: 0.9999
+
+net:
+  - name: backbone
+    type: DarkNetv5
+    kwargs:
+      init_planes: 32
+      csp1_block_nums: [1, 3, 3, 1]
+      out_layers: [2, 3, 4]
+      out_strides: [8, 16, 32]
+      focus_type: v5_focus
+      normalize:
+        type: solo_bn
+      act_fn:
+        type: Silu
+        kwargs:
+          inplace: True
+      initializer:
+        method: yolov5_init
+  - name: neck
+    prev: backbone
+    type: DarknetPAFPN
+    kwargs:
+      csp2_block_nums: 1    # should be same with csp1_block_nums[-1]
+      num_outs: 3
+      out_strides: [8, 16, 32]
+      normalize:
+        type: solo_bn
+      act_fn:
+        type: Silu
+        kwargs:
+          inplace: True
+      initializer:
+        method: yolov5_init
+  - name: head
+    prev: neck
+    type: YoloV5Head
+    kwargs:
+      num_classes: *num_classes
+      num_levels: 3
+      num_anchors_per_level: 3
+      out_strides: [8, 16, 32]
+      initializer:
+        method: yolov5_init
+  - name: post_process
+    prev: head
+    type: yolov5_post
+    kwargs:
+      num_classes: *num_classes
+      num_levels: 3
+      num_anchors_per_level: 3
+      out_strides: [8, 16, 32]
+      loss_weights: [0.05, 1.0, 0.5]
+      obj_loss_layer_weights: [4.0, 1.0, 0.4]
+      initializer:
+        method: yolov5_init
+      cfg:
+        anchor_generator:
+          type: cluster
+          kwargs:
+            base_anchors_file: anchors.json
+        roi_supervisor:
+          type: yolov5
+        roi_predictor:
+          type: yolov5
+          kwargs:
+            roi_min_size: 2
+            conf_thres: 0.001
+            merger:
+              type: yolov5
+              kwargs:
+                top_n: 300
+                nms:
+                  type: naive
+                  nms_iou_thresh: 0.6
+        obj_loss:
+          type: sigmoid_cross_entropy
+          kwargs:
+            reduction: none
+        box_loss:
+          type: iou_loss
+          kwargs:
+            loss_type: ciou
+            reduction: none
+        cls_loss:
+          type: sigmoid_cross_entropy
+          kwargs:
+            reduction: none
