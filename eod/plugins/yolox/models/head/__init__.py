@@ -1,0 +1,1 @@
+from .yolox_head import YoloXHead # noqa
