@@ -1,0 +1,87 @@
+num_classes: &num_classes 10
+
+flip: &flip
+  type: flip
+  kwargs:
+    flip_p: 0.5
+
+to_tensor: &to_tensor
+  type: custom_to_tensor
+
+train_resize: &train_resize
+  type: keep_ar_resize_max
+  kwargs:
+    padding_type: left_top
+    padding_val: 0
+    random_size: [10, 20]
+
+test_resize: &test_resize
+  type: keep_ar_resize_max
+  kwargs:
+    max_size: 416
+    padding_type: left_top
+    padding_val: 0
+
+
+dataset:
+  train:
+    dataset:
+      type: rank_custom
+      kwargs:
+        num_classes: *num_classes
+        meta_file: path/your/train.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: &image_dir path/your/train_image_dir
+            color_mode: BGR
+        transformer: [*flip, *train_resize, *to_tensor]
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: local # special for rank_dataset
+          kwargs: {}
+        batch_size: 8
+  test:
+    dataset:
+      type: custom
+      kwargs:
+        num_classes: *num_classes
+        meta_file: &gt_file path/your/test.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: path/your/test_image_dir
+            color_mode: BGR
+        transformer: [*test_resize, *to_tensor]
+        evaluator:
+          type: MR
+          kwargs:
+            gt_file: *gt_file
+            iou_thresh: 0.5
+            num_classes: *num_classes
+        reload_cfg:  # special for rank_dataset
+          mini_epoch: 1
+          seed: 0
+          group: &group 1 # to avoid memory overflow, generate random numbers in groups
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 8
+  dataloader:
+    type: base
+    kwargs:
+      num_workers: 4
+      alignment: 32
+      worker_init: True
+      pad_type: batch_pad
+
+# special for rank_dataset
+hooks:
+  - type: reload
+    kwargs: 
+      group: *group

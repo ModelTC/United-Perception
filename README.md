@@ -118,6 +118,11 @@ mpirun -np 8 python -m eod train --config configs/yolox/yolox_tiny.yaml --launch
 * Mpirun is convenient to debug with pdb
 * --launch: mpi
 
+## Custom Example
+
+* [custom dataset](configs/custom/custom_dataset.yaml)
+* [rank_dataset](configs/custom/rank_dataset.yaml)
+
 ## Benckmark
 
 * [YOLOX](docs/benchmark.md) 
