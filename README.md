@@ -1,13 +1,17 @@
 # EOD
 
+![image](eod-logo.png)
 
 Easy and Efficient Object Detector
 
-EOD (*E*asy and *E*fficient *O*bject *D*etection) is a detection framework based on Pytorch. 
-It can serve both researchers and engingeering uesrs. 
+**EOD** (**E**asy and **E**fficient **O**bject **D**etection) is a general object detection model production framework.
+It aim on provide two key feature about Object Detection:
+
++ Efficient: we will focus on training **VERY HIGH ACCURARY** single-shot detection model, and model compress (quantization/sparsity) will be heavy address. 
++ Easy: easy to use, easy to add new features(backbone/head/neck), easy to deploy.
 
 The master branch works with **PyTorch 1.8.1**.
-Due to the pytoch version, it can not well support the 30 series graphics card hardware.
+Due to the pytorch version, it can not well support the 30 series graphics card hardware.
 
 ## Install
 
@@ -144,4 +148,4 @@ mpirun -np 8 python -m eod train --config configs/yolox/yolox_tiny.yaml --launch
 
 ## Acknowledgments
 
-Thanks to all past contributors, especially @opcoder,
+Thanks to all past contributors, especially [opcoder](https://github.com/opcoder),
