@@ -44,7 +44,7 @@ class YoloxPAFPN(nn.Module):
         )
         self.C3_p4 = CSPLayer(
             int(2 * in_channels[1]), int(in_channels[1]),
-            n=round(3 * depth), depthwise=depthwise, act=act_fn
+            n=round(3 * depth), depthwise=depthwise, act=act_fn, normalize=normalize
         )
 
         self.reduce_conv1 = ConvBnAct(
@@ -53,27 +53,27 @@ class YoloxPAFPN(nn.Module):
         )
         self.C3_p3 = CSPLayer(
             int(2 * in_channels[0]), int(in_channels[0]),
-            n=round(3 * depth), depthwise=depthwise, act=act_fn
+            n=round(3 * depth), depthwise=depthwise, act=act_fn, normalize=normalize
         )
 
         # bottom-up conv
         self.bu_conv2 = Conv(
             int(in_channels[0]), int(in_channels[0]),
-            kernel_size=3, stride=2, act_fn=act_fn
+            kernel_size=3, stride=2, act_fn=act_fn, normalize=normalize
         )
         self.C3_n3 = CSPLayer(
             int(2 * in_channels[0]), int(in_channels[1]),
-            n=round(3 * depth), depthwise=depthwise, act=act_fn
+            n=round(3 * depth), depthwise=depthwise, act=act_fn, normalize=normalize
         )
 
         # bottom-up conv
         self.bu_conv1 = Conv(
             int(in_channels[1]), int(in_channels[1]),
-            kernel_size=3, stride=2, act_fn=act_fn,
+            kernel_size=3, stride=2, act_fn=act_fn, normalize=normalize
         )
         self.C3_n4 = CSPLayer(
             int(2 * in_channels[1]), int(in_channels[2]),
-            n=round(3 * depth), depthwise=depthwise, act=act_fn
+            n=round(3 * depth), depthwise=depthwise, act=act_fn, normalize=normalize
         )
 
         for i in range(self.num_level - len(inplanes)):

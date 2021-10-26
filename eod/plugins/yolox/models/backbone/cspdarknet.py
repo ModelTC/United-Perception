@@ -128,7 +128,6 @@ class CSPDarknet(nn.Module):
                  input_channels=3,
                  focus_type='v5_focus'):
         super(CSPDarknet, self).__init__()
-        # todo: add DWconv support
         Conv = DWConv if depthwise else ConvBnAct  # BaseConv
         self.use_spp_pool = use_spp_pool
 
@@ -158,9 +157,9 @@ class CSPDarknet(nn.Module):
                 ConvBnAct(
                     base_channels // 2, base_channels // 2, 3,
                     normalize=normalize, act_fn=act_fn),
-                nn.Conv2d(
-                    base_channels // 2, base_channels,
-                    kernel_size=3, stride=1, padding=1, bias=False))
+                ConvBnAct(
+                    base_channels // 2, base_channels, kernel_size=3,
+                    normalize=normalize, act_fn=act_fn, stride=1))
         self.out_planes.append(base_channels)
 
         # dark2
