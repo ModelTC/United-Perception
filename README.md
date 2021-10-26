@@ -9,6 +9,8 @@ It aim on provide two key feature about Object Detection:
 
 + Efficient: we will focus on training **VERY HIGH ACCURARY** single-shot detection model, and model compress (quantization/sparsity) will be heavy address. 
 + Easy: easy to use, easy to add new features(backbone/head/neck), easy to deploy.
++ Large-Scale Dataset Training [Detail](https://github.com/ModelTC/rank_dataset)
+
 
 The master branch works with **PyTorch 1.8.1**.
 Due to the pytorch version, it can not well support the 30 series graphics card hardware.
