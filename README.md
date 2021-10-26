@@ -1,9 +1,10 @@
 # EOD
 
+
 Easy and Efficient Object Detector
 
-EOD(Easy and Efficient Object Detection is a simplified version of POD(Spring Object Detection), a detection framework based on distributed Pytorch. 
-It omits some functions highly bundled with Spring, and can serve both researchers and engingeering uesrs. 
+EOD (*E*asy and *E*fficient *O*bject *D*etection) is a detection framework based on Pytorch. 
+It can serve both researchers and engingeering uesrs. 
 
 The master branch works with **PyTorch 1.8.1**.
 Due to the pytoch version, it can not well support the 30 series graphics card hardware.
@@ -143,4 +144,4 @@ mpirun -np 8 python -m eod train --config configs/yolox/yolox_tiny.yaml --launch
 
 ## Acknowledgments
 
-Thanks to all past contributors, especially 
+Thanks to all past contributors, especially @opcoder,
