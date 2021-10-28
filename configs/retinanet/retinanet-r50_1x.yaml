@@ -34,7 +34,6 @@ dataset: # Required.
     dataset:
       type: coco
       kwargs:
-        source: train  # dataset id
         meta_file: coco/annotations/instances_train2017.json
         image_reader:
           type: fs_opencv
@@ -46,7 +45,6 @@ dataset: # Required.
     dataset:
       type: coco
       kwargs:
-        source: val
         meta_file: &gt_file coco/annotations/instances_val2017.json
         image_reader:
           type: fs_opencv

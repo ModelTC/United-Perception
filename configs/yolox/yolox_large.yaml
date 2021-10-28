@@ -68,7 +68,6 @@ dataset:
     dataset:
       type: coco
       kwargs:
-        source: train
         meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
         image_reader:
           type: fs_opencv
@@ -88,7 +87,6 @@ dataset:
     dataset:
       type: coco
       kwargs:
-        source: val
         meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
         image_reader:
           type: fs_opencv
