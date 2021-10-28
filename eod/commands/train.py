@@ -7,7 +7,7 @@ import sys
 # Import from third library
 import torch.multiprocessing as mp
 
-from eod.utils.env.dist_helper import setup_distributed, dist_finalize
+from eod.utils.env.dist_helper import setup_distributed, dist_finalize, env
 from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from eod.utils.env.launch import launch
 
@@ -121,7 +121,8 @@ def main(args):
     runner = RUNNER_REGISTRY.get(runner_cfg['type'])(cfg, **runner_cfg['kwargs'])
     train_func = {"train": runner.train, "eval": runner.evaluate}
     train_func[train_phase]()
-    dist_finalize()
+    if env.world_size > 1:
+        dist_finalize()
 
 
 def _main(args):

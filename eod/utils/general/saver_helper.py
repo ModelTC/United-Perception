@@ -60,7 +60,12 @@ class Saver(object):
         elif 'pretrain_model' in self.save_cfg:
             state = self.load_checkpoint(self.save_cfg['pretrain_model'])
             logger.warning('Load checkpoint from {}'.format(self.save_cfg['pretrain_model']))
-            return {'model': state['model']}
+            if 'ema' in state:
+                logger.info("Load ema pretrain model")
+                st = state['ema']['ema_state_dict']
+            else:
+                st = state['model']
+            return {'model': st}
         else:
             logger.warning('Load nothing! No weights provided {}')
             return {'model': {}}
