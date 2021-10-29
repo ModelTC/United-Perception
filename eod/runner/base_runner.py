@@ -217,7 +217,7 @@ class BaseRunner(object):
             return
         ema_config = copy.deepcopy(self.config['ema'])
         ema_type = ema_config.get('ema_type', 'linear')
-        ema_config['kwargs']['model'] = self.model
+        ema_config['kwargs']['model'] = self.build_fake_model()
         self.ema = EMA_REGISTRY.get(ema_type)(**ema_config['kwargs'])
 
     def build_hooks(self):
@@ -475,6 +475,31 @@ class BaseRunner(object):
             self.model = self.model.cuda()
         if self.config['runtime']['special_bn_init']:
             self.special_bn_init()
+
+    def build_fake_model(self):
+        '''
+        pt_sync_bn can't be deepcopy, replace with solo bn for ema
+        '''
+        net_cfg = self.config['net']
+        normalize = {"type": "solo_bn"}
+        flag = False
+        for n in net_cfg:
+            if 'normalize' in n['kwargs']:
+                if n['kwargs']['normalize']['type'] == 'pt_sync_bn':
+                    flag = True
+                    n['kwargs']['normalize'] = normalize
+        if flag:
+            model_helper_type = self.config['runtime']['model_helper']['type']
+            model_helper_kwargs = self.config['runtime']['model_helper']['kwargs']
+            model_helper_ins = MODEL_HELPER_REGISTRY[model_helper_type]
+
+            model = model_helper_ins(net_cfg, **model_helper_kwargs)
+            if self.device == 'cuda':
+                model = model.cuda()
+            model.load(self.model.state_dict())
+        else:
+            model = self.model
+        return model
 
     @property
     def progress(self):
