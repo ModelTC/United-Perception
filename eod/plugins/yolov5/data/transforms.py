@@ -121,7 +121,7 @@ class Mosaic(Augmentation):
             canvas[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # cannvas[ymin:ymax, xmin:xmax]
             padw = x1a - x1b
             padh = y1a - y1b
-            cur_input = self.clip_bboxes(cur_input, (padh, padw), out_size * 2)
+            cur_input = self.clip_bboxes(cur_input, (padh, padw), [size * 2 for size in out_size])
             if cur_input.get('gt_bboxes', None) is not None:
                 gt_bboxes.append(cur_input['gt_bboxes'])
             if cur_input.get('gt_ignores', None) is not None:
