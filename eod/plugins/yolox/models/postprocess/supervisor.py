@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from eod.models.heads.utils.matcher import build_matcher
 from eod.utils.general.registry_factory import MATCHER_REGISTRY, ROI_SUPERVISOR_REGISTRY
 from eod.models.heads.utils.bbox_helper import bbox_iou_overlaps
+from eod.utils.general.log_helper import default_logger as logger
 
 
 __all__ = ['OTASupervisor', 'OTAMatcher']
@@ -63,8 +64,19 @@ class OTASupervisor(object):
             num_gts += len(gts)
             preds = mlvl_preds[b_ix]  # [A, 85]
             if gts.shape[0] > 0:
-                num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides = \
-                    self.matcher.match(gts, preds, points, num_points_per_level, strides)
+                try:
+                    num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides = \
+                        self.matcher.match(gts, preds, points, num_points_per_level, strides)
+                except RuntimeError:
+                    logger.info(
+                        "OOM RuntimeError is raised due to the huge memory cost during label assignment. \
+                           CPU mode is applied in this batch. If you want to avoid this issue, \
+                           try to reduce the batch size or image size."
+                    )
+                    torch.cuda.empty_cache()
+                    num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides = \
+                        self.matcher.match(gts, preds, points, num_points_per_level, strides, mode='cpu')
+                torch.cuda.empty_cache()
                 cls_target = F.one_hot(
                     (gt_matched_classes - 1).to(torch.int64), self.num_classes
                 ) * pred_ious_this_matching.unsqueeze(-1)
@@ -98,11 +110,16 @@ class OTAMatcher(object):
         self.radius = radius
 
     @torch.no_grad()
-    def match(self, gts, preds, points, num_points_per_level, strides):
+    def match(self, gts, preds, points, num_points_per_level, strides, mode='cuda'):
         ''' points: [A, 2] || gts: [G, 5] || preds: [A, 85]
         num_points_per_level:  [15808, 3952, 988, 247, 70]
         strides: [8, 16, 32, 64, 128]'''
         G = len(gts)
+        if mode == 'cpu':
+            logger.info('------------CPU Mode for This Batch-------------')
+            gts = gts.cpu()
+            points = points.cpu()
+
         gt_labels = gts[:, 4]   # [G, 1]
         gt_bboxes = gts[:, :4]  # [G, 4]
 
@@ -113,6 +130,9 @@ class OTAMatcher(object):
             assert "Not implement"
 
         masked_preds = preds[fg_mask]
+        if mode == 'cpu':
+            masked_preds = masked_preds.cpu()
+
         preds_cls = masked_preds[:, :self.num_classes]
         preds_box = masked_preds[:, self.num_classes:-1]  # [A', 4]
         preds_obj = masked_preds[:, -1:]
@@ -154,6 +174,13 @@ class OTAMatcher(object):
         (num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds
          ) = self.dynamic_k_matching(cost, pair_wise_ious, gt_labels, G, fg_mask)
         del pair_wise_cls_loss, cost, pair_wise_ious, pair_wise_ious_loss
+
+        if mode == "cpu":
+            gt_matched_classes = gt_matched_classes.cuda()
+            fg_mask = fg_mask.cuda()
+            pred_ious_this_matching = pred_ious_this_matching.cuda()
+            matched_gt_inds = matched_gt_inds.cuda()
+            expanded_strides = expanded_strides.cuda()
 
         return num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides
 
