@@ -57,7 +57,7 @@ def accuracy_v2(cls_pred, cls_target, activation_type='softmax'):
     num_channel = cls_pred.shape[1]
     if activation_type == 'softmax':
         acc = accuracy(cls_pred, cls_target)[0]
-    elif activation_type == 'sigmoid' and num_channel > 2:
+    elif activation_type == 'sigmoid' and num_channel > 2 or activation_type == 'qfl':
         acc = accuracy(cls_pred, cls_target.long() - 1, ignore_indices=[-1, -2])[0]
     elif activation_type == 'sigmoid' and num_channel <= 2:
         acc = binary_accuracy(cls_pred, cls_target)[0]

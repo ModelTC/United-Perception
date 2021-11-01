@@ -116,6 +116,13 @@ class YoloxPostProcess(nn.Module):
                 results = self.predictor.predict(mlvl_preds)
                 return results
 
+    def get_acc(self, cls_pred, cls_targets):
+        max_value, cls_targets_acc = cls_targets.topk(1, 1, True, True)
+        cls_targets_acc += 1
+        cls_targets_acc[max_value == 0] = 0
+        acc = A.accuracy_v2(cls_pred, cls_targets_acc, activation_type='qfl')
+        return acc
+
     def get_loss(self, targets, mlvl_preds, mlvl_ori_loc_preds=None):
         mlvl_cls_pred, mlvl_loc_pred, mlvl_obj_pred = zip(*mlvl_preds)
         cls_pred = torch.cat(mlvl_cls_pred, dim=1)
@@ -141,7 +148,8 @@ class YoloxPostProcess(nn.Module):
 
         cls_pred = cls_pred.reshape(-1, self.num_classes - 1)
         cls_loss = self.cls_loss(cls_pred[fg_masks], cls_targets, normalizer_override=num_fgs)
-        acc = A.accuracy_v2(cls_pred[fg_masks], cls_targets, activation_type=self.class_activation)
+
+        acc = self.get_acc(cls_pred[fg_masks], cls_targets)
 
         loc_target = reg_targets.reshape(-1, 4)
         loc_pred = loc_pred.reshape(-1, 4)
