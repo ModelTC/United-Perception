@@ -37,9 +37,9 @@ def colormap(rgb=False):
 
 
 class BaseVisualizer(object):
-    def __init__(self, class_names=None, output_dir='vis_dir', thresh=0.9, show_box=True, show_class=True):
+    def __init__(self, class_names=None, vis_dir='vis_dir', thresh=0.9, show_box=True, show_class=True):
         self.class_names = class_names
-        self.output_dir = output_dir
+        self.vis_dir = vis_dir
         self.thresh = thresh
         self.show_box = show_box
         self.show_class = show_class
@@ -51,7 +51,7 @@ class BaseVisualizer(object):
             class_text = 'id:{:d}'.format(class_index)
         return class_text + ' {:0.2f}'.format(score).lstrip('0').rstrip('.0')
 
-    def vis(self, im, boxes, classes, filename, ig_boxes=None, absolute_path=False):
+    def vis(self, im, boxes, classes, filename, ig_boxes=None):
         raise NotImplementedError
 
 
@@ -63,11 +63,11 @@ class OpenCVVisualizer(BaseVisualizer):
 
     def __init__(self,
                  class_names=None,
-                 output_dir='vis_dir',
-                 thresh=0.9,
+                 vis_dir='vis_dir',
+                 thresh=0.5,
                  show_box=True,
                  show_class=True):
-        super(OpenCVVisualizer, self).__init__(class_names, output_dir, thresh, show_box, show_class)
+        super(OpenCVVisualizer, self).__init__(class_names, vis_dir, thresh, show_box, show_class)
 
     def vis_bbox(self, img, bbox, thick=1):
         """Visualizes a bounding box."""
@@ -93,7 +93,7 @@ class OpenCVVisualizer(BaseVisualizer):
         cv2.putText(img, txt, txt_tl, font, font_scale, self._GRAY, lineType=cv2.LINE_AA)
         return img
 
-    def vis(self, im, boxes, classes, filename, ig_boxes=None, absolute_path=False):
+    def vis(self, im, boxes, classes, filename, ig_boxes=None):
         """Constructs a numpy array with the detections visualized."""
         if boxes is None or boxes.shape[0] == 0 or max(boxes[:, 4]) < self.thresh:
             return im
@@ -117,29 +117,28 @@ class OpenCVVisualizer(BaseVisualizer):
                 class_str = self.get_class_string(classes[i], score)
                 im = self.vis_class(im, (bbox[0], bbox[1] - 2), class_str)
 
-        if not absolute_path:
-            output_name = os.path.basename(filename)
-        target_path = os.path.join(self.output_dir, output_name)
-        cv2.imwrite(target_path, im)
+        output_name = os.path.basename(filename)
+        output_name = os.path.join(self.vis_dir, output_name)
+        cv2.imwrite(output_name, im)
 
 
 @VISUALIZER_REGISTRY.register('plt')
 class PLTVisualizer(BaseVisualizer):
     def __init__(self,
                  class_names=None,
-                 output_dir='vis_dir',
-                 thresh=0.9,
+                 vis_dir='vis_dir',
+                 thresh=0.5,
                  show_box=True,
                  show_class=True,
                  dpi=200,
                  box_alpha=0.0,
                  ext='pdf'):
-        super(PLTVisualizer, self).__init__(class_names, output_dir, thresh, show_box, show_class)
+        super(PLTVisualizer, self).__init__(class_names, vis_dir, thresh, show_box, show_class)
         self.dpi = dpi
         self.box_alpha = box_alpha
         self.ext = ext
 
-    def vis(self, im, boxes, classes, filename, ig_boxes=None, absolute_path=False):
+    def vis(self, im, boxes, classes, filename, ig_boxes=None):
         """Visual debugging of detections."""
         if (boxes is None or boxes.shape[0] == 0 or max(boxes[:, 4]) < self.thresh):
             return
@@ -217,9 +216,7 @@ class PLTVisualizer(BaseVisualizer):
                         bbox=dict(facecolor=color_box, alpha=0.4, pad=0, edgecolor='none'),
                         color='white')
 
-        output_name = filename
-        if not absolute_path:
-            output_name = os.path.basename(filename) + '.' + self.ext
-            output_name = os.path.join(self.output_dir, '{}'.format(output_name))
+        output_name = os.path.basename(filename) + '.' + self.ext
+        output_name = os.path.join(self.vis_dir, '{}'.format(output_name))
         fig.savefig(output_name, dpi=self.dpi)
         plt.close('all')

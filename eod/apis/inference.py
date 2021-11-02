@@ -39,6 +39,8 @@ class BaseInference(object):
         logger.info('build saver done')
         # build visualizer
         self.vis_type = config['inference']['visualizer']['type']
+        # update vis_dir
+        config['inference']['visualizer']['kwargs']['vis_dir'] = self.vis_dir
         self.visualizer = VISUALIZER_REGISTRY.build(config['inference']['visualizer'])
         logger.info('build visualizer done')
         # resume
@@ -200,5 +202,4 @@ class BaseInference(object):
             img_h, img_w = img.shape[:2]
             classes = boxes[:, -1].astype(np.int32)
             boxes = boxes[:, :-1]
-            output_name = os.path.join(self.vis_dir, filename)
-            self.visualizer.vis(img, boxes, classes, output_name, absolute_path=True)
+            self.visualizer.vis(img, boxes, classes, filename)
