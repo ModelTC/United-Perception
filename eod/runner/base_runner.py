@@ -176,6 +176,7 @@ class BaseRunner(object):
                 self.lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
                 logger.info(f'resume from epoch:{start_epoch} iteration:{self.cur_iter}')
         if 'ema' in ckpt and self.ema is not None:
+            logger.info("load ckpt ema to model ema")
             self.ema.load_state_dict(ckpt['ema'])
 
     def build_saver(self):
@@ -489,6 +490,8 @@ class BaseRunner(object):
                     flag = True
                     n['kwargs']['normalize'] = normalize
         if flag:
+            logger.info("pt_sync_bn can't be deepcopy, replace with solo bn for ema, \
+                load model state to fake model state")
             model_helper_type = self.config['runtime']['model_helper']['type']
             model_helper_kwargs = self.config['runtime']['model_helper']['kwargs']
             model_helper_ins = MODEL_HELPER_REGISTRY[model_helper_type]
