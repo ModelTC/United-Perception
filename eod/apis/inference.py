@@ -185,8 +185,8 @@ class BaseInference(object):
             batch = self.fetch([filename])
             with torch.no_grad():
                 output = self.detector(batch)
-            output_list += self.map_back(output)
-        return output_list
+            output = self.map_back(output)
+            self.vis(output)
 
     def vis(self, outputs):
         for img_idx, output in enumerate(outputs):
@@ -198,7 +198,7 @@ class BaseInference(object):
             filename = os.path.basename(output['image_info'][-1])
             if self.vis_type == 'plt':
                 filename = filename.rsplit('.', 1)[0]
-            logger.info('visualizing {}:{}'.format(img_idx, filename))
+            logger.info('visualizing {}'.format(filename))
 
             img_h, img_w = img.shape[:2]
             classes = boxes[:, -1].astype(np.int32)

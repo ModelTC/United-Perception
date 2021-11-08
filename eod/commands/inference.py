@@ -61,8 +61,7 @@ def main(args):
     infer_cfg['kwargs'] = infer_cfg.get('kwargs', {})
     cfg['runtime']['inferencer'] = infer_cfg
     inferencer = INFERENCER_REGISTRY.get(infer_cfg['type'])(cfg, **infer_cfg['kwargs'])
-    output_list = inferencer.predict()
-    inferencer.vis(output_list)
+    inferencer.predict()
 
 
 def _main(args):
