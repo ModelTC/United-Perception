@@ -83,6 +83,7 @@ class BaseDataLoader(DataLoader):
 
         gt_bboxes = [_.get('gt_bboxes', None) for _ in batch]
         gt_ignores = [_.get('gt_ignores', None) for _ in batch]
+        caches = [_.get('cache', False) for _ in batch]
 
         output = EasyDict({
             'image': images,
@@ -92,6 +93,7 @@ class BaseDataLoader(DataLoader):
             'flipped': flipped,
             'neg_targets': neg_targets,
             'image_sources': image_sources,
+            'caches': caches
         })
 
         output['gt_bboxes'] = gt_bboxes if gt_bboxes[0] is not None else None
