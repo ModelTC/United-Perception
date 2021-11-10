@@ -25,12 +25,14 @@ class YoloxPAFPN(nn.Module):
                  upsample='nearest',
                  align_corners=True,
                  normalize={'type': 'solo_bn'},
-                 downsample_plane=256):
+                 downsample_plane=256,
+                 start_level=3):
         super(YoloxPAFPN, self).__init__()
         in_channels = inplanes
         self.outplanes = inplanes
         self.out_strides = out_strides
         self.num_level = len(out_strides)
+        self.start_level = start_level
         Conv = DWConv if depthwise else ConvBnAct
 
         self.upsample = upsample
@@ -126,8 +128,8 @@ class YoloxPAFPN(nn.Module):
         pan_out0 = self.C3_n4(p_out0)  # 1024->1024/32
         features.append(pan_out0)
         x = features[-1]
-        for i in range(self.num_level - len(laterals)):
-            level = i + len(laterals)
+        for i in range(self.num_level - self.start_level):
+            level = i + self.start_level
             x = self.get_downsample(level)(x)
             features.append(x)
 

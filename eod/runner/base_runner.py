@@ -164,7 +164,7 @@ class BaseRunner(object):
         logger.info(f'world size:{env.world_size}')
         self.build_global_flags()
 
-    def resume_model(self):
+    def resume_model(self, without_ema=False):
         ckpt = self.saver.load_pretrain_or_resume()
         self.model.load(ckpt['model'])
         if self.training:
@@ -175,7 +175,7 @@ class BaseRunner(object):
                 self.optimizer.load_state_dict(ckpt['optimizer'])
                 self.lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
                 logger.info(f'resume from epoch:{start_epoch} iteration:{self.cur_iter}')
-        if 'ema' in ckpt and self.ema is not None:
+        if 'ema' in ckpt and self.ema is not None and not without_ema:
             logger.info("load ckpt ema to model ema")
             self.ema.load_state_dict(ckpt['ema'])
 

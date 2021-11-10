@@ -68,12 +68,28 @@ class Focus(nn.Module):
                                     padding, groups, normalize=normalize, act_fn=act_fn)
 
     def forward(self, x):  # x(b,c,w,h) -> y(b,4c,w/2,h/2)
+        '''
         N, C, H, W = x.size()
         x = x.view(N, C, H // self.bs, self.bs, W // self.bs, self.bs)  # (N, C, H//bs, bs, W//bs, bs)
         x = x.permute(0, 3, 5, 1, 2, 4).contiguous()  # (N, bs, bs, C, H//bs, W//bs)
         x = x.view(N, C * (self.bs ** 2), H // self.bs, W // self.bs)  # (N, C*bs^2, H//bs, W//bs)
         x = self.conv_block(x)
-        return x
+        '''
+        #code from mmdetection/mmdet/models/backbone/csp_darknet.py
+        patch_top_left = x[..., ::2, ::2]
+        patch_top_right = x[..., ::2, 1::2]
+        patch_bot_left = x[..., 1::2, ::2]
+        patch_bot_right = x[..., 1::2, 1::2]
+        x = torch.cat(
+            (
+                patch_top_left,
+                patch_bot_left,
+                patch_top_right,
+                patch_bot_right,
+            ),
+            dim=1,
+        )
+        return self.conv_block(x)
 
 
 class Bottleneck(nn.Module):

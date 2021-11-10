@@ -140,7 +140,7 @@ class DarknetPAFPN(nn.Module):
     def forward(self, x):
         res = []
         features = x['features']
-        assert isinstance(features, list), 'Only support list'
+        #assert isinstance(features, list), 'Only support list'
 
         f = features[-1]
 
