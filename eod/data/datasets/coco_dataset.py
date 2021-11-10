@@ -393,8 +393,8 @@ class CocoDataset(BaseDataset):
             img_bboxes[:, [1, 3]] -= pad_w
             img_bboxes[:, [2, 4]] -= pad_h
             # clip
-            np.clip(img_bboxes[:, [1, 3]], 0, info[1], out=img_bboxes[:, [1, 3]])
-            np.clip(img_bboxes[:, [2, 4]], 0, info[0], out=img_bboxes[:, [2, 4]])
+            # np.clip(img_bboxes[:, [1, 3]], 0, info[1], out=img_bboxes[:, [1, 3]])
+            # np.clip(img_bboxes[:, [2, 4]], 0, info[0], out=img_bboxes[:, [2, 4]])
             img_bboxes[:, 1] /= scale_w
             img_bboxes[:, 2] /= scale_h
             img_bboxes[:, 3] /= scale_w
