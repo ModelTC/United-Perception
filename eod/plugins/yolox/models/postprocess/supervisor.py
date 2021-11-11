@@ -77,12 +77,19 @@ class OTASupervisor(object):
                     num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides = \
                         self.matcher.match(gts, preds, points, num_points_per_level, strides, mode='cpu')
                 torch.cuda.empty_cache()
-                cls_target = F.one_hot(
-                    (gt_matched_classes - 1).to(torch.int64), self.num_classes
-                ) * pred_ious_this_matching.unsqueeze(-1)
-                reg_target = gts[matched_gt_inds, :4]
-                obj_target = fg_mask.unsqueeze(-1)
-                l1_target = self.get_l1_target(gts[matched_gt_inds, :4], points[fg_mask], expanded_strides[0][fg_mask])
+                if num_fg == 0:
+                    fg_mask = preds.new_zeros(preds.shape[0], dtype=torch.bool)
+                    cls_target = preds.new_zeros((0, self.num_classes))
+                    reg_target = preds.new_zeros((0, 4))
+                    obj_target = preds.new_zeros((fg_mask.shape[0], 1)).to(torch.bool)
+                    l1_target = preds.new_zeros((0, 4))
+                else:
+                    cls_target = F.one_hot(
+                        (gt_matched_classes - 1).to(torch.int64), self.num_classes
+                    ) * pred_ious_this_matching.unsqueeze(-1)
+                    reg_target = gts[matched_gt_inds, :4]
+                    obj_target = fg_mask.unsqueeze(-1)
+                    l1_target = self.get_l1_target(gts[matched_gt_inds, :4], points[fg_mask], expanded_strides[0][fg_mask])  # noqa
                 num_fgs += num_fg
             else:
                 fg_mask = preds.new_zeros(preds.shape[0], dtype=torch.bool)
@@ -128,6 +135,9 @@ class OTAMatcher(object):
                 gt_bboxes, strides, points, num_points_per_level)
         else:
             assert "Not implement"
+
+        if fg_mask.sum() <= 1e-6:
+            return 0, None, None, None, None, None
 
         masked_preds = preds[fg_mask]
         if mode == 'cpu':
