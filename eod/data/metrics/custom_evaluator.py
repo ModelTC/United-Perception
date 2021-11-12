@@ -117,7 +117,7 @@ class CustomEvaluator(Evaluator):
             with open(res_file, 'r') as f:
                 for line in f:
                     dt = json.loads(line)
-                    dt_by_label = dts.setdefault(line['label'], [])
+                    dt_by_label = dts.setdefault(dt['label'], [])
                     dt_by_label.append(dt)
         else:
             for device_res in res:
@@ -560,9 +560,6 @@ class MREvaluator(CustomEvaluator):
                    args.num_classes,
                    args.class_names,
                    args.iou_thresh,
-                   img_root=args.img_root,
-                   bad_case_analyser=args.bad_case_analyser,
-                   vis_mode=args.vis_mode,
                    metrics_csv=args.metrics_csv,
                    ignore_mode=args.ignore_mode,
                    eval_class_idxs=args.eval_class_idxs,
