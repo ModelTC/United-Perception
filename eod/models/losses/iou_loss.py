@@ -124,7 +124,7 @@ class IOULoss(BaseLoss):
                           reduction=reduction,
                           loss_weight=loss_weight)
         self.loss_type = loss_type
-        self.key_fields = ["weights", "anchor", "bbox_normalize"]
+        self.key_fields = ["weights", "anchor", "bbox_normalize", "normalizer_override"]
 
     def forward(self, input, target, reduction, normalizer=None, weights=None, anchor=None, bbox_normalize=None):
         """

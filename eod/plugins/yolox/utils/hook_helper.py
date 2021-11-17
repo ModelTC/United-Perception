@@ -32,10 +32,13 @@ class YoloxNoaug(Hook):
                 logger.info("rebuild dataloader")
                 runner.build_dataloaders()
                 runner.data_iterators['train'] = iter(runner.data_loaders["train"])
-                if env.world_size > 1:
-                    runner.model.module.yolox_post.use_l1 = True
-                else:
-                    runner.model.yolox_post.use_l1 = True
+                try:
+                    if env.world_size > 1:
+                        runner.model.module.yolox_post.use_l1 = True
+                    else:
+                        runner.model.yolox_post.use_l1 = True
+                except:  # noqa
+                    pass
                 runner.test_freq = self.test_freq
                 runner.save_freq = self.save_freq
                 self.flag = True
