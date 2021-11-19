@@ -202,6 +202,9 @@ class CustomDataset(BaseDataset):
             if self.cache is not None:
                 img = self.get_cache_image(data)
                 img = cv2.imdecode(img, cv2.IMREAD_COLOR)
+                if self.image_reader.color_mode != 'BGR':
+                    cvt_color = getattr(cv2, 'COLOR_BGR2{}'.format(self.image_reader.color_mode))
+                    img = cv2.cvtColor(img, cvt_color)
                 cache = True
             else:
                 img = self.image_reader(filename, data.get('image_source', 0))

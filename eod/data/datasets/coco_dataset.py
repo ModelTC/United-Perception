@@ -279,9 +279,9 @@ class CocoDataset(BaseDataset):
         try:
             if self.cache is not None:
                 img = self.get_cache_image(meta_img)
-                cvt_color = getattr(cv2, 'COLOR_BGR2{}'.format(self.image_reader.color_mode))
                 img = cv2.imdecode(img, cv2.IMREAD_COLOR)
                 if self.image_reader.color_mode != 'BGR':
+                    cvt_color = getattr(cv2, 'COLOR_BGR2{}'.format(self.image_reader.color_mode))
                     img = cv2.cvtColor(img, cvt_color)
             else:
                 img = self.image_reader(filename)
