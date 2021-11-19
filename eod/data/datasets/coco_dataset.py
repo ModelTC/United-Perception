@@ -13,6 +13,10 @@ from PIL import Image
 from pycocotools import mask as maskUtils
 from pycocotools.coco import COCO
 from torch.nn.modules.utils import _pair
+import pickle as pk
+from eod.utils.env.dist_helper import env
+import cv2
+
 
 from eod.utils.general.context import no_print
 from eod.utils.general.registry_factory import DATASET_REGISTRY
@@ -76,7 +80,8 @@ class CocoDataset(BaseDataset):
                  semantic_seg_prefix=None,
                  unknown_erasing=False,
                  use_ignore=False,
-                 evaluator=None):
+                 evaluator=None,
+                 cache=None):
         with no_print():
             self.coco = self._loader(meta_file)
 
@@ -119,6 +124,41 @@ class CocoDataset(BaseDataset):
 
         self.img_ids = sorted(self.img_ids)
         self.aspect_ratios = [self.coco.imgs[ix]['aspect_ratio'] for ix in self.img_ids]
+
+        self.cache = cache
+        if self.cache is not None:
+            cache_dir = self.cache.get('cache_dir', './')
+            os.makedirs(cache_dir, exist_ok=True)
+            cache_name = self.cache.get('cache_name', 'cache.pkl')
+            cache_file = os.path.join(cache_dir, cache_name)
+            if not os.path.exists(cache_file):
+                self.cache_image = {}
+                self.cache_dataset()
+                if env.is_master():
+                    with open(cache_file, "wb") as f:
+                        pk.dump(self.cache_image, f)
+            else:
+                with open(cache_file, "rb") as f:
+                    self.cache_image = pk.load(f)
+
+    def cache_dataset(self):
+        from multiprocessing.pool import ThreadPool
+        NUM_THREADs = min(8, os.cpu_count())
+        pool = ThreadPool(NUM_THREADs)
+        pool.map(self.set_cache_images, self.img_ids)
+        pool.close()
+        pool.join()
+
+    def set_cache_images(self, img_id):
+        meta_img = self.coco.imgs[img_id]
+        filename = self.get_filename(meta_img)
+        with open(os.path.join(self.image_reader.image_directory(), filename), "rb") as f:
+            img = np.frombuffer(f.read(), np.uint8)
+            self.cache_image[filename] = img
+
+    def get_cache_image(self, meta_img):
+        filename = self.get_filename(meta_img)
+        return self.cache_image[filename]
 
     def __len__(self):
         return len(self.img_ids)
@@ -236,7 +276,17 @@ class CocoDataset(BaseDataset):
         gt_keyps = torch.stack(gt_keyps) if gt_keyps else None
         gt_masks = gt_masks if gt_masks else None  # cannot be a tensor
 
-        img = self.image_reader(filename)
+        try:
+            if self.cache is not None:
+                img = self.get_cache_image(meta_img)
+                cvt_color = getattr(cv2, 'COLOR_BGR2{}'.format(self.image_reader.color_mode))
+                img = cv2.imdecode(img, cv2.IMREAD_COLOR)
+                if self.image_reader.color_mode != 'BGR':
+                    img = cv2.cvtColor(img, cvt_color)
+            else:
+                img = self.image_reader(filename)
+        except:  # noqa 
+            img = self.image_reader(filename)
 
         input = EasyDict({
             'image': img,
