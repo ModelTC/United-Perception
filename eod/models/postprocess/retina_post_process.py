@@ -242,7 +242,8 @@ class IOUPostProcess(BasePostProcess):
             pos_loc_target, pos_loc_pred = self._mask_tensor([loc_target, loc_pred], loc_mask)
             if pos_loc_pred.numel():
                 pos_decode_loc_target, pos_decode_loc_pred = self.decode_loc(pos_loc_target, pos_loc_pred.detach(), loc_mask)  # noqa
-                scores[loc_mask] = bbox_iou_overlaps(pos_decode_loc_pred, pos_decode_loc_target, aligned=True)
+                temp = bbox_iou_overlaps(pos_decode_loc_pred, pos_decode_loc_target, aligned=True)
+                scores[loc_mask] = temp.to(scores.dtype)
             cls_loss = self.cls_loss(cls_pred, cls_target, normalizer_override=pos_normalizer, scores=scores)
             acc = self._get_acc(cls_pred, cls_target)
         else:
