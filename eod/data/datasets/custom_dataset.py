@@ -39,7 +39,8 @@ class CustomDataset(BaseDataset):
                  num_classes,
                  evaluator=None,
                  label_mapping=None,
-                 cache=None):
+                 cache=None,
+                 clip_output=True):
         super(CustomDataset, self).__init__(
             meta_file, image_reader, transformer, evaluator=evaluator)
 
@@ -48,6 +49,7 @@ class CustomDataset(BaseDataset):
         self.metas = []
         self.aspect_ratios = []
         self._normal_init()
+        self.clip_output = clip_output
 
         if len(self.aspect_ratios) == 0:
             self.aspect_ratios = [1] * len(self.metas)
@@ -151,8 +153,9 @@ class CustomDataset(BaseDataset):
             img_bboxes[:, [1, 3]] -= pad_w
             img_bboxes[:, [2, 4]] -= pad_h
             # clip
-            np.clip(img_bboxes[:, [1, 3]], 0, info[1], out=img_bboxes[:, [1, 3]])
-            np.clip(img_bboxes[:, [2, 4]], 0, info[0], out=img_bboxes[:, [2, 4]])
+            if self.clip_output:
+                np.clip(img_bboxes[:, [1, 3]], 0, info[1], out=img_bboxes[:, [1, 3]])
+                np.clip(img_bboxes[:, [2, 4]], 0, info[0], out=img_bboxes[:, [2, 4]])
             img_bboxes[:, 1] /= scale_w
             img_bboxes[:, 2] /= scale_h
             img_bboxes[:, 3] /= scale_w
