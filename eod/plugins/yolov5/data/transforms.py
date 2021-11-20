@@ -36,7 +36,8 @@ class Mosaic(Augmentation):
                  tar_size=640,
                  fill_color=0,
                  mosaic_self=False,
-                 memcached=None):
+                 memcached=None,
+                 clip_box=True):
         super(Mosaic, self).__init__()
         assert extra_input and dataset is not None
         self.dataset = dataset
@@ -46,6 +47,7 @@ class Mosaic(Augmentation):
             self.tar_size = [tar_size, tar_size]  # (h, w)
         self.fill_color = fill_color
         self.mosaic_self = mosaic_self
+        self.clip_box = clip_box
         self.memcached = memcached
         if self.memcached is not None:
             self.init_memcached()
@@ -72,209 +74,17 @@ class Mosaic(Augmentation):
             gt_bboxes = data['gt_bboxes']
             gt_bboxes[:, [0, 2]] += padw
             gt_bboxes[:, [1, 3]] += padh
-            gt_bboxes[:, [0, 2]] = torch.clamp(gt_bboxes[:, [0, 2]], 0, max_hw[1])
-            gt_bboxes[:, [1, 3]] = torch.clamp(gt_bboxes[:, [1, 3]], 0, max_hw[0])
+            if self.clip_box:
+                gt_bboxes[:, [0, 2]] = torch.clamp(gt_bboxes[:, [0, 2]], 0, max_hw[1])
+                gt_bboxes[:, [1, 3]] = torch.clamp(gt_bboxes[:, [1, 3]], 0, max_hw[0])
             data['gt_bboxes'] = gt_bboxes
         if data.get('gt_ignores', None) is not None:
             ig_bboxes = data['gt_ignores']
             ig_bboxes[:, [0, 2]] += padw
             ig_bboxes[:, [1, 3]] += padh
-            ig_bboxes[:, [0, 2]] = torch.clamp(ig_bboxes[:, [0, 2]], 0, max_hw[1])
-            ig_bboxes[:, [1, 3]] = torch.clamp(ig_bboxes[:, [1, 3]], 0, max_hw[0])
-            data['gt_ignores'] = ig_bboxes
-        return data
-
-    def sew(self, inputs, center, out_size):
-        assert len(inputs) == 4, 'mosaic must have 4 images once a time'
-        yc, xc = center
-        channels = 3           # default is rgb
-        if len(inputs[0].image.shape) == 2:
-            channels = 1
-        if not isinstance(self.fill_color, list):
-            self.fill_color = [self.fill_color] * channels
-        canvas = []
-        for c in range(channels):
-            canvas_c = np.full((out_size[0] * 2, out_size[1] * 2), self.fill_color[c], dtype=np.uint8)
-            canvas.append(canvas_c)
-        if channels == 1:
-            canvas = canvas[0]
-        else:
-            canvas = np.stack(canvas, axis=-1)
-        # only care about gt_bboxes and gt_ignores
-        gt_bboxes = []
-        ig_bboxes = []
-        for idx, cur_input in enumerate(inputs):
-            img = cur_input['image']
-            h, w = img.shape[0], img.shape[1]
-            if idx == 0:  # top left
-                x1a, y1a, x2a, y2a = max(xc - w, 0), max(yc - h, 0), xc, yc  # xmin, ymin, xmax, ymax (large image)
-                x1b, y1b, x2b, y2b = w - (x2a - x1a), h - (y2a - y1a), w, h  # xmin, ymin, xmax, ymax (small image)
-            elif idx == 1:  # top right
-                x1a, y1a, x2a, y2a = xc, max(yc - h, 0), min(xc + w, out_size[1] * 2), yc
-                x1b, y1b, x2b, y2b = 0, h - (y2a - y1a), min(w, x2a - x1a), h
-            elif idx == 2:  # bottom left
-                x1a, y1a, x2a, y2a = max(xc - w, 0), yc, xc, min(out_size[0] * 2, yc + h)
-                x1b, y1b, x2b, y2b = w - (x2a - x1a), 0, w, min(y2a - y1a, h)
-            elif idx == 3:  # bottom right
-                x1a, y1a, x2a, y2a = xc, yc, min(xc + w, out_size[1] * 2), min(out_size[0] * 2, yc + h)
-                x1b, y1b, x2b, y2b = 0, 0, min(w, x2a - x1a), min(y2a - y1a, h)
-            canvas[y1a:y2a, x1a:x2a] = img[y1b:y2b, x1b:x2b]  # cannvas[ymin:ymax, xmin:xmax]
-            padw = x1a - x1b
-            padh = y1a - y1b
-            cur_input = self.clip_bboxes(cur_input, (padh, padw), [size * 2 for size in out_size])
-            if cur_input.get('gt_bboxes', None) is not None:
-                gt_bboxes.append(cur_input['gt_bboxes'])
-            if cur_input.get('gt_ignores', None) is not None:
-                ig_bboxes.append(cur_input['gt_ignores'])
-
-        sewed_input = inputs[0]
-        sewed_input['image'] = canvas
-        if sewed_input.get('gt_bboxes', None) is not None:
-            sewed_input['gt_bboxes'] = torch.cat(gt_bboxes)
-        if sewed_input.get('gt_ignores', None) is not None:
-            sewed_input['gt_ignores'] = torch.cat(ig_bboxes)
-        return sewed_input
-
-    def cache_resize_image(self, img, filename, tar_size):
-        hash_filename = self.hash_filename(filename)
-        if hash_filename not in self.image_shapes:
-            re_img = self.resize_img(img, tar_size)
-            self.image_shapes[hash_filename] = re_img.shape
-            if self.encode_type is not None:
-                re_img = cv2.imencode(f'.{self.encode_type}', re_img)[1]
-            self.client.set(hash_filename, re_img.tostring(), noreply=False)
-        else:
-            re_img = self.client.get(hash_filename)
-            re_img = np.frombuffer(re_img, dtype=np.uint8)
-            if self.encode_type is not None:
-                re_img = cv2.imdecode(img, cv2.IMREAD_COLOR)
-            else:
-                re_img = re_img.reshape(self.image_shapes[hash_filename])
-        return re_img
-
-    def resize_img(self, img, tar_size):
-        interp = cv2.INTER_LINEAR
-        h0, w0 = img.shape[:2]  # orig hw
-        r = min(1. * tar_size[0] / h0, 1. * tar_size[1] / w0)
-        if r != 1:
-            img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
-        return img
-
-    def load_img(self, ori_data, tar_size):
-        data = copy.deepcopy(ori_data)
-        img = data.image
-        h0, w0 = img.shape[:2]
-        if self.memcached is None:
-            img = self.resize_img(img, tar_size)
-        else:
-            try:
-                img = self.cache_resize_image(img, data['filename'], tar_size)
-            except Exception as e: # noqa
-                img = self.resize_img(img, tar_size)
-        if img.dtype != np.uint8:
-            img = img.astype(np.uint8)
-        h1, w1 = img.shape[:2]  # new hw
-        data.image = img
-        scale_h, scale_w = h1 / h0, w1 / w0
-        if data.get('gt_bboxes', None) is not None:
-            gt_bboxes = data['gt_bboxes']
-            gt_bboxes[:, [0, 2]] *= scale_w
-            gt_bboxes[:, [1, 3]] *= scale_h
-            data['gt_bboxes'] = gt_bboxes
-        if data.get('gt_ignores', None) is not None:
-            ig_bboxes = data['gt_ignores']
-            ig_bboxes[:, [0, 2]] *= scale_w
-            ig_bboxes[:, [1, 3]] *= scale_h
-            data['gt_ignores'] = ig_bboxes
-        return data
-
-    def get_idx(self):
-        return random.randint(0, len(self.dataset) - 1)
-
-    def augment(self, data):
-        if not self.mosaic_self and random.random() >= self.mosaic_prob:
-            return data
-        origin_input = copy.copy(data)
-        image_s = self.tar_size  # h, w
-        mosaic_border = [-image_s[0] // 2, -image_s[1] // 2]
-        yc, xc = [int(random.uniform(-x, 2 * image_s[idx] + x)) for idx, x in enumerate(mosaic_border)]  # noqa
-        inputs = []
-
-        # if prob less than mosaic_prob, the mosaic will paste 4 same ori_img
-        for i in range(4):
-            if i == 0 or self.mosaic_self:
-                cur_input = origin_input
-            else:
-                idx = self.get_idx()
-                cur_input = self.dataset.get_input(idx)
-            if not (self.mosaic_self and i > 0):
-                cur_input = self.load_img(cur_input, image_s)
-            if self.mosaic_self and i > 0:
-                cur_input = copy.deepcopy(cur_input)
-            inputs.append(cur_input)
-
-        output = self.sew(inputs, (yc, xc), image_s)
-        output['mosaic'] = True
-        return output
-
-
-@AUGMENTATION_REGISTRY.register('mosaic_mot17')
-class MosaicMot17(Augmentation):
-    """ stitch 4 images into one image, used for yolov5, little diff with mosaic
-    """
-
-    def __init__(self,
-                 extra_input=True,
-                 dataset=None,
-                 mosaic_prob=1.0,
-                 tar_size=640,
-                 fill_color=0,
-                 mosaic_self=False,
-                 memcached=None):
-        super(MosaicMot17, self).__init__()
-        assert extra_input and dataset is not None
-        self.dataset = dataset
-        self.mosaic_prob = mosaic_prob
-        self.tar_size = tar_size
-        if isinstance(self.tar_size, int):
-            self.tar_size = [tar_size, tar_size]  # (h, w)
-        self.fill_color = fill_color
-        self.mosaic_self = mosaic_self
-        self.memcached = memcached
-        if self.memcached is not None:
-            self.init_memcached()
-
-    def init_memcached(self):
-        from pymemcache.client.base import PooledClient
-        host = self.memcached.get('host', '127.0.0.1')
-        port = self.memcached.get('port', '11211')
-        pool_size = self.memcached.get('pool_size', 4)
-        self.client = PooledClient(f'{host}:{port}', max_pool_size=pool_size)
-        self.encode_type = self.memcached.get("encode_type", None)
-        self.image_shapes = {}
-
-    def hash_filename(self, filename):
-        import hashlib
-        md5 = hashlib.md5()
-        md5.update(filename.encode('utf-8'))
-        hash_filename = md5.hexdigest()
-        return hash_filename
-
-    def clip_bboxes(self, data, pad, max_hw):
-        padh, padw = pad
-        if data.get('gt_bboxes', None) is not None:
-            gt_bboxes = data['gt_bboxes']
-            gt_bboxes[:, [0, 2]] += padw
-            gt_bboxes[:, [1, 3]] += padh
-            # gt_bboxes[:, [0, 2]] = torch.clamp(gt_bboxes[:, [0, 2]], 0, max_hw[1])
-            # gt_bboxes[:, [1, 3]] = torch.clamp(gt_bboxes[:, [1, 3]], 0, max_hw[0])
-            data['gt_bboxes'] = gt_bboxes
-        if data.get('gt_ignores', None) is not None:
-            ig_bboxes = data['gt_ignores']
-            ig_bboxes[:, [0, 2]] += padw
-            ig_bboxes[:, [1, 3]] += padh
-            # ig_bboxes[:, [0, 2]] = torch.clamp(ig_bboxes[:, [0, 2]], 0, max_hw[1])
-            # ig_bboxes[:, [1, 3]] = torch.clamp(ig_bboxes[:, [1, 3]], 0, max_hw[0])
+            if self.clip_box:
+                ig_bboxes[:, [0, 2]] = torch.clamp(ig_bboxes[:, [0, 2]], 0, max_hw[1])
+                ig_bboxes[:, [1, 3]] = torch.clamp(ig_bboxes[:, [1, 3]], 0, max_hw[0])
             data['gt_ignores'] = ig_bboxes
         return data
 
@@ -414,8 +224,16 @@ class MosaicMot17(Augmentation):
 
 @AUGMENTATION_REGISTRY.register('random_perspective')
 class RandomPespective(Augmentation):
-    def __init__(self, degrees=0.0, translate=0.1, scale=0.5, shear=0.0,
-                 perspective=0.0, fill_color=0, max_try=1, border=(0, 0)):
+    def __init__(self,
+                 degrees=0.0,
+                 translate=0.1,
+                 scale=0.5,
+                 shear=0.0,
+                 perspective=0.0,
+                 fill_color=0,
+                 max_try=1,
+                 border=(0, 0),
+                 clip_box=True):
         super(RandomPespective, self).__init__()
         self.degrees = degrees
         self.translate = translate
@@ -425,6 +243,7 @@ class RandomPespective(Augmentation):
         self.fill_color = fill_color
         self.border = border
         self.max_try = max_try
+        self.clip_box = clip_box
 
     def label_transform(self, ori_targets, M, width, height, scale):
         targets = copy.deepcopy(ori_targets)
@@ -444,8 +263,9 @@ class RandomPespective(Augmentation):
             xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
             # clip boxes
-            xy[:, [0, 2]] = xy[:, [0, 2]].clip(0, width - ALIGNED_FLAG.offset)
-            xy[:, [1, 3]] = xy[:, [1, 3]].clip(0, height - ALIGNED_FLAG.offset)
+            if self.clip_box:
+                xy[:, [0, 2]] = xy[:, [0, 2]].clip(0, width - ALIGNED_FLAG.offset)
+                xy[:, [1, 3]] = xy[:, [1, 3]].clip(0, height - ALIGNED_FLAG.offset)
 
             # filter candidates
             i = box_candidates(box1=targets[:, :4].cpu().numpy().T * scale, box2=xy.T)
