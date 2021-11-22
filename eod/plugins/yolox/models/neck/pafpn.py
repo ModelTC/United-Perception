@@ -88,11 +88,6 @@ class YoloxPAFPN(nn.Module):
                           normalize=normalize))
             self.outplanes.append(downsample_plane)
 
-        for m in self.modules():
-            if isinstance(m, nn.BatchNorm2d):
-                m.eps = 1e-3
-                m.momentum = 0.03
-
     def forward(self, input):
         laterals = input['features']
         [x2, x1, x0] = laterals

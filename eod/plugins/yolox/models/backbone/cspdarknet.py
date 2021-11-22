@@ -233,11 +233,6 @@ class CSPDarknet(nn.Module):
         if initializer is not None:
             initialize_from_cfg(self, initializer)
 
-        for m in self.modules():
-            if isinstance(m, nn.BatchNorm2d):
-                m.eps = 1e-3
-                m.momentum = 0.03
-
     def get_outplanes(self):
         """
         get dimension of the output tensor

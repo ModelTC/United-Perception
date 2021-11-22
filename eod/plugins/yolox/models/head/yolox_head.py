@@ -28,7 +28,8 @@ class YoloXHead(nn.Module):
                  depthwise=False,
                  initializer=None,
                  class_activation='sigmoid',
-                 normalize={'type': 'solo_bn'}):
+                 normalize={'type': 'solo_bn'},
+                 init_prior=0.01):
         super(YoloXHead, self).__init__()
         self.prefix = self.__class__.__name__
         self.num_levels = len(inplanes)
@@ -130,11 +131,7 @@ class YoloXHead(nn.Module):
 
         if initializer is not None:
             initialize_from_cfg(self, initializer)
-        self.initialize_biases(1e-2)
-        for m in self.modules():
-            if isinstance(m, nn.BatchNorm2d):
-                m.eps = 1e-3
-                m.momentum = 0.03
+        self.initialize_biases(init_prior)
 
     def forward_net(self, features, idx=0):
         mlvl_preds = []
