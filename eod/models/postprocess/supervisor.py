@@ -205,6 +205,7 @@ class ATSSSupervisor(object):
         INF = 100000000
         gt_bboxes = input['gt_bboxes']
         ignore_regions = input.get('gt_ignores', None)
+        image_info = input.get('image_info')
         num_anchors_per_level = [len(anchor) for anchor in mlvl_anchors]
         all_anchors = torch.cat(mlvl_anchors, dim=0)
         B = len(gt_bboxes)
@@ -238,6 +239,8 @@ class ATSSSupervisor(object):
                 ious = bbox_iou_overlaps(all_anchors, gt)
                 gt_cx = (bbox[:, 2] + bbox[:, 0]) / 2.0
                 gt_cy = (bbox[:, 3] + bbox[:, 1]) / 2.0
+                gt_cx = torch.clamp(gt_cx, min=0, max=image_info[b_ix][1])
+                gt_cy = torch.clamp(gt_cy, min=0, max=image_info[b_ix][0])
                 gt_points = torch.stack((gt_cx, gt_cy), dim=1)
                 distances = (anchor_points[:, None, :] - gt_points[None, :, :]).pow(2).sum(-1).sqrt()
                 # Selecting candidates based on the center distance between anchor box and object

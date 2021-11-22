@@ -29,13 +29,15 @@ class RoiPredictor(object):
                  post_nms_top_n,
                  roi_min_size,
                  merger=None,
-                 nms=None):
+                 nms=None,
+                 clip_box=True):
         self.pre_nms_score_thresh = pre_nms_score_thresh
         # self.apply_score_thresh_above = apply_score_thresh_above
         self.pre_nms_top_n = pre_nms_top_n
         self.post_nms_top_n = post_nms_top_n
         self.nms_cfg = nms
         self.roi_min_size = roi_min_size
+        self.clip_box = clip_box
         if merger is not None:
             self.merger = build_merger(merger)
         else:
@@ -93,7 +95,8 @@ class RoiPredictor(object):
         for b_ix in range(B):
             # clip rois and filter rois which are too small
             image_rois = rois[b_ix]
-            image_rois = clip_bbox(image_rois, image_info[b_ix])
+            if self.clip_box:
+                image_rois = clip_bbox(image_rois, image_info[b_ix])
             image_rois, filter_inds = filter_by_size(image_rois, roi_min_size)
             image_cls_pred = cls_pred[b_ix][filter_inds]
             if image_rois.numel() == 0:
@@ -138,8 +141,8 @@ class RoiPredictorMultiCls(RoiPredictor):
     """
 
     def __init__(self, pre_nms_score_thresh,
-                 pre_nms_top_n, post_nms_top_n, roi_min_size, merger=None, nms=None):
-        super().__init__(pre_nms_score_thresh, pre_nms_top_n, post_nms_top_n, roi_min_size, merger, nms)
+                 pre_nms_top_n, post_nms_top_n, roi_min_size, merger=None, nms=None, clip_box=True):
+        super().__init__(pre_nms_score_thresh, pre_nms_top_n, post_nms_top_n, roi_min_size, merger, nms, clip_box)
         self.INF = 4096
 
     def single_level_predict(self, anchors, preds, image_info):
@@ -172,7 +175,8 @@ class RoiPredictorMultiCls(RoiPredictor):
         for b_ix in range(B):
             # clip rois and filter rois which are too small
             image_rois = rois[b_ix]
-            image_rois = clip_bbox(image_rois, image_info[b_ix])
+            if self.clip_box:
+                image_rois = clip_bbox(image_rois, image_info[b_ix])
             image_rois, filter_inds = filter_by_size(image_rois, roi_min_size)
             image_cls_pred = cls_pred[b_ix][filter_inds]
             if image_rois.numel() == 0:

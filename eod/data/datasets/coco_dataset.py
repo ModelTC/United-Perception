@@ -82,7 +82,7 @@ class CocoDataset(BaseDataset):
                  use_ignore=False,
                  evaluator=None,
                  cache=None,
-                 clip_output=True):
+                 clip_box=True):
         with no_print():
             self.coco = self._loader(meta_file)
 
@@ -111,7 +111,7 @@ class CocoDataset(BaseDataset):
         self.has_semantic_seg = has_semantic_seg
         self.semantic_seg_prefix = semantic_seg_prefix
         self.unknown_erasing = unknown_erasing
-        self.clip_output = clip_output
+        self.clip_box = clip_box
 
         if self.box2mask:
             assert self.has_mask
@@ -395,7 +395,7 @@ class CocoDataset(BaseDataset):
             img_bboxes[:, [1, 3]] -= pad_w
             img_bboxes[:, [2, 4]] -= pad_h
             # clip
-            if self.clip_output:
+            if self.clip_box:
                 np.clip(img_bboxes[:, [1, 3]], 0, info[1], out=img_bboxes[:, [1, 3]])
                 np.clip(img_bboxes[:, [2, 4]], 0, info[0], out=img_bboxes[:, [2, 4]])
             img_bboxes[:, 1] /= scale_w
