@@ -52,7 +52,9 @@ class QuantRunner(BaseRunner):
 
     def forward_model(self, batch):
         output = self.model(batch)
-        if not self.training:
+        if self.model.training:
+            self.post_process.train()
+        else:
             self.post_process.eval()
         output = self.post_process(output)
         return output
