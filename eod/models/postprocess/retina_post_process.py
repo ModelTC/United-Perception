@@ -255,6 +255,7 @@ class IOUPostProcess(BasePostProcess):
             loc_loss = self.loc_loss(loc_pred, loc_target, loc_mask=loc_mask, mlvl_shapes=mlvl_shapes)
         else:
             loc_target, loc_pred, iou_pred = self._mask_tensor([loc_target, loc_pred, iou_pred], loc_mask)
+            weights_normalizer = self.get_weights_normalizer(iou_target)
             if loc_mask.sum() == 0:
                 loc_loss = loc_pred.sum()
                 iou_loss = iou_pred.sum()
@@ -265,7 +266,6 @@ class IOUPostProcess(BasePostProcess):
                     loc_loss_kwargs["anchor"] = self.get_sample_anchor(loc_mask)
                 if "weights" in loc_loss_key_fields:
                     loc_loss_kwargs["weights"] = iou_target
-                weights_normalizer = self.get_weights_normalizer(iou_target)
                 loc_loss = self.loc_loss(loc_pred, loc_target, normalizer_override=weights_normalizer, **loc_loss_kwargs)  # noqa
                 iou_loss = self.iou_branch_loss(iou_pred.view(-1), iou_target, normalizer_override=pos_normalizer)
         return {
