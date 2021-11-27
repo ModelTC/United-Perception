@@ -108,6 +108,54 @@ class RetinaSubNet(BaseNet):
         return cls_pred, loc_pred
 
 
+@MODULE_ZOO_REGISTRY.register('RetinaHeadWithIOU')
+class RetinaHeadWithIOU(RetinaSubNet):
+    """
+    Classify and regress Anchors direclty (all classes)
+    """
+
+    def __init__(self,
+                 inplanes,
+                 feat_planes,
+                 num_classes,
+                 normalize=None,
+                 initializer=None,
+                 num_conv=4,
+                 class_activation='sigmoid',
+                 init_prior=0.01,
+                 num_anchors=1,
+                 num_levels=5):
+        """
+        Implementation for ATSS https://arxiv.org/abs/1912.02424
+        """
+        super(RetinaHeadWithIOU, self).__init__(inplanes,
+                                                feat_planes,
+                                                num_classes,
+                                                normalize,
+                                                initializer,
+                                                num_conv,
+                                                class_activation,
+                                                init_prior,
+                                                num_anchors,
+                                                num_levels)
+        assert num_levels is not None, "num_levels must be provided !!!"
+        self.iou_pred = nn.Conv2d(feat_planes, self.num_anchors, kernel_size=3, stride=1, padding=1)
+        initialize_from_cfg(self, initializer)
+        init_bias_focal(self.cls_subnet_pred, self.class_activation, init_prior, self.num_classes)
+
+    def forward_net(self, x, lvl=None):
+        cls_feature = self.cls_subnet(x)
+        box_feature = self.box_subnet(x)
+        cls_pred = self.cls_subnet_pred(cls_feature)
+        loc_pred = self.box_subnet_pred(box_feature)
+        iou_pred = self.iou_pred(box_feature)
+        if FP16_FLAG.fp16:
+            cls_pred = cls_pred.float()
+            loc_pred = loc_pred.float()
+            iou_pred = iou_pred.float()
+        return cls_pred, loc_pred, iou_pred
+
+
 @MODULE_ZOO_REGISTRY.register('RetinaHeadWithBN')
 class RetinaHeadWithBN(RetinaSubNet):
     def __init__(self,
@@ -240,12 +288,14 @@ class RetinaHeadWithBNIOU(RetinaHeadWithBN):
                                                   normalize,
                                                   initializer,
                                                   num_conv,
+                                                  num_levels,
                                                   class_activation,
                                                   init_prior,
-                                                  num_anchors,
-                                                  num_levels)
+                                                  num_anchors)
         assert num_levels is not None, "num_levels must be provided !!!"
         self.iou_pred = nn.Conv2d(feat_planes, self.num_anchors, kernel_size=3, stride=1, padding=1)
+        initialize_from_cfg(self, initializer)
+        init_bias_focal(self.cls_subnet_pred, self.class_activation, init_prior, self.num_classes)
 
     def forward_net(self, x, lvl=None):
         cls_feature = self.cls_subnet[lvl](x)
@@ -253,4 +303,8 @@ class RetinaHeadWithBNIOU(RetinaHeadWithBN):
         cls_pred = self.cls_subnet_pred(cls_feature)
         loc_pred = self.box_subnet_pred(box_feature)
         iou_pred = self.iou_pred(box_feature)
+        if FP16_FLAG.fp16:
+            cls_pred = cls_pred.float()
+            loc_pred = loc_pred.float()
+            iou_pred = iou_pred.float()
         return cls_pred, loc_pred, iou_pred
