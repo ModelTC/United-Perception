@@ -7,13 +7,14 @@ import sys
 # Import from third library
 import torch.multiprocessing as mp
 
-from eod.utils.env.dist_helper import setup_distributed, dist_finalize, env
+from eod.utils.env.dist_helper import setup_distributed, finalize, env
 from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from eod.utils.env.launch import launch
 
 # Import from local
 from .subcommand import Subcommand
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGISTRY
+from eod.utils.general.global_flag import DIST_BACKEND
 
 
 __all__ = ['Train']
@@ -41,7 +42,7 @@ class Train(Subcommand):
         sub_parser.add_argument('--backend',
                                 dest='backend',
                                 type=str,
-                                default='ddp',
+                                default='dist',
                                 help='model backend')
         sub_parser.add_argument(
             '--nocudnn',
@@ -63,6 +64,10 @@ class Train(Subcommand):
                                 type=int,
                                 default=20,
                                 help='display intervel')
+        sub_parser.add_argument('--async',
+                                dest='asynchronize',
+                                action='store_true',
+                                help='whether to use asynchronize mode(linklink)')
         sub_parser.add_argument('--ng', '--num_gpus_per_machine',
                                 dest='num_gpus_per_machine',
                                 type=int,
@@ -99,8 +104,9 @@ class Train(Subcommand):
 def main(args):
     cfg = load_yaml(args.config)
     cfg['args'] = {
-        'ddp': args.backend == 'ddp',
+        'ddp': args.backend == 'dist',
         'config_path': args.config,
+        'asynchronize': args.asynchronize,
         'nocudnn': args.nocudnn,
         'display': args.display,
         'no_running_config': args.no_running_config,
@@ -122,10 +128,11 @@ def main(args):
     train_func = {"train": runner.train, "eval": runner.evaluate}
     train_func[train_phase]()
     if env.world_size > 1:
-        dist_finalize()
+        finalize()
 
 
 def _main(args):
+    DIST_BACKEND.backend = args.backend
     if args.launch == 'pytorch':
         launch(main, args.num_gpus_per_machine, args.num_machines, args=args, start_method=args.fork_method)
     else:
@@ -133,5 +140,5 @@ def _main(args):
         fork_method = mp.get_start_method(allow_none=True)
         assert fork_method == args.fork_method
         sys.stdout.flush()
-        setup_distributed(args.port, args.launch)
+        setup_distributed(args.port, args.launch, args.backend)
         main(args)

@@ -9,7 +9,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.hook_helper import build_hooks
 from eod.utils.env.gene_env import set_random_seed, to_device
-from eod.utils.env.dist_helper import barrier, all_gather, env
+from eod.utils.env.dist_helper import barrier, all_gather, env, DistModule, reduce_gradients
 from eod.data.metrics.base_evaluator import Metric
 from eod.utils.general.cfg_helper import merge_opts_into_cfg, format_cfg
 from eod.utils.env.gene_env import get_env_info
@@ -25,6 +25,7 @@ from eod.utils.general.registry_factory import (
 from eod.utils.general.global_flag import (
     ALIGNED_FLAG,
     ITER_BASE_FLAG,
+    DIST_BACKEND
 )
 
 
@@ -35,7 +36,7 @@ __all__ = ['BaseRunner']
 class BaseRunner(object):
     def __init__(self, config, work_dir='./', training=True):
         self.args = config.get('args', {})
-        self.ddp = self.args.get('ddp', True)
+        self.backend = self.args.get('backend', 'dist')
         self.work_dir = work_dir
         self._progress = None
         self._eta = None
@@ -155,14 +156,15 @@ class BaseRunner(object):
             ALIGNED_FLAG.offset = 0
         if self.iter_base:
             ITER_BASE_FLAG.flag = True
+        self.backend = DIST_BACKEND.backend
 
     def build_env(self):
+        self.build_global_flags()
         rank_init = self.config['runtime']['rank_init']
         random_seed = self.config['runtime']['random_seed']
         set_random_seed(random_seed, rank_init)
         torch.backends.cudnn.enabled = not self.args.get('nocudnn', False)
         logger.info(f'world size:{env.world_size}')
-        self.build_global_flags()
 
     def resume_model(self):
         ckpt = self.saver.load_pretrain_or_resume()
@@ -254,13 +256,11 @@ class BaseRunner(object):
 
     def prepare_dist_model(self):
         if env.distributed:
-            if self.ddp:
+            if self.backend == 'dist':
                 logger.info('using ddp')
                 self.model = DDP(self.model, device_ids=[env.local_rank], broadcast_buffers=False)
             else:
-                pass
-                # TODO
-                # self.model = DistModule(self.model, not self.args.get('asynchronize', False))
+                self.model = DistModule(self.model, not self.args.get('asynchronize', False))
 
         if self.training:
             self.start_iter = self.lr_scheduler.last_iter
@@ -561,7 +561,15 @@ class BaseRunner(object):
 
     def backward(self, loss):
         self.model.zero_grad()
-        loss.backward()
+        if self.backend == 'dist':
+            loss.backward()
+        elif self.backend == 'linklink':
+            loss = loss / env.world_size
+            loss.backward()
+            reduce_gradients(self.model, not self.args['asynchronize'],
+                             self.args.get('allow_dead_parameter', False))
+        else:
+            raise NotImplementedError
         self._hooks('after_backward', self.cur_iter, loss)
         return loss
 
