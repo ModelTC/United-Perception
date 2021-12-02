@@ -13,6 +13,7 @@ from eod.utils.env.dist_helper import barrier, all_gather, env, DistModule, redu
 from eod.data.metrics.base_evaluator import Metric
 from eod.utils.general.cfg_helper import merge_opts_into_cfg, format_cfg
 from eod.utils.env.gene_env import get_env_info
+from eod.utils.general.fp16_helper import register_float_module
 from eod.utils.general.registry_factory import (
     SAVER_REGISTRY,
     RUNNER_REGISTRY,
@@ -52,11 +53,13 @@ class BaseRunner(object):
         self.aligned = self.config['runtime']['aligned']
         self.fp16 = False
         self.build()
+
+    def prepare_fp16(self):
         if self.config['runtime'].get('fp16', False):
             if self.backend == 'dist':
                 self.scaler = torch.cuda.amp.GradScaler(enabled=True)
             else:
-                # self.model = self.model.half()
+                register_float_module(self.config['runtime']['fp16'].get('keep_batchnorm_fp32', True))
                 pass
             self.fp16 = True
             FP16_FLAG.fp16 = True
@@ -83,6 +86,7 @@ class BaseRunner(object):
         self.build_env()
         self.get_git_version()
         self.build_dataloaders()
+        self.prepare_fp16()
         self.build_model()
         self.build_trainer()
         self.build_saver()
@@ -95,8 +99,23 @@ class BaseRunner(object):
         if not self.args.get('no_running_config', False):
             logger.info('Running with config:\n{}'.format(format_cfg(self.config)))
 
+    def update_optimizer_cfg(self, cfg_optimizer):
+        if not self.fp16:
+            return cfg_optimizer
+        if self.backend == 'dist':
+            return cfg_optimizer
+        elif self.backend == 'linklink':
+            if cfg_optimizer['type'] == 'SGD':
+                cfg_optimizer['type'] = 'FusedFP16SGD'
+            if cfg_optimizer['type'] == 'AdamW':
+                cfg_optimizer['type'] = 'FusedFP16AdamW'
+            return cfg_optimizer
+        else:
+            raise NotImplementedError
+
     def build_optimizer(self, cfg_optimizer):
         register_type = cfg_optimizer.pop('register_type', 'base')
+        cfg_optimizer = self.update_optimizer_cfg(cfg_optimizer)
         optimizer_ins = OPTIMIZER_REGISTRY[register_type](cfg_optimizer, self.model)
         return optimizer_ins.build_optimizer()
 
@@ -180,7 +199,10 @@ class BaseRunner(object):
         self.model.load(ckpt['model'])
         if self.training:
             if self.fp16:
-                self.resume_fp16(ckpt)
+                if self.backend == 'dist':
+                    self.resume_fp16(ckpt)
+                else:
+                    self.optimizer.reload()
             if 'optimizer' in ckpt:
                 start_epoch = ckpt['epoch']
                 self.optimizer.load_state_dict(ckpt['optimizer'])
@@ -371,8 +393,11 @@ class BaseRunner(object):
         return metrics
 
     def batch2device(self, batch):
-        if batch['image'].device != torch.device('cuda') or batch['image'].dtype != torch.float32:
-            batch = to_device(batch, device=torch.device('cuda'), dtype=torch.float32)
+        model_dtype = torch.float32
+        if self.fp16 and self.backend == 'linklink':
+            model_dtype = self.model.dtype
+        if batch['image'].device != torch.device('cuda') or batch['image'].dtype != model_dtype:
+            batch = to_device(batch, device=torch.device('cuda'), dtype=model_dtype)
         return batch
 
     def get_batch(self, batch_type='train'):
@@ -485,6 +510,8 @@ class BaseRunner(object):
             self.model = self.model.cuda()
         if self.config['runtime']['special_bn_init']:
             self.special_bn_init()
+        if self.fp16 and self.backend == 'linklink':
+            self.model = self.model.half()
 
     def build_fake_model(self):
         '''
@@ -513,6 +540,8 @@ class BaseRunner(object):
                         m.momentum = 0.03
             if self.device == 'cuda':
                 model = model.cuda()
+            if self.fp16 and self.backend == 'linklink':
+                self.model = self.model.half()
             model.load(self.model.state_dict())
         else:
             model = self.model
@@ -539,7 +568,8 @@ class BaseRunner(object):
         return self.optimizer
 
     def resume_fp16(self, ckpt):
-        self.scaler.load_state_dict(ckpt['scaler'])
+        if 'scaler' in ckpt:
+            self.scaler.load_state_dict(ckpt['scaler'])
 
     def get_fp16_dump_dict(self):
         return {'scaler': self.scaler.state_dict()}

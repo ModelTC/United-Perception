@@ -1,5 +1,11 @@
 # Standard Library
 from collections.abc import Iterable, Mapping
+from eod.utils.model.bn_helper import (
+    FrozenBatchNorm2d,
+    CaffeFrozenBatchNorm2d,
+    PyTorchSyncBN,
+    GroupNorm
+)
 
 import numpy as np
 import torch
@@ -37,3 +43,17 @@ def to_float32(func):
         return func(*args_, **kwargs_)
 
     return fp32_wrapper
+
+
+def register_float_module(keep_fp32):
+    import spring.linklink as linklink
+    if keep_fp32:
+        linklink.fp16.register_float_module(torch.nn.BatchNorm2d, cast_args=True)
+        # linklink.fp16.register_float_module(GroupSyncBatchNorm, cast_args=True)
+        linklink.fp16.register_float_module(FrozenBatchNorm2d, cast_args=True)
+        linklink.fp16.register_float_module(PyTorchSyncBN, cast_args=True)
+        linklink.fp16.register_float_module(CaffeFrozenBatchNorm2d, cast_args=True)
+        linklink.fp16.register_float_module(GroupNorm, cast_args=True)
+        # linklink.fp16.register_float_module(TaskBatchNorm2d, cast_args=True)
+        # linklink.fp16.register_float_module(SyncTaskBatchNorm2d, cast_args=True)
+        linklink.fp16.init()
