@@ -25,7 +25,8 @@ from eod.utils.general.registry_factory import (
 from eod.utils.general.global_flag import (
     ALIGNED_FLAG,
     ITER_BASE_FLAG,
-    DIST_BACKEND
+    DIST_BACKEND,
+    FP16_FLAG
 )
 
 
@@ -51,6 +52,14 @@ class BaseRunner(object):
         self.aligned = self.config['runtime']['aligned']
         self.fp16 = False
         self.build()
+        if self.config['runtime'].get('fp16', False):
+            if self.backend == 'dist':
+                self.scaler = torch.cuda.amp.GradScaler(enabled=True)
+            else:
+                # self.model = self.model.half()
+                pass
+            self.fp16 = True
+            FP16_FLAG.fp16 = True
 
     def save_running_cfg(self):
         self.saver.save_model_arch(self.model)
@@ -529,6 +538,12 @@ class BaseRunner(object):
     def get_optimizer(self):
         return self.optimizer
 
+    def resume_fp16(self, ckpt):
+        self.scaler.load_state_dict(ckpt['scaler'])
+
+    def get_fp16_dump_dict(self):
+        return {'scaler': self.scaler.state_dict()}
+
     def get_dump_dict(self):
         model_dict = self.model.state_dict()
         dump_dict = {
@@ -550,7 +565,11 @@ class BaseRunner(object):
         return self.model(batch)
 
     def forward(self, batch, return_output=False):
-        output = self.forward_model(batch)
+        if self.backend == 'dist' and self.fp16:
+            with torch.cuda.amp.autocast(enabled=True):
+                output = self.forward_model(batch)
+        else:
+            output = self.forward_model(batch)
         self._temporaries['last_output'] = output
         losses = [val for name, val in output.items() if name.find('loss') >= 0]
         loss = sum(losses)
@@ -562,7 +581,10 @@ class BaseRunner(object):
     def backward(self, loss):
         self.model.zero_grad()
         if self.backend == 'dist':
-            loss.backward()
+            if self.fp16:
+                self.scaler.scale(loss).backward()
+            else:
+                loss.backward()
         elif self.backend == 'linklink':
             loss = loss / env.world_size
             loss.backward()
@@ -574,7 +596,11 @@ class BaseRunner(object):
         return loss
 
     def update(self):
-        self.optimizer.step()
+        if self.backend == 'dist' and self.fp16:
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+        else:
+            self.optimizer.step()
         self._hooks('after_update', self.cur_iter)
 
     def get_total_iter(self):
