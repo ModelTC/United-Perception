@@ -16,7 +16,7 @@ from .runner import *
 from .data import *
 from .models import * 
 from .utils import *
-from .plugins import *
+from .tasks import *
 from .apis import *
 
 matplotlib.use('Agg')  # Use a non-interactive backend

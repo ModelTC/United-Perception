@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
-from eod.models.utils.initializer import initialize_from_cfg
-from eod.models.utils.normalize import build_norm_layer
+from eod.utils.model.initializer import initialize_from_cfg
+from eod.utils.model.normalize import build_norm_layer
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'resnet_custom']
 

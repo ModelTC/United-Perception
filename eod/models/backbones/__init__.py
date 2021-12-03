@@ -4,8 +4,6 @@ from .resnet import (resnet101,  # noqa
                      resnet34,
                      resnet50,
                      resnet_custom)
-
-
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 imported_vars = list(globals().items())

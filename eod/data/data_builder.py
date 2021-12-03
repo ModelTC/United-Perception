@@ -66,7 +66,6 @@ class BaseDataLoaderBuilder(object):
                 }
             }
         batch_sampler = BATCH_SAMPLER_REGISTRY.build(cfg_batch_sampler)
-
         batch_sampler = InfiniteBatchSampler(batch_sampler)
 
         return batch_sampler

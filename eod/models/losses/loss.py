@@ -34,7 +34,6 @@ class BaseLoss(_Loss):
         self.loss_weight = loss_weight
         self.name = name
 
-    # @to_float32
     def __call__(self, input, target, reduction_override=None, normalizer_override=None, **kwargs):
         r"""
         Arguments:
