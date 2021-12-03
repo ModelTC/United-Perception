@@ -531,7 +531,6 @@ class BaseRunner(object):
             model_helper_type = self.config['runtime']['model_helper']['type']
             model_helper_kwargs = self.config['runtime']['model_helper']['kwargs']
             model_helper_ins = MODEL_HELPER_REGISTRY[model_helper_type]
-
             model = model_helper_ins(net_cfg, **model_helper_kwargs)
             if self.config['runtime']['special_bn_init']:
                 for m in model.modules():
@@ -541,7 +540,12 @@ class BaseRunner(object):
             if self.device == 'cuda':
                 model = model.cuda()
             if self.fp16 and self.backend == 'linklink':
-                self.model = self.model.half()
+                model = model.half()
+            if self.config['runtime']['special_bn_init']:
+                for m in model.modules():
+                    if isinstance(m, torch.nn.BatchNorm2d) or isinstance(m, torch.nn.SyncBatchNorm):
+                        m.eps = 1e-3
+                        m.momentum = 0.03
             model.load(self.model.state_dict())
         else:
             model = self.model
