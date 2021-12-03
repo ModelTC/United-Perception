@@ -49,7 +49,7 @@ class OTASupervisor(object):
 
         gt_bboxes = input['gt_bboxes']
         strides = input['strides']
-
+        image_info = input['image_info']
         # center points
         num_points_per_level = [len(p) for p in locations]
         points = torch.cat(locations, dim=0)  # [A, 2]
@@ -66,7 +66,7 @@ class OTASupervisor(object):
             if gts.shape[0] > 0:
                 try:
                     num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides = \
-                        self.matcher.match(gts, preds, points, num_points_per_level, strides)
+                        self.matcher.match(gts, preds, points, num_points_per_level, strides, image_info[b_ix][:2])
                 except RuntimeError:
                     logger.info(
                         "OOM RuntimeError is raised due to the huge memory cost during label assignment. \
@@ -109,16 +109,15 @@ class OTASupervisor(object):
 
 @MATCHER_REGISTRY.register('ota')
 class OTAMatcher(object):
-    def __init__(self, num_classes, center_sample=True, pos_radius=1, candidate_k=10, radius=2.5, img_size=[]):
+    def __init__(self, num_classes, center_sample=True, pos_radius=1, candidate_k=10, radius=2.5):
         self.pos_radius = pos_radius
         self.center_sample = center_sample
         self.num_classes = num_classes - 1  # 80
         self.candidate_k = candidate_k
         self.radius = radius
-        self.img_size = img_size
 
     @torch.no_grad()
-    def match(self, gts, preds, points, num_points_per_level, strides, mode='cuda'):
+    def match(self, gts, preds, points, num_points_per_level, strides, mode='cuda', img_size=[]):
         ''' points: [A, 2] || gts: [G, 5] || preds: [A, 85]
         num_points_per_level:  [15808, 3952, 988, 247, 70]
         strides: [8, 16, 32, 64, 128]'''
@@ -133,7 +132,7 @@ class OTAMatcher(object):
 
         if self.center_sample:
             fg_mask, is_in_boxes_and_center, expanded_strides = self.get_sample_region(
-                gt_bboxes, strides, points, num_points_per_level)
+                gt_bboxes, strides, points, num_points_per_level, img_size)
         else:
             assert "Not implement"
 
@@ -196,7 +195,7 @@ class OTAMatcher(object):
 
         return num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides
 
-    def get_sample_region(self, gt_bboxes, strides, points, num_points_per_level):
+    def get_sample_region(self, gt_bboxes, strides, points, num_points_per_level, img_size):
         G = gt_bboxes.shape[0]  # num_gts
         A = points.shape[0]     # num_anchors
         expanded_strides = torch.zeros(1, points.shape[0]).to(dtype=points.dtype, device=points.device)
@@ -229,9 +228,8 @@ class OTAMatcher(object):
         gt_bboxes_cx = (gt_bboxes[:, 0] + gt_bboxes[:, 2]) / 2
         gt_bboxes_cy = (gt_bboxes[:, 1] + gt_bboxes[:, 3]) / 2
 
-        if len(self.img_size) > 0:
-            gt_bboxes_cx = torch.clamp(gt_bboxes_cx, min=0, max=self.img_size[1])
-            gt_bboxes_cy = torch.clamp(gt_bboxes_cy, min=0, max=self.img_size[0])
+        gt_bboxes_cx = torch.clamp(gt_bboxes_cx, min=0, max=img_size[1])
+        gt_bboxes_cy = torch.clamp(gt_bboxes_cy, min=0, max=img_size[0])
 
         gt_bboxes_l = gt_bboxes_cx.unsqueeze(1).repeat(1, A) - center_radius * expanded_strides
         gt_bboxes_r = gt_bboxes_cx.unsqueeze(1).repeat(1, A) + center_radius * expanded_strides
