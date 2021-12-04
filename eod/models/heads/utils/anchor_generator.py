@@ -130,7 +130,7 @@ class BoxAnchorGenerator(AnchorGenerator):
         else:
             ratios = np.array(ratios)
             scales = np.array(scales)
-            anchor = np.array([1, 1, stride, stride], dtype=np.float) - 1
+            anchor = np.array([1, 1, stride.item(), stride.item()], dtype=np.float) - 1
             anchors = self._ratio_enum(anchor, ratios)
             anchors = np.vstack([self._scale_enum(anchors[i, :], scales) for i in range(anchors.shape[0])])
         return anchors
