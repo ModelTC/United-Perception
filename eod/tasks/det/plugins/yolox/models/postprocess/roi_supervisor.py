@@ -228,8 +228,9 @@ class OTAMatcher(object):
         gt_bboxes_cx = (gt_bboxes[:, 0] + gt_bboxes[:, 2]) / 2
         gt_bboxes_cy = (gt_bboxes[:, 1] + gt_bboxes[:, 3]) / 2
 
-        gt_bboxes_cx = torch.clamp(gt_bboxes_cx, min=0, max=img_size[1])
-        gt_bboxes_cy = torch.clamp(gt_bboxes_cy, min=0, max=img_size[0])
+        if len(img_size) > 0:
+            gt_bboxes_cx = torch.clamp(gt_bboxes_cx, min=0, max=img_size[1])
+            gt_bboxes_cy = torch.clamp(gt_bboxes_cy, min=0, max=img_size[0])
 
         gt_bboxes_l = gt_bboxes_cx.unsqueeze(1).repeat(1, A) - center_radius * expanded_strides
         gt_bboxes_r = gt_bboxes_cx.unsqueeze(1).repeat(1, A) + center_radius * expanded_strides
