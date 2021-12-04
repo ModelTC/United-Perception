@@ -57,10 +57,9 @@ test_resize: &test_resize
 dataset:
   train:
     dataset:
-      type: custom
+      type: coco
       kwargs:
-        num_classes: *num_classes
-        meta_file: /mnt/lustre/share/yaoyongqiang/data/coco_caches/instances_train20172custom.json
+        meta_file: coco/annotations/instances_train2017.json
         image_reader:
           type: fs_opencv
           kwargs:
@@ -88,9 +87,6 @@ dataset:
             image_dir: coco/val2017
             color_mode: BGR
         transformer: [*test_resize, *to_tensor]
-        cache:
-            cache_dir: /mnt/lustre/share/shenmingzhu/coco_cache
-            cache_name: coco2017_val.pkl
         evaluator:
           type: COCO
           kwargs:
@@ -118,11 +114,12 @@ trainer: # Required.
   only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.01,momentum=0.937,weight_decay=0.0005)
     register_type: yolov5
-    type: AdamW
+    type: SGD
     kwargs:
-      lr: 1.25e-5
-      betas: [0.9, 0.999]
-      weight_decay: 0.05      # weight_decay = 0.0005 * batch_szie / 64
+      lr: 0.0003125
+      momentum: 0.9
+      nesterov: True
+      weight_decay: 0.0005      # weight_decay = 0.0005 * batch_szie / 64
   lr_scheduler:
     lr_register_type: yolox_base
     warmup_epochs: 5       # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
@@ -134,9 +131,9 @@ trainer: # Required.
       no_aug_epoch: &no_aug_epoch 15
 
 saver:
-  save_dir: checkpoints/yolox_n_ret_a2_comloc_ada
-  results_dir: results_dir/yolox_n_ret_a2_comloc_ada
-  auto_resume: False
+  save_dir: checkpoints/yolox_n_ret_a1_comloc
+  results_dir: results_dir/yolox_n_ret_a1_comloc
+  auto_resume: True
 
 hooks:
   - type: yolox_noaug
@@ -174,7 +171,7 @@ net:
     kwargs:
       num_classes: *num_classes  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       width: 0.25
-      num_point: &dense_points 2
+      num_point: &dense_points 1
       act_fn: {'type': 'Silu'}
   - name: post_process
     prev: roi_head
@@ -208,21 +205,21 @@ net:
           type: hand_craft
           kwargs:
             anchor_ratios: [1]  # anchor strides are provided as feature strides by feature extractor
-            anchor_scales: [3, 4] # scale of anchors relative to feature map
+            anchor_scales: [3] # scale of anchors relative to feature map
         roi_supervisor:
           type: atss
           kwargs:
             top_n: 9
             use_iou: True
         roi_predictor:
-          type: base_multicls
+          type: base
           kwargs:
             pre_nms_score_thresh: 0.05  # to reduce computation
             pre_nms_top_n: 1000
             post_nms_top_n: 1000
             roi_min_size: 0               # minimum scale of a valid roi
             merger:
-              type: retina_multicls
+              type: retina
               kwargs:
                 top_n: 100
                 nms:

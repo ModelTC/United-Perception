@@ -1,8 +1,7 @@
 num_classes: &num_classes 81
 
 runtime:
-  runner:
-    type: fp16
+  fp16: True
 
 flip: &flip
  type: flip

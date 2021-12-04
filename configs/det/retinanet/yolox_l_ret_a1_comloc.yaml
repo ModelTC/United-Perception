@@ -3,8 +3,7 @@ runtime:
     aligned: True
     async_norm: True
     special_bn_init: True
-    runner:
-       type: fp16
+    fp16: True
 
 mixup: &mixup
   type: yolox_mixup_cv2
