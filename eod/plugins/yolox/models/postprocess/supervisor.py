@@ -49,7 +49,6 @@ class OTASupervisor(object):
 
         gt_bboxes = input['gt_bboxes']
         strides = input['strides']
-        image_info = input['image_info']
         # center points
         num_points_per_level = [len(p) for p in locations]
         points = torch.cat(locations, dim=0)  # [A, 2]
@@ -65,8 +64,9 @@ class OTASupervisor(object):
             preds = mlvl_preds[b_ix]  # [A, 85]
             if gts.shape[0] > 0:
                 try:
+                    img_size = input['image_info'][b_ix][:2]
                     num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides = \
-                        self.matcher.match(gts, preds, points, num_points_per_level, strides, image_info[b_ix][:2])
+                        self.matcher.match(gts, preds, points, num_points_per_level, strides, img_size=img_size)
                 except RuntimeError:
                     logger.info(
                         "OOM RuntimeError is raised due to the huge memory cost during label assignment. \
