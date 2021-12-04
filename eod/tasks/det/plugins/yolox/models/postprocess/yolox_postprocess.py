@@ -9,8 +9,8 @@ from eod.models.losses import build_loss
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 from eod.utils.env.dist_helper import allreduce, env
-from eod.tasks.det.models.postprocess.supervisor import build_roi_supervisor
-from eod.tasks.det.models.postprocess.predictor import build_roi_predictor
+from eod.tasks.det.models.postprocess.roi_supervisor import build_roi_supervisor
+from eod.tasks.det.models.postprocess.roi_predictor import build_roi_predictor
 
 
 __all__ = ['YoloxPostProcess']

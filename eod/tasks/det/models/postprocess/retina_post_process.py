@@ -9,8 +9,8 @@ from eod.models.losses import build_loss
 from eod.tasks.det.models.losses.entropy_loss import apply_class_activation
 from eod.tasks.det.models.utils.bbox_helper import offset2bbox, bbox_iou_overlaps
 from eod.utils.env.dist_helper import allreduce, env
-from .supervisor import build_roi_supervisor
-from .predictor import build_roi_predictor
+from .roi_supervisor import build_roi_supervisor
+from .roi_predictor import build_roi_predictor
 
 
 __all__ = ['BasePostProcess', 'IOUPostProcess']

@@ -5,8 +5,8 @@ from eod.tasks.det.models.utils.anchor_generator import build_anchor_generator
 from eod.models.losses import build_loss
 from eod.utils.env.dist_helper import get_world_size
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
-from eod.tasks.det.models.postprocess.supervisor import build_roi_supervisor
-from eod.tasks.det.models.postprocess.predictor import build_roi_predictor
+from eod.tasks.det.models.postprocess.roi_supervisor import build_roi_supervisor
+from eod.tasks.det.models.postprocess.roi_predictor import build_roi_predictor
 from eod.tasks.det.models.utils.bbox_helper import xywh2xyxy
 
 
