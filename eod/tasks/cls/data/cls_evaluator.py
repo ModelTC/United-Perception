@@ -43,10 +43,10 @@ class ImageNetEvaluator(Evaluator):
         maxk = max(self.topk)
         _, pred = pred.topk(maxk, 1, True, True)
         pred = pred.t()
-        correct = pred.eq(label.view(1, -1).expand_as(pred))
+        correct = pred.eq(label.reshape(1, -1).expand_as(pred))
         res = {}
         for k in self.topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             acc = correct_k.mul_(100.0 / num)
             res.update({f'top{k}': acc.item()})
         metric = Metric(res)
