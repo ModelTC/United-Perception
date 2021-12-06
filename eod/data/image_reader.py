@@ -93,5 +93,53 @@ class FileSystemPILReader(ImageReader):
         return img
 
 
+@IMAGE_READER_REGISTRY.register('ceph_opencv')
+class CephSystemCVReader(ImageReader):
+    def __init__(self, image_dir, color_mode, memcached=True, conf_path='~/.s3cfg'):
+        super(CephSystemCVReader, self).__init__(image_dir, color_mode)
+        self.image_dir = image_dir
+        self.color_mode = color_mode
+        assert color_mode in ['RGB', 'BGR', 'GRAY'], '{} not supported'.format(color_mode)
+        if color_mode != 'BGR':
+            self.cvt_color = getattr(cv2, 'COLOR_BGR2{}'.format(color_mode))
+        else:
+            self.cvt_color = None
+        self.conf_path = os.path.expanduser(conf_path)
+        self.memcached = memcached
+        self.initialized = False
+
+    def image_directory(self):
+        return self.image_dir
+
+    def image_color(self):
+        return self.color_mode
+
+    @staticmethod
+    def ceph_join(root, filename):
+        if 's3://' in filename:
+            return filename
+        else:
+            return os.path.join(root, filename)
+
+    def __call__(self, filename, image_dir_idx=0):
+        image_dir = get_cur_image_dir(self.image_dir, image_dir_idx)
+        filename = self.ceph_join(image_dir, filename)
+        if not self.initialized:
+            self._init_memcached()
+        value = self.mclient.Get(filename)
+        img_array = np.fromstring(value, np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        if self.color_mode != 'BGR':
+            img = cv2.cvtColor(img, self.cvt_color)
+        return img
+
+    def _init_memcached(self):
+        if not self.initialized:
+            from petrel_client.client import Client
+            # from petrel_client.mc_client import py_memcache as mc
+            self.mclient = Client(enable_mc=self.memcached, conf_path=self.conf_path)
+            self.initialized = True
+
+
 def build_image_reader(cfg_reader):
     return IMAGE_READER_REGISTRY.build(cfg_reader)

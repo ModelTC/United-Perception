@@ -32,7 +32,7 @@ class RandomResizedCrop(TorchAugmentation):
         self.op = transforms.RandomResizedCrop(size, **kwargs)
 
 
-@AUGMENTATION_REGISTRY.register('torch_horizontal_flip')
+@AUGMENTATION_REGISTRY.register('torch_random_horizontal_flip')
 class RandomHorizontalFlip(TorchAugmentation):
     def __init__(self, p=0.5):
         self.p = p
