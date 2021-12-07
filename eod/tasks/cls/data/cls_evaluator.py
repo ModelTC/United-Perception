@@ -27,7 +27,10 @@ class ImageNetEvaluator(Evaluator):
             with open(res_file) as f:
                 lines = f.readlines()
         for line in lines:
-            info = json.loads(line)
+            if res is None:
+                info = json.loads(line)
+            else:
+                info = line
             for key in info.keys():
                 if key not in res_dict.keys():
                     res_dict[key] = [info[key]]
