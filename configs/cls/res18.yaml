@@ -88,8 +88,6 @@ dataset: # Required.
         num_workers: 4
         pin_memory: False
 
-
-iter_base: True
 trainer: # Required.
   max_epoch: 100
   test_freq: 5
