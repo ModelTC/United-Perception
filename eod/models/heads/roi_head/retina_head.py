@@ -167,6 +167,55 @@ class RetinaHeadWithBN(RetinaSubNet):
         return cls_pred, loc_pred
 
 
+@MODULE_ZOO_REGISTRY.register('RetinaHeadWithBNSep')
+class RetinaHeadWithBNSep(RetinaSubNet):
+    def __init__(self,
+                 inplanes,
+                 feat_planes,
+                 num_classes,
+                 normalize={'type': 'solo_bn'},
+                 initializer=None,
+                 num_conv=4,
+                 num_levels=5,
+                 class_activation='sigmoid',
+                 init_prior=0.01,
+                 num_anchors=9):
+        self.num_levels = num_levels
+        super(RetinaHeadWithBNSep, self).__init__(inplanes,
+                                                  feat_planes,
+                                                  num_classes,
+                                                  normalize,
+                                                  initializer,
+                                                  num_conv,
+                                                  class_activation,
+                                                  init_prior,
+                                                  num_anchors,
+                                                  num_levels)
+
+        assert num_levels is not None, "num_levels must be provided !!!"
+
+    def build(self, num_conv, input_planes, feat_planes, normalize):
+        mlvl_heads = nn.ModuleList()
+        for lvl in range(self.num_levels):
+            layers = []
+            inplanes = input_planes
+            for conv_idx in range(num_conv):
+                layers.append(nn.Sequential(
+                    nn.Conv2d(inplanes, feat_planes, kernel_size=3, stride=1, padding=1, bias=False),
+                    build_norm_layer(feat_planes, normalize)[1],
+                    nn.ReLU(inplace=True)))
+                inplanes = feat_planes
+            mlvl_heads.append(nn.Sequential(*layers))
+        return mlvl_heads
+
+    def forward_net(self, x, lvl=None):
+        cls_feature = self.cls_subnet[lvl](x)
+        box_feature = self.box_subnet[lvl](x)
+        cls_pred = self.cls_subnet_pred(cls_feature)
+        loc_pred = self.box_subnet_pred(box_feature)
+        return cls_pred, loc_pred
+
+
 @MODULE_ZOO_REGISTRY.register('RetinaHeadWithBNIOU')
 class RetinaHeadWithBNIOU(RetinaHeadWithBN):
     """
