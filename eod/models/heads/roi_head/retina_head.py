@@ -6,7 +6,7 @@ from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from eod.utils.general.global_flag import FP16_FLAG
 
 
-__all__ = ['BaseNet', 'RetinaSubNet', 'RetinaHeadWithBN', 'RetinaHeadWithBNIOU']
+__all__ = ['BaseNet', 'RetinaSubNet', 'RetinaHeadWithBN', 'RetinaHeadWithBNIOU', 'RetinaHeadWithBNSep']
 
 
 class BaseNet(nn.Module):
