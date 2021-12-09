@@ -84,6 +84,7 @@ class SegDataset(BaseDataset):
         input = self.get_input(idx)
         if self.transformer is not None:
             input = self.transformer(input)
+        input.image_info = input['image'].size()
         return input
 
     def dump(self, output):

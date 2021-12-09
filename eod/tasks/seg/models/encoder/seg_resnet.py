@@ -228,7 +228,7 @@ class ResNet(nn.Module):
 
     def forward(self, input):
         img = input["image"]
-        size = img.size()
+        size = img.size()[2:]
         x = self.relu(self.bn1(self.conv1(img)))
         x = self.maxpool(x)
 

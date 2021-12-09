@@ -197,6 +197,8 @@ class CustomImageToTensor(Augmentation):
         else:
             image = image[None]
         data['image'] = torch.from_numpy(image).float()
+        if 'gt_seg' in data:
+            data['gt_seg'] = torch.from_numpy(data['gt_seg'].copy())
         return data
 
 

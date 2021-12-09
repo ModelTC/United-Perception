@@ -65,3 +65,9 @@ class SegEvaluator(Evaluator):
         metric = Metric(res)
         metric.set_cmp_key('mIoU')
         return metric
+
+    @staticmethod
+    def add_subparser(name, subparsers):
+        subparser = subparsers.add_parser(name, help='subcommand for Seg evaluation')
+        subparser.add_argument('--res_file', required=True, help='results file of detection')
+        return subparser
