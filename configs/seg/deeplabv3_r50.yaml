@@ -93,14 +93,14 @@ dataset: # Required.
         pin_memory: False
 
 trainer: # Required.
-  max_epoch: 120
+  max_epoch: &max_epoch 120
   test_freq: 5
   save_freq: 5
   only_save_latest: True
   optimizer:
     type: SGD
     kwargs:
-      lr: 0.01
+      lr: 0.00125
       momentum: 0.9
       weight_decay: 0.0005
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
@@ -110,6 +110,7 @@ trainer: # Required.
     type: polylr
     kwargs:
       power: 0.9
+      max_epoch: *max_epoch
 
 saver: # Required.
   save_dir: checkpoints/seg    # dir to save checkpoints
