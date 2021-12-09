@@ -50,7 +50,7 @@ class SegEvaluator(Evaluator):
         inter_sum = 0.0
         union_sum = 0.0
         target_sum = 0.0
-        for idx in range(preds.shape[0]):
+        for idx in range(len(preds)):
             inter, union, target = intersectionAndUnion(preds[idx], targets[idx], self.num_classes, self.ignore_label)
             inter_sum += inter
             union_sum += union

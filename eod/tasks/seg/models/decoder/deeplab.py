@@ -116,6 +116,7 @@ class dec_deeplabv3(nn.Module):
             loss = self.loss(pred, gt_seg)
             return {f"{self.prefix}.loss": loss, "blob_pred": pred[0]}
         else:
+            pred = pred.max(1)[1]
             return {"blob_pred": pred}
 
 
@@ -165,4 +166,5 @@ class dec_deeplabv3p(nn.Module):
             loss = self.loss(pred, gt_seg)
             return {f"{self.prefix}.loss": loss, "blob_pred": pred[0]}
         else:
+            pred = pred.max(1)[1]
             return {"blob_pred": pred}
