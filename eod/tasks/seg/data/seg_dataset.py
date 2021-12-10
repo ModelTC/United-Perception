@@ -88,7 +88,8 @@ class SegDataset(BaseDataset):
         return input
 
     def dump(self, output):
-        pred = self.tensor2numpy(output['blob_pred'])
+        pred = output['blob_pred'].max(1)[1]
+        pred = self.tensor2numpy(pred)
         seg_label = self.tensor2numpy(output['gt_seg'])
         out_res = []
         for _idx in range(pred.shape[0]):
