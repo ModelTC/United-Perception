@@ -5,6 +5,11 @@ seg_rand_resize: &seg_rand_resize
   kwargs:
      scale: [0.5, 2.0]
 
+seg_resize: &seg_resize
+  type: seg_resize
+  kwargs:
+     size: [2048, 1024]
+
 seg_crop_train: &seg_crop_train
   type: seg_crop
   kwargs:
