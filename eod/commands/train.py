@@ -15,6 +15,7 @@ from eod.utils.env.launch import launch
 from .subcommand import Subcommand
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGISTRY
 from eod.utils.general.global_flag import DIST_BACKEND
+from eod.utils.general.log_helper import default_logger as logger
 
 
 __all__ = ['Train']
@@ -134,6 +135,7 @@ def main(args):
 def _main(args):
     DIST_BACKEND.backend = args.backend
     if args.launch == 'pytorch':
+        logger.init_log()
         launch(main, args.num_gpus_per_machine, args.num_machines, args=args, start_method=args.fork_method)
     else:
         mp.set_start_method(args.fork_method, force=True)
@@ -141,4 +143,5 @@ def _main(args):
         assert fork_method == args.fork_method
         sys.stdout.flush()
         setup_distributed(args.port, args.launch, args.backend)
+        logger.init_log()
         main(args)
