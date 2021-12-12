@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from ..env.dist_helper import env
+from eod.utils.general.log_helper import default_logger as logger
 
 
 class FrozenBatchNorm2d(torch.nn.BatchNorm2d):
@@ -46,19 +47,21 @@ class GroupNorm(torch.nn.GroupNorm):
 
 
 class PyTorchSyncBN(torch.nn.SyncBatchNorm):
-    def __init__(self, num_features, bn_group_size, **kwargs):
+    def __init__(self, num_features, group_size, **kwargs):
         super(PyTorchSyncBN, self).__init__(
             num_features,
-            process_group=self._get_group(bn_group_size),
+            process_group=self._get_group(group_size),
             **kwargs
         )
 
     @staticmethod
-    def _get_group(bn_group_size):
+    def _get_group(group_size):
         rank = env.rank
         world_size = env.world_size
-        assert world_size % bn_group_size == 0
-        num_groups = world_size // bn_group_size
+        if group_size is None or group_size > world_size:
+            logger.warning("roup_size of '{}' invalid, reset to {}".format(group_size, world_size))
+            group_size = world_size
+        num_groups = world_size // group_size
         groups = []
         rank_list = np.split(np.arange(world_size), num_groups)
         rank_list = [list(map(int, x)) for x in rank_list]
