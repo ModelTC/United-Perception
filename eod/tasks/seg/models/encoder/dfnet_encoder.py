@@ -15,10 +15,12 @@ model_urls = {
     'dfv2': '/mnt/lustre/share/HiLight/model_zoo/df2_imagenet.pth',
 }
 
+
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=dilation, groups=groups, bias=False, dilation=dilation)
+
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -51,6 +53,7 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
 
         return out
+
 
 @MODULE_ZOO_REGISTRY.register('dfnetv1')
 class dfnetv1(nn.Module):
@@ -110,6 +113,7 @@ class dfnetv1(nn.Module):
 
     def get_outplanes(self):
         return self.out_planes
+
 
 @MODULE_ZOO_REGISTRY.register('dfnetv2')
 class dfnetv2(nn.Module):
