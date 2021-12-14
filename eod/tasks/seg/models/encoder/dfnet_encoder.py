@@ -89,10 +89,10 @@ class dfnetv1(nn.Module):
             )
 
         layers = []
-        layers.append(BasicBlock(self.inplanes, planes, stride, downsample))
+        layers.append(BasicBlock(self.inplanes, planes, stride, downsample, normalize=self._normalize))
         self.inplanes = planes * BasicBlock.expansion
         for i in range(1, blocks):
-            layers.append(BasicBlock(self.inplanes, planes))
+            layers.append(BasicBlock(self.inplanes, planes, normalize=self._normalize))
 
         return nn.Sequential(*layers)
 
@@ -139,7 +139,7 @@ class dfnetv2(nn.Module):
         self.stage4_2 = self._make_layer(512, 2, stride=1)
         self.avgpool = nn.AvgPool2d(7, stride=1)
 
-    def _make_layer(self, planes, blocks, stride=1, norm_layer=nn.BatchNorm2d):
+    def _make_layer(self, planes, blocks, stride=1):
         downsample = None
         if stride != 1 or self.inplanes != planes * BasicBlock.expansion:
             downsample = nn.Sequential(
@@ -149,10 +149,10 @@ class dfnetv2(nn.Module):
             )
 
         layers = []
-        layers.append(BasicBlock(self.inplanes, planes, stride, downsample))
+        layers.append(BasicBlock(self.inplanes, planes, stride, downsample, normalize=self._normalize))
         self.inplanes = planes * BasicBlock.expansion
         for i in range(1, blocks):
-            layers.append(BasicBlock(self.inplanes, planes))
+            layers.append(BasicBlock(self.inplanes, planes, normalize=self._normalize))
 
         return nn.Sequential(*layers)
 
