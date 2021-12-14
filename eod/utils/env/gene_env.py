@@ -88,7 +88,7 @@ def patterns_match(patterns, string):
 
 
 def _bold(s):
-    return "\033[1m%s\033[0m" % s
+    return "\033[33;1m%s\033[0m" % s
 
 
 def _describe(model, lines=None, spaces=0):
@@ -96,14 +96,14 @@ def _describe(model, lines=None, spaces=0):
     for name, p in model.named_parameters():
         if '.' in name:
             continue
-        if p.requires_grad:
+        if not p.requires_grad:
             name = _bold(name)
         line = "{head}- {name}".format(head=head, name=name)
         lines.append(line)
 
     for name, m in model.named_children():
         space_num = len(name) + spaces + 1
-        if m.training:
+        if not m.training:
             name = _bold(name)
         line = "{head}.{name} ({type}({extra_repr}))".format(
             head=head,
