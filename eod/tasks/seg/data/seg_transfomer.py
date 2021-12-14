@@ -14,7 +14,7 @@ class SegResize(Augmentation):
     def __init__(self, size, **kwargs):
         super(Augmentation, self).__init__()
         assert (isinstance(size, collections.Iterable) and len(size) == 2)
-        self.size = size
+        self.size = tuple(size)
 
     def augment(self, data):
         data['image'] = cv2.resize(data['image'], dsize=self.size, interpolation=cv2.INTER_LINEAR)
