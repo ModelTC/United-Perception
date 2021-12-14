@@ -12,7 +12,7 @@ from eod.utils.env.gene_env import set_random_seed, to_device
 from eod.utils.env.dist_helper import barrier, all_gather, env, DistModule, reduce_gradients
 from eod.data.metrics.base_evaluator import Metric
 from eod.utils.general.cfg_helper import merge_opts_into_cfg, format_cfg
-from eod.utils.env.gene_env import get_env_info
+from eod.utils.env.gene_env import get_env_info, print_network
 from eod.utils.general.fp16_helper import register_float_module
 from eod.utils.general.registry_factory import (
     SAVER_REGISTRY,
@@ -515,6 +515,7 @@ class BaseRunner(object):
             self.special_bn_init()
         if self.fp16 and self.backend == 'linklink':
             self.model = self.model.half()
+        logger.info(print_network(self.model))
 
     def build_fake_model(self):
         '''
