@@ -57,7 +57,7 @@ dataset: # Required.
           sampler:
             type: dist
             kwargs: {}
-          batch_size: 4
+          batch_size: 2
     dataloader:
         type: seg_base
         kwargs:
@@ -98,14 +98,14 @@ dataset: # Required.
         pin_memory: False
 
 trainer: # Required.
-  max_epoch: &max_epoch 120
+  max_epoch: &max_epoch 180
   test_freq: 5
   save_freq: 5
   only_save_latest: True
   optimizer:
     type: SGD
     kwargs:
-      lr: 0.00125
+      lr: 0.000625
       momentum: 0.9
       weight_decay: 0.0005
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
@@ -118,8 +118,8 @@ trainer: # Required.
       max_epoch: *max_epoch
 
 saver: # Required.
-  save_dir: checkpoints/seg    # dir to save checkpoints
-  results_dir: results_dir/seg  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: checkpoints/df1_seg    # dir to save checkpoints
+  results_dir: results_dir/df1_seg  # dir to save detection results. i.e., bboxes, masks, keypoints
   pretrain_model: /mnt/lustre/share/HiLight/model_zoo/df1_imagenet.pth
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
@@ -131,9 +131,6 @@ net: &subnet
   - name: encoder              # backbone = resnet50(frozen_layers, out_layers, out_strides)
     type: dfnetv1
     kwargs:
-#      multi_grid: True
-#      zero_init_residual: True
-#      replace_stride_with_dilation: [False, True, True]
       normalize:
         type: pt_sync_bn
         kwargs:
@@ -144,7 +141,6 @@ net: &subnet
     kwargs:
         num_classes: *num_classes
         inner_planes: 128
-#        dilations: [12, 24, 36]
         normalize:
           type: pt_sync_bn
           kwargs:
