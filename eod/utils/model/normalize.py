@@ -1,12 +1,14 @@
 # Import from third library
 import torch
 import torch.nn as nn
+from eod.utils.general.global_flag import DIST_BACKEND
 
 from eod.utils.model.bn_helper import (
     CaffeFrozenBatchNorm2d,
     FrozenBatchNorm2d,
     GroupNorm,
     PyTorchSyncBN,
+    GroupSyncBatchNorm
 )
 
 _norm_cfg = {
@@ -15,6 +17,7 @@ _norm_cfg = {
     'caffe_freeze_bn': ('bn', CaffeFrozenBatchNorm2d),
     'gn': ('gn', GroupNorm),
     'pt_sync_bn': ('bn', PyTorchSyncBN),
+    'link_sync_bn': ('bn', GroupSyncBatchNorm)
 }
 
 
@@ -27,6 +30,13 @@ def build_norm_layer(num_features, cfg, postfix=''):
     if layer_type not in _norm_cfg:
         raise KeyError('Unrecognized norm type {}'.format(layer_type))
     else:
+        if 'sync_bn' in layer_type:
+            if DIST_BACKEND.backend == 'dist':
+                layer_type = 'pt_sync_bn'
+            elif DIST_BACKEND.backend == 'link':
+                layer_type = 'link_sync_bn'
+            else:
+                raise NotImplementedError
         abbr, norm_layer = _norm_cfg[layer_type]
         if norm_layer is None:
             raise NotImplementedError
