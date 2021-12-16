@@ -48,10 +48,10 @@ class SegEvaluator(Evaluator):
         inter_sum = 0.0
         union_sum = 0.0
         target_sum = 0.0
-        for idx in range(res_dict['inter']):
-            inter_sum += res_dict['inter']
-            union_sum += res_dict['union']
-            target_sum += res_dict['target']
+        for idx in range(len(res_dict['inter'])):
+            inter_sum += res_dict['inter'][idx]
+            union_sum += res_dict['union'][idx]
+            target_sum += res_dict['target'][idx]
         miou_cls = inter_sum / (union_sum + 1e-10)
         miou = np.mean(miou_cls)
         acc_cls = inter_sum / (target_sum + 1e-10)
