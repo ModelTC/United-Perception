@@ -4,6 +4,8 @@ from eod.utils.general.registry_factory import DATASET_REGISTRY
 from easydict import EasyDict
 from eod.data.image_reader import build_image_reader
 from eod.utils.general.registry import Registry
+from .seg_evaluator import intersectionAndUnion
+import numpy as np
 
 __all__ = ['SegDataset']
 
@@ -41,7 +43,10 @@ class SegDataset(BaseDataset):
                  evaluator=None,
                  seg_type='cityscapes',
                  parser_info={},
-                 seg_label_reader=None):
+                 seg_label_reader=None,
+                 output_pred=False,
+                 ignore_label=255,
+                 num_classes=19):
         super(SegDataset, self).__init__(meta_file,
                                          image_reader,
                                          transformer,
@@ -52,6 +57,9 @@ class SegDataset(BaseDataset):
         self._list_check()
         self.meta_parser = [SEG_PARSER_REGISTRY[m_type](**parser_info) for m_type in self.seg_type]
         self.parse_metas()
+        self.output_pred = output_pred
+        self.ignore_label = ignore_label
+        self.num_classes = num_classes
 
     def parse_metas(self):
         self.metas = []
@@ -90,12 +98,22 @@ class SegDataset(BaseDataset):
     def dump(self, output):
         pred = output['blob_pred'].max(1)[1]
         pred = self.tensor2numpy(pred)
-        seg_label = self.tensor2numpy(output['gt_seg'])
+        if 'gt_seg' in output and output['gt_seg'] is not None:
+            seg_label = self.tensor2numpy(output['gt_seg'])
+        else:
+            seg_label = np.zeros((pred.shape))
         out_res = []
         for _idx in range(pred.shape[0]):
+            inter, union, target = intersectionAndUnion(pred[_idx],
+                                                        seg_label[_idx],
+                                                        self.num_classes,
+                                                        self.ignore_label)
             res = {
-                'pred': pred[_idx],
-                'gt_seg': seg_label[_idx]
+                'inter': inter,
+                'union': union,
+                'target': target
             }
+            if self.output_pred:
+                res['pred'] = pred[_idx]
             out_res.append(res)
         return out_res

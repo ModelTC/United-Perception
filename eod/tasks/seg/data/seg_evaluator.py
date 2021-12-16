@@ -45,16 +45,13 @@ class SegEvaluator(Evaluator):
 
     def eval(self, res_file, res=None):
         res_dict = self.load_res(res_file, res)
-        preds = res_dict['pred']
-        targets = res_dict['gt_seg']
         inter_sum = 0.0
         union_sum = 0.0
         target_sum = 0.0
-        for idx in range(len(preds)):
-            inter, union, target = intersectionAndUnion(preds[idx], targets[idx], self.num_classes, self.ignore_label)
-            inter_sum += inter
-            union_sum += union
-            target_sum += target
+        for idx in range(res_dict['inter']):
+            inter_sum += res_dict['inter']
+            union_sum += res_dict['union']
+            target_sum += res_dict['target']
         miou_cls = inter_sum / (union_sum + 1e-10)
         miou = np.mean(miou_cls)
         acc_cls = inter_sum / (target_sum + 1e-10)

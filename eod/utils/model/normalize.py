@@ -33,7 +33,7 @@ def build_norm_layer(num_features, cfg, postfix=''):
         if 'sync_bn' in layer_type:
             if DIST_BACKEND.backend == 'dist':
                 layer_type = 'pt_sync_bn'
-            elif DIST_BACKEND.backend == 'link':
+            elif DIST_BACKEND.backend == 'linklink':
                 layer_type = 'link_sync_bn'
             else:
                 raise NotImplementedError
