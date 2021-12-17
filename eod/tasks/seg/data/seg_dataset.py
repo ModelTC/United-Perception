@@ -4,6 +4,7 @@ from eod.utils.general.registry_factory import DATASET_REGISTRY
 from easydict import EasyDict
 from eod.data.image_reader import build_image_reader
 from eod.utils.general.registry import Registry
+from eod.utils.general.petrel_helper import PetrelHelper
 from .seg_evaluator import intersectionAndUnion
 import numpy as np
 
@@ -23,8 +24,8 @@ class BaseParser(object):
 @SEG_PARSER_REGISTRY.register('cityscapes')
 class CityScapesParser(BaseParser):
     def parse(self, meta_file, idx, metas):
-        with open(meta_file, "r") as f:
-            for line in f.readlines():
+        with PetrelHelper.open(meta_file) as fin:
+            for line in fin:
                 cls_res = {}
                 spts = line.strip().split()
                 cls_res['filename'] = spts[0]
