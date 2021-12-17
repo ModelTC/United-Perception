@@ -190,6 +190,9 @@ class ImageToTensorInverse(Augmentation):
 
 @AUGMENTATION_REGISTRY.register('custom_to_tensor')
 class CustomImageToTensor(Augmentation):
+    def __init__(self, norm_image=False):
+        self.norm_image = norm_image
+
     def augment(self, data):
         image = data['image']
         if image.ndim == 3:
@@ -197,6 +200,8 @@ class CustomImageToTensor(Augmentation):
         else:
             image = image[None]
         data['image'] = torch.from_numpy(image).float()
+        if self.norm_image:
+            data['image'] = data['image'].div(255)
         if 'gt_seg' in data:
             data['gt_seg'] = torch.from_numpy(data['gt_seg'].copy())
         return data
