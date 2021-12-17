@@ -51,6 +51,8 @@ dataset: # Required.
              image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
              color_mode: GRAY
         transformer: [*seg_rand_resize, *flip, *seg_crop_train, *to_tensor, *normalize]
+        num_classes: *num_classes
+        ignore_label: 255
     batch_sampler:
         type: base
         kwargs:
@@ -79,11 +81,10 @@ dataset: # Required.
              image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
              color_mode: GRAY
         transformer: [*seg_crop_test, *to_tensor, *normalize]
+        num_classes: *num_classes
+        ignore_label: 255
         evaluator:
           type: seg               # choices = {'COCO', 'VOC', 'MR'}
-          kwargs:
-             num_classes: *num_classes
-             ignore_label: 255
     batch_sampler:
       type: base
       kwargs:

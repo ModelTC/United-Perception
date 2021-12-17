@@ -20,7 +20,7 @@ def intersectionAndUnion(output, target, K, ignore_index=255):
 
 @EVALUATOR_REGISTRY.register('seg')
 class SegEvaluator(Evaluator):
-    def __init__(self, num_classes, ignore_label):
+    def __init__(self, num_classes=19, ignore_label=255):
         self.num_classes = num_classes
         self.ignore_label = ignore_label
 
@@ -48,10 +48,25 @@ class SegEvaluator(Evaluator):
         inter_sum = 0.0
         union_sum = 0.0
         target_sum = 0.0
-        for idx in range(len(res_dict['inter'])):
-            inter_sum += res_dict['inter'][idx]
-            union_sum += res_dict['union'][idx]
-            target_sum += res_dict['target'][idx]
+        if 'inter' in res_dict:
+            image_num = len(res_dict['inter'])
+        else:
+            image_num = len(res_dict['pred'])
+            preds = res_dict['pred']
+            targets = res_dict['gt_seg']
+        for idx in range(image_num):
+            if 'inter' not in res_dict:
+                inter, union, target = intersectionAndUnion(preds[idx],
+                                                            targets[idx],
+                                                            self.num_classes,
+                                                            self.ignore_label)
+            else:
+                inter = res_dict['inter'][idx]
+                union = res_dict['union'][idx]
+                target = res_dict['target'][idx]
+            inter_sum += inter
+            union_sum += union
+            target_sum += target
         miou_cls = inter_sum / (union_sum + 1e-10)
         miou = np.mean(miou_cls)
         acc_cls = inter_sum / (target_sum + 1e-10)

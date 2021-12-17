@@ -104,15 +104,18 @@ class SegDataset(BaseDataset):
             seg_label = np.zeros((pred.shape))
         out_res = []
         for _idx in range(pred.shape[0]):
-            inter, union, target = intersectionAndUnion(pred[_idx],
-                                                        seg_label[_idx],
-                                                        self.num_classes,
-                                                        self.ignore_label)
-            res = {
-                'inter': inter,
-                'union': union,
-                'target': target
-            }
+            if 'gt_seg' in output and output['gt_seg'] is not None:
+                inter, union, target = intersectionAndUnion(pred[_idx],
+                                                            seg_label[_idx],
+                                                            self.num_classes,
+                                                            self.ignore_label)
+                res = {
+                    'inter': inter,
+                    'union': union,
+                    'target': target
+                }
+            else:
+                res = {}
             if self.output_pred:
                 res['pred'] = pred[_idx]
             out_res.append(res)
