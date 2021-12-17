@@ -63,9 +63,8 @@ class Saver(object):
             output = {}
             if 'ema' in state:
                 logger.info("Load ema pretrain model")
-                st = state['ema']['ema_state_dict']
-                output['model'] = st
-                output['ema'] = st
+                output['model'] = state['ema']['ema_state_dict']
+                output['ema'] = state['ema']
             else:
                 st = state['model']
                 output['model'] = st
