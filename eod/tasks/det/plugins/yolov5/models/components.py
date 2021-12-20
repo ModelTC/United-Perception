@@ -49,6 +49,17 @@ class ConvBnAct(nn.Module):
         x = self.act1(x)
         return x
 
+class Space2Depth(nn.Module):
+    def __init__(self, block_size):
+        super(Space2Depth, self).__init__()
+        self.bs = block_size
+    
+    def forward(self, x):
+        N, C, H, W = x.size()
+        x = x.view(N, C, H // self.bs, self.bs, W // self.bs, self.bs)  # (N, C, H//bs, bs, W//bs, bs)
+        x = x.permute(0, 3, 5, 1, 2, 4).contiguous()  # (N, bs, bs, C, H//bs, W//bs)
+        x = x.view(N, C * (self.bs ** 2), H // self.bs, W // self.bs)  # (N, C*bs^2, H//bs, W//bs)
+        return x
 
 class Focus(nn.Module):
     # Focus wh information into c-space
@@ -63,15 +74,12 @@ class Focus(nn.Module):
                  normalize={'type': 'solo_bn'},
                  act_fn={'type': 'Hardswish'}):
         super(Focus, self).__init__()
-        self.bs = block_size
+        self.space2depth = Space2Depth(block_size)
         self.conv_block = ConvBnAct(in_planes * (block_size ** 2), out_planes, kernel_size, stride,
                                     padding, groups, normalize=normalize, act_fn=act_fn)
 
     def forward(self, x):  # x(b,c,w,h) -> y(b,4c,w/2,h/2)
-        N, C, H, W = x.size()
-        x = x.view(N, C, H // self.bs, self.bs, W // self.bs, self.bs)  # (N, C, H//bs, bs, W//bs, bs)
-        x = x.permute(0, 3, 5, 1, 2, 4).contiguous()  # (N, bs, bs, C, H//bs, W//bs)
-        x = x.view(N, C * (self.bs ** 2), H // self.bs, W // self.bs)  # (N, C*bs^2, H//bs, W//bs)
+        x = self.space2depth(x)
         x = self.conv_block(x)
         return x
 

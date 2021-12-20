@@ -23,7 +23,7 @@ class QuantRunner(BaseRunner):
         self.get_git_version()
         self.build_dataloaders()
         self.build_model()
-        self.build_trainer()
+        # self.build_trainer()
         self.build_ema()
         self.build_saver()
         self.build_hooks()
@@ -31,6 +31,7 @@ class QuantRunner(BaseRunner):
         if self.training:
             self.quantize_model()
             self.calibrate()
+            self.build_trainer()
         self.prepare_dist_model()
         get_env_info()
         self.save_running_cfg()
@@ -47,6 +48,8 @@ class QuantRunner(BaseRunner):
         if self.device == 'cuda':
             self.model = self.model.cuda()
             self.post_process = self.post_process.cuda()
+        if self.config['runtime']['special_bn_init']:
+            self.special_bn_init()
         if self.fp16:
             self.model = self.model.half()
 
@@ -68,11 +71,14 @@ class QuantRunner(BaseRunner):
 
     def quantize_model(self):
         from mqbench.prepare_by_platform import prepare_by_platform
+        from eod.utils.model.bn_helper import FrozenBatchNorm2d
+        from eod.tasks.det.plugins.yolov5.models.components import Space2Depth
         logger.info("prepare quantize model")
         deploy_backend = self.config['quant']['deploy_backend']
         prepare_args = self.config['quant'].get('prepare_args', {})
-        self.model = prepare_by_platform(self.model, self.backend_type[deploy_backend], prepare_args)
-        print(self.model.code)
+        self.model.train().cuda()
+        self.model = prepare_by_platform(self.model, self.backend_type[deploy_backend], prepare_args, leaf_modules=[FrozenBatchNorm2d, Space2Depth], custombn=[FrozenBatchNorm2d])
+        print(self.model)
 
     def calibrate(self):
         logger.info("calibrate model")
