@@ -80,7 +80,7 @@ dataset: # Required.
            kwargs:
              image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
              color_mode: GRAY
-        transformer: [*seg_crop_test, *to_tensor, *normalize]
+        transformer: [*seg_resize, *to_tensor, *normalize]
         num_classes: *num_classes
         ignore_label: 255
         evaluator:
