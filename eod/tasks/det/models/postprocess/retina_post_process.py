@@ -277,7 +277,8 @@ class IOUPostProcess(BasePostProcess):
 
     def get_weights_normalizer(self, centerness_target):
         sum_centerness_targets = centerness_target.sum()
-        allreduce(sum_centerness_targets)
+        if env.world_size > 1:
+            allreduce(sum_centerness_targets)
         num_gpus = env.world_size
         ave_centerness_targets = max(sum_centerness_targets.item(), 1) / float(num_gpus)
         return ave_centerness_targets

@@ -183,7 +183,8 @@ class YoloxPostProcess(nn.Module):
 
     def get_ave_normalizer(self, _mask):
         ave_mask = torch.sum(_mask)
-        allreduce(ave_mask)
+        if env.world_size > 1:
+            allreduce(ave_mask)
         num_gpus = env.world_size
         ave_normalizer = max(ave_mask.item(), 1) / float(num_gpus)
         return ave_normalizer
