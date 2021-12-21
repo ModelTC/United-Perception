@@ -582,7 +582,7 @@ class BaseRunner(object):
             'model': model_dict,
             'lr_scheduler': self.lr_scheduler.state_dict()
         }
-        if self.fp16:
+        if self.fp16 and self.backend == 'dist':
             dump_dict.update(self.get_fp16_dump_dict())
         if self.ema is not None:
             dump_dict['ema'] = self.ema.state_dict()
