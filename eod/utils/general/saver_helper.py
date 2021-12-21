@@ -62,9 +62,11 @@ class Saver(object):
             logger.warning('Load checkpoint from {}'.format(self.save_cfg['pretrain_model']))
             output = {}
             if 'ema' in state:
-                logger.info("Load ema pretrain model")
-                output['model'] = state['ema']['ema_state_dict']
-                output['ema'] = state['ema']
+                if "ema_state_dict" in state['ema']:
+                    logger.info("Load ema pretrain model")
+                    st = state['ema']['ema_state_dict']
+                else:
+                    st = state['model']
             else:
                 st = state['model']
                 output['model'] = st
