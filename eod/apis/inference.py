@@ -157,7 +157,8 @@ class BaseInference(object):
         image_h, image_w = get_image_size(img)
         new_image_h, new_image_w = get_image_size(data.image)
         pad_w, pad_h = data.get('dw', 0), data.get('dh', 0)
-        data.image_info = [new_image_h, new_image_w, scale_factor, image_h, image_w, data.flipped, pad_w, pad_h, filename]
+        data.image_info = [new_image_h, new_image_w, scale_factor,
+                           image_h, image_w, data.flipped, pad_w, pad_h, filename]
         data.image = data.image.cuda()
         return data
 
@@ -175,7 +176,6 @@ class BaseInference(object):
         return data
 
     def predict(self):
-        output_list = []
         if os.path.isdir(self.image_path):
             list_imgs = self.iterate_image(self.image_path)
         else:

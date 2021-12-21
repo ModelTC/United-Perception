@@ -115,13 +115,13 @@ dataset: # Required.
 
 
 trainer: # Required.
-  max_epoch: 12             # total epochs for the training
+  max_epoch: 6             # total epochs for the training
   test_freq: 1
   save_freq: 1
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
     kwargs:
-      lr: 0.0000625
+      lr: 0.00000625
       momentum: 0.9
       weight_decay: 0.0
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
@@ -130,7 +130,7 @@ trainer: # Required.
     warmup_ratio: 0.001
     type: MultiStepLR
     kwargs:
-      milestones: [6, 10]     # epochs to decay lr
+      milestones: [2, 4]     # epochs to decay lr
       gamma: 0.1             # decay rate
 
 saver: # Required.

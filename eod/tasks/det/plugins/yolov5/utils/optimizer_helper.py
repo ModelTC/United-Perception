@@ -26,10 +26,9 @@ class Yolov5Optimizer(BaseOptimizer):
                 trainable_params[1]["params"].append(v.weight)
                 trainable_params_list.append(k + ".weight")
                 trainable_params[1]["weight_decay"] = weight_decay
-        
+
         for n, p in self.model.named_parameters():
             if n not in trainable_params_list:
                 trainable_params[-1]["params"].append(p)
 
         return trainable_params
-

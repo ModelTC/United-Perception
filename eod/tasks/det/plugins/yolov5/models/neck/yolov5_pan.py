@@ -1,6 +1,7 @@
 # Standard Library
 
 # Import from third library
+import torch
 import torch.nn as nn
 
 from eod.utils.model.initializer import initialize_from_cfg
@@ -129,14 +130,6 @@ class DarknetPAFPN(nn.Module):
         """
         return self.out_planes
 
-    def get_outstrides(self):
-        """
-        Returns:
-
-            - out (:obj:`int`): number of channels of output
-        """
-        return self.out_strides
-
     def forward(self, x):
         res = []
         features = x['features']
@@ -176,9 +169,12 @@ class DarknetPAFPN(nn.Module):
                     res.append(f)
 
         if not self.out_align:
-            return {'features': res, 'strides': self.out_strides}
+            return {'features': res, 'strides': self.get_outstrides()}
         else:
             feats = []
             for i, m in enumerate(self.out_align_convs):
                 feats.append(m(res[i]))
-            return {'features': feats, 'strides': self.out_strides}
+            return {'features': feats, 'strides': self.get_outstrides()}
+
+    def get_outstrides(self):
+        return torch.tensor(self.out_strides, dtype=torch.int)

@@ -127,13 +127,13 @@ class YoloxPAFPN(nn.Module):
             x = self.get_downsample(level)(x)
             features.append(x)
 
-        return {'features': features, 'strides': self.out_strides}
+        return {'features': features, 'strides': self.get_outstrides()}
 
     def get_outplanes(self):
         return self.outplanes
 
     def get_outstrides(self):
-        return self.out_strides
+        return torch.tensor(self.out_strides, dtype=torch.int)
 
     def get_downsample(self, idx):
         return getattr(self, f"p{idx}_conv")

@@ -75,3 +75,6 @@ WARM_SCHEDULER_REGISTY = Registry()
 DATA_BUILDER_REGISTY = Registry()
 
 MODEL_HELPER_REGISTRY = Registry()
+
+# deploy
+DEPLOY_REGISTRY = Registry()
