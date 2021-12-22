@@ -94,13 +94,11 @@ dataset: # Required.
           type: dist
           kwargs: {}
         batch_size: 1
-#        drop_last: True
     dataloader:
       type: seg_base
       kwargs:
         num_workers: 2
         pin_memory: False
-#        drop_last: True
 
 trainer: # Required.
   max_epoch: &max_epoch 240
