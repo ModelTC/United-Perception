@@ -1,4 +1,5 @@
 # Import from third library
+import torch
 import torch.nn as nn
 
 from eod.utils.model.initializer import initialize_from_cfg
@@ -85,14 +86,6 @@ class DarkNetv5(nn.Module):
         """
         return self.out_planes
 
-    def get_outstrides(self):
-        """
-        Returns:
-
-            - out (:obj:`int`): number of channels of output
-        """
-        return self.out_strides
-
     def forward(self, x):
         x = x['image']
         features = []
@@ -102,7 +95,10 @@ class DarkNetv5(nn.Module):
             x = m(x)
             features.append(x)   # P2/4 ~ P5/32
         features = [features[_] for _ in self.out_layers]
-        return {'features': features, 'strides': self.out_strides}
+        return {'features': features, 'strides': self.get_outstrides()}
+
+    def get_outstrides(self):
+        return torch.tensor(self.out_strides, dtype=torch.int)
 
 
 @MODULE_ZOO_REGISTRY.register('yolov5s')

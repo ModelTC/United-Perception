@@ -239,14 +239,6 @@ class CSPDarknet(nn.Module):
         """
         return self.out_planes
 
-    def get_outstrides(self):
-        """
-        Returns:
-
-            - out (:obj:`int`): number of channels of output
-        """
-        return self.out_strides
-
     def forward(self, x):
         x = x['image']
         features = []
@@ -268,7 +260,10 @@ class CSPDarknet(nn.Module):
 
         # [dark3, dark4, dark5]
         features = [features[_] for _ in self.out_layers]
-        return {'features': features, 'strides': self.out_strides}
+        return {'features': features, 'strides': self.get_outstrides()}
+
+    def get_outstrides(self):
+        return torch.tensor(self.out_strides, dtype=torch.int)
 
 
 @MODULE_ZOO_REGISTRY.register('yolox')
