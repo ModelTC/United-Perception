@@ -69,7 +69,7 @@ class Saver(object):
                     st = state['model']
             else:
                 st = state['model']
-                output['model'] = st
+            output['model'] = st
             return output
         else:
             logger.warning('Load nothing! No weights provided {}')
