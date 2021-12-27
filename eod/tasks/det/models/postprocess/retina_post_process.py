@@ -230,7 +230,7 @@ class IOUPostProcess(BasePostProcess):
 
         del mlvl_cls_pred, mlvl_loc_pred, mlvl_iou_pred
 
-        pos_normalizer =self.get_ave_normalizer(loc_mask)
+        pos_normalizer = self.get_ave_normalizer(loc_mask)
 
         # cls loss
         if self.cls_use_ghm:

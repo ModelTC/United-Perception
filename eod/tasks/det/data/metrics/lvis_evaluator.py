@@ -21,7 +21,7 @@ from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.registry_factory import EVALUATOR_REGISTRY
 
 # Import from local
-from .base_evaluator import Evaluator, Metric
+from eod.data.metrics.base_evaluator import Evaluator, Metric
 
 # fix pycocotools py2-style bug
 builtins.unicode = str
