@@ -13,7 +13,7 @@ seg_resize: &seg_resize
 seg_crop_train: &seg_crop_train
   type: seg_crop
   kwargs:
-    size: [769, 769]
+    size: [1024, 1024]
     crop_type: rand
 
 seg_flip: &flip
