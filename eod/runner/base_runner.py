@@ -157,11 +157,14 @@ class BaseRunner(object):
         pool = cfg_data.get('data_pool', ['train:train', 'test:test'])
         pool = self._check_data_pool(pool, cfg_data)
         self.train_pool = [source for source in pool if source.startswith('train')]
+        train_pool_idxs = [idx for idx in range(len(pool)) if pool[idx].startswith('train')]
         self.test_pool = [source for source in pool if source.startswith('test')]
-        if not self.training:
-            pool = self.test_pool
+        test_pool_idxs = [idx for idx in range(len(pool)) if pool[idx].startswith('test')]
         if not isinstance(builder_type, list):
             builder_type = [builder_type] * len(pool)
+        if not self.training:
+            pool = self.test_pool
+            builder_type = [builder_type[idx] for idx in test_pool_idxs]
         self.data_loaders = build(builder_type, cfg_data, pool, reload_cfg)
         if 'train' in self.data_loaders:
             self.set_train_epoch_size()
