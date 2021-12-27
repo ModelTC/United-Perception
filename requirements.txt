@@ -1,5 +1,6 @@
 prettytable
 pycocotools
+lvis
 numpy>=1.16.4,<1.18
 pandas>=0.25.1
 easydict>=1.9

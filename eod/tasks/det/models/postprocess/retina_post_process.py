@@ -230,7 +230,7 @@ class IOUPostProcess(BasePostProcess):
 
         del mlvl_cls_pred, mlvl_loc_pred, mlvl_iou_pred
 
-        pos_normalizer = max(1, torch.sum(loc_mask.float()).item())
+        pos_normalizer = self.get_ave_normalizer(loc_mask)
 
         # cls loss
         if self.cls_use_ghm:
@@ -254,6 +254,7 @@ class IOUPostProcess(BasePostProcess):
         if self.loc_use_ghm:
             loc_loss = self.loc_loss(loc_pred, loc_target, loc_mask=loc_mask, mlvl_shapes=mlvl_shapes)
         else:
+            weights_normalizer = self.get_weights_normalizer(iou_target)
             loc_target, loc_pred, iou_pred = self._mask_tensor([loc_target, loc_pred, iou_pred], loc_mask)
             weights_normalizer = self.get_weights_normalizer(iou_target)
             if loc_mask.sum() == 0:
@@ -282,3 +283,10 @@ class IOUPostProcess(BasePostProcess):
         num_gpus = env.world_size
         ave_centerness_targets = max(sum_centerness_targets.item(), 1) / float(num_gpus)
         return ave_centerness_targets
+
+    def get_ave_normalizer(self, loc_mask):
+        ave_loc_mask = torch.sum(loc_mask)
+        allreduce(ave_loc_mask)
+        num_gpus = env.world_size
+        ave_normalizer = max(ave_loc_mask.item(), 1) / float(num_gpus)
+        return ave_normalizer

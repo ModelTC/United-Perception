@@ -175,6 +175,7 @@ class YoloXHeadShare(nn.Module):
                  initializer=None,
                  class_activation='sigmoid',
                  normalize={'type': 'solo_bn'},
+                 init_prior=0.01,
                  num_conv=2):
         super(YoloXHeadShare, self).__init__()
         self.prefix = self.__class__.__name__
@@ -218,11 +219,7 @@ class YoloXHeadShare(nn.Module):
 
         if initializer is not None:
             initialize_from_cfg(self, initializer)
-        self.initialize_biases(1e-2)
-        for m in self.modules():
-            if isinstance(m, nn.BatchNorm2d):
-                m.eps = 1e-3
-                m.momentum = 0.03
+        self.initialize_biases(init_prior)
 
     def initialize_biases(self, prior_prob):
         b = self.cls_pred.bias.view(self.num_point, -1)
