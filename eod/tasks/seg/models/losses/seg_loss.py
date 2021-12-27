@@ -60,19 +60,16 @@ class OhemCrossEntropy2dTensor(nn.Module):
         b, c, h, w = pred.size()
         target = target.view(-1)
         valid_mask = target.ne(self.ignore_index)
-        target = target * valid_mask.long()
+        target = (target * valid_mask).long()
         num_valid = valid_mask.sum()
-
         prob = F.softmax(pred, dim=1)
         prob = (prob.transpose(0, 1)).reshape(c, -1)
-
         if self.min_kept > num_valid:
-            print('Labels: {}'.format(num_valid))
+            logger.info('Labels: {}'.format(num_valid))
         elif num_valid > 0:
             prob = prob.masked_fill_(~valid_mask, 1)
-            target = target.type(torch.long)
             mask_prob = prob[
-                target, torch.arange(len(target), dtype=torch.long)].type(torch.long)
+                target, torch.arange(len(target), dtype=torch.long)]
             threshold = self.thresh
             if self.min_kept > 0:
                 _, index = mask_prob.sort()
