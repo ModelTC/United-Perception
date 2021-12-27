@@ -36,7 +36,7 @@ class ConvBNReLU(nn.Module):
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
-                if not ly.bias is None: nn.init.constant_(ly.bias, 0)
+                if ly.bias is not None: nn.init.constant_(ly.bias, 0)
 
 
 class UpSample(nn.Module):
@@ -59,11 +59,11 @@ class UpSample(nn.Module):
 
 class BiSeNetOutput(nn.Module):
 
-    def __init__(self, in_chan, mid_chan, n_classes, up_factor=32, *args, **kwargs):
+    def __init__(self, in_chan, mid_chan, n_classes, up_factor=32, normalize={'type': 'solo_bn'}):
         super(BiSeNetOutput, self).__init__()
         self.up_factor = up_factor
         out_chan = n_classes * up_factor * up_factor
-        self.conv = ConvBNReLU(in_chan, mid_chan, ks=3, stride=1, padding=1)
+        self.conv = ConvBNReLU(in_chan, mid_chan, ks=3, stride=1, padding=1, normalize=normalize)
         self.conv_out = nn.Conv2d(mid_chan, out_chan, kernel_size=1, bias=True)
         self.up = nn.PixelShuffle(up_factor)
         self.init_weight()
@@ -78,14 +78,14 @@ class BiSeNetOutput(nn.Module):
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
-                if not ly.bias is None: nn.init.constant_(ly.bias, 0)
+                if ly.bias is not None: nn.init.constant_(ly.bias, 0)
 
     def get_params(self):
         wd_params, nowd_params = [], []
         for name, module in self.named_modules():
             if isinstance(module, (nn.Linear, nn.Conv2d)):
                 wd_params.append(module.weight)
-                if not module.bias is None:
+                if module.bias is not None:
                     nowd_params.append(module.bias)
             elif isinstance(module, nn.modules.batchnorm._BatchNorm):
                 nowd_params += list(module.parameters())
@@ -95,7 +95,7 @@ class BiSeNetOutput(nn.Module):
 class AttentionRefinementModule(nn.Module):
     def __init__(self, in_chan, out_chan, normalize={'type': 'solo_bn'}):
         super(AttentionRefinementModule, self).__init__()
-        self.conv = ConvBNReLU(in_chan, out_chan, ks=3, stride=1, padding=1)
+        self.conv = ConvBNReLU(in_chan, out_chan, ks=3, stride=1, padding=1, normalize=normalize)
         self.conv_atten = nn.Conv2d(out_chan, out_chan, kernel_size=1, bias=False)
         self.bn_atten = build_norm_layer(out_chan, normalize)[1]
         self.sigmoid_atten = nn.Sigmoid()
@@ -114,16 +114,16 @@ class AttentionRefinementModule(nn.Module):
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
-                if not ly.bias is None: nn.init.constant_(ly.bias, 0)
+                if ly.bias is not None: nn.init.constant_(ly.bias, 0)
 
 
 class SpatialPath(nn.Module):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, inplane=3, outplane=128, normalize={'type': 'solo_bn'}):
         super(SpatialPath, self).__init__()
-        self.conv1 = ConvBNReLU(3, 64, ks=7, stride=2, padding=3)
-        self.conv2 = ConvBNReLU(64, 64, ks=3, stride=2, padding=1)
-        self.conv3 = ConvBNReLU(64, 64, ks=3, stride=2, padding=1)
-        self.conv_out = ConvBNReLU(64, 128, ks=1, stride=1, padding=0)
+        self.conv1 = ConvBNReLU(inplane, 64, ks=7, stride=2, padding=3, normalize=normalize)
+        self.conv2 = ConvBNReLU(64, 64, ks=3, stride=2, padding=1, normalize=normalize)
+        self.conv3 = ConvBNReLU(64, 64, ks=3, stride=2, padding=1, normalize=normalize)
+        self.conv_out = ConvBNReLU(64, outplane, ks=1, stride=1, padding=0, normalize=normalize)
         self.init_weight()
 
     def forward(self, x):
@@ -137,14 +137,14 @@ class SpatialPath(nn.Module):
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
-                if not ly.bias is None: nn.init.constant_(ly.bias, 0)
+                if ly.bias is not None: nn.init.constant_(ly.bias, 0)
 
     def get_params(self):
         wd_params, nowd_params = [], []
         for name, module in self.named_modules():
             if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d):
                 wd_params.append(module.weight)
-                if not module.bias is None:
+                if module.bias is not None:
                     nowd_params.append(module.bias)
             elif isinstance(module, nn.modules.batchnorm._BatchNorm):
                 nowd_params += list(module.parameters())
@@ -152,9 +152,9 @@ class SpatialPath(nn.Module):
 
 
 class FeatureFusionModule(nn.Module):
-    def __init__(self, in_chan, out_chan):
+    def __init__(self, in_chan, out_chan, normalize={'type': 'solo_bn'}):
         super(FeatureFusionModule, self).__init__()
-        self.convblk = ConvBNReLU(in_chan, out_chan, ks=1, stride=1, padding=0)
+        self.convblk = ConvBNReLU(in_chan, out_chan, ks=1, stride=1, padding=0, normalize=normalize)
         self.conv1 = nn.Conv2d(out_chan,
                                out_chan // 4,
                                kernel_size=1,
@@ -187,14 +187,14 @@ class FeatureFusionModule(nn.Module):
         for ly in self.children():
             if isinstance(ly, nn.Conv2d):
                 nn.init.kaiming_normal_(ly.weight, a=1)
-                if not ly.bias is None: nn.init.constant_(ly.bias, 0)
+                if ly.bias is not None: nn.init.constant_(ly.bias, 0)
 
     def get_params(self):
         wd_params, nowd_params = [], []
         for name, module in self.named_modules():
             if isinstance(module, (nn.Linear, nn.Conv2d)):
                 wd_params.append(module.weight)
-                if not module.bias is None:
+                if module.bias is not None:
                     nowd_params.append(module.bias)
             elif isinstance(module, nn.modules.batchnorm._BatchNorm):
                 nowd_params += list(module.parameters())
@@ -203,13 +203,18 @@ class FeatureFusionModule(nn.Module):
 
 @MODULE_ZOO_REGISTRY.register('bisegnet')
 class BiSegNet(nn.Module):
-    def __init__(self, inplanes=256, inner_planes=128, output_aux=True, num_classes=19, normalize={'type': 'solo_bn'},
+    def __init__(self,
+                 inplanes=256,
+                 inner_planes=128,
+                 output_aux=True,
+                 num_classes=19,
+                 normalize={'type': 'solo_bn'},
                  loss=None):
         super(BiSegNet, self).__init__()
         self.prefix = self.__class__.__name__
 
         # spatial path
-        self.sp = SpatialPath()
+        self.sp = SpatialPath(3, 128, normalize=normalize)
 
         # contex path
         self.arm16 = AttentionRefinementModule(256, 128, normalize)
@@ -220,12 +225,12 @@ class BiSegNet(nn.Module):
         self.up32 = nn.Upsample(scale_factor=2)
         self.up16 = nn.Upsample(scale_factor=2)
 
-        self.ffm = FeatureFusionModule(256, 256)
-        self.conv_out = BiSeNetOutput(256, 256, num_classes, up_factor=8)
+        self.ffm = FeatureFusionModule(256, 256, normalize=normalize)
+        self.conv_out = BiSeNetOutput(256, 256, num_classes, up_factor=8, normalize=normalize)
         self.output_aux = output_aux
         if self.output_aux:
-            self.conv_out16 = BiSeNetOutput(128, 64, num_classes, up_factor=8)
-            self.conv_out32 = BiSeNetOutput(128, 64, num_classes, up_factor=16)
+            self.conv_out16 = BiSeNetOutput(128, 64, num_classes, up_factor=8, normalize=normalize)
+            self.conv_out32 = BiSeNetOutput(128, 64, num_classes, up_factor=16, normalize=normalize)
         self.loss = build_loss(loss)
 
     def forward(self, x):
