@@ -22,7 +22,7 @@ seg_flip: &flip
 seg_crop_test: &seg_crop_test
   type: seg_crop
   kwargs:
-    size: [769, 769]
+    size: [1024, 1024]
     crop_type: center
 
 to_tensor: &to_tensor
@@ -129,7 +129,7 @@ hooks:
   - type: auto_save_best
 
 net: &subnet
-  - name: encoder              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
     type: icnet_encoder
     kwargs:
       zero_init_residual: True
@@ -139,7 +139,7 @@ net: &subnet
         kwargs:
           group_size: 8
   - name: decoder
-    prev: encoder
+    prev: backbone
     type: icnet_decoder
     kwargs:
         num_classes: *num_classes
