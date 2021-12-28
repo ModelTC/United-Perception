@@ -90,7 +90,7 @@ class UNet_Decoder(nn.Module):
         self.up1 = Up(1024, 512 // factor, bilinear, normalize)
         self.up2 = Up(512, 256 // factor, bilinear, normalize)
         self.up3 = Up(256, 128 // factor, bilinear, normalize)
-        self.up4 = Up(128, 64, bilinear)
+        self.up4 = Up(128, 64, bilinear, normalize=normalize)
         self.outc = OutConv(64, num_classes)
         self.loss = build_loss(loss)
 
