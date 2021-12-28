@@ -103,15 +103,15 @@ class ICNetEncoder(nn.Module):
     def __init__(self, out_planes=512, **kwargs):
         super(ICNetEncoder, self).__init__()
         self.conv_sub1 = nn.Sequential(
-            ConvBnRelu(3, 32, 3, 2, 1),
-            ConvBnRelu(32, 32, 3, 2, 1),
-            ConvBnRelu(32, 64, 3, 2, 1)
+            ConvBnRelu(3, 32, 3, 2, 1, normalize=kwargs.get('normalize', {'type': 'solo_bn'})),
+            ConvBnRelu(32, 32, 3, 2, 1, normalize=kwargs.get('normalize', {'type': 'solo_bn'})),
+            ConvBnRelu(32, 64, 3, 2, 1, normalize=kwargs.get('normalize', {'type': 'solo_bn'}))
         )
         self.backbone = resnet50(**kwargs)
         self.out_planes = out_planes
-        self.head = PSPModule(2048, self.out_planes)
-        self.conv_sub4 = ConvBnRelu(512, 256, 1)
-        self.conv_sub2 = ConvBnRelu(512, 256, 1)
+        self.head = PSPModule(2048, self.out_planes, normalize=kwargs.get('normalize', {'type': 'solo_bn'}))
+        self.conv_sub4 = ConvBnRelu(512, 256, 1, normalize=kwargs.get('normalize', {'type': 'solo_bn'}))
+        self.conv_sub2 = ConvBnRelu(512, 256, 1, normalize=kwargs.get('normalize', {'type': 'solo_bn'}))
 
     def forward(self, input):
         img = input["image"]
