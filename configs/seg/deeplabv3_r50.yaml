@@ -121,7 +121,7 @@ trainer: # Required.
 saver: # Required.
   save_dir: checkpoints/deeplabv3_r50_seg    # dir to save checkpoints
   results_dir: results_dir/deeplabv3_r50_seg  # dir to save detection results. i.e., bboxes, masks, keypoints
-  pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth
+  pretrain_model: /mnt/lustre/share/HiLight/model_zoo/resnet50-ebb6acbb.pth
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
@@ -129,7 +129,7 @@ hooks:
   - type: auto_save_best
 
 net: &subnet
-  - name: encoder              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
     type: seg_resnet50
     kwargs:
       multi_grid: True
@@ -140,7 +140,7 @@ net: &subnet
         kwargs:
           group_size: 8
   - name: decoder
-    prev: encoder
+    prev: backbone
     type: deeplabv3
     kwargs:
         num_classes: *num_classes
