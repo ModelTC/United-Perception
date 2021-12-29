@@ -4,9 +4,9 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from eod.tasks.seg.models.encoder.icnet import CascadeFeatureFusion
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from eod.models.losses import build_loss
+from ..components import CascadeFeatureFusion
 
 __all__ = ['ICnetDecoder']
 
