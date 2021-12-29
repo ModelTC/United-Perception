@@ -10,6 +10,7 @@ It aim on provide two key feature about Object Detection:
 + Efficient: we will focus on training **VERY HIGH ACCURARY** single-shot detection model, and model compress (quantization/sparsity) will be heavy address. 
 + Easy: easy to use, easy to add new features(backbone/head/neck), easy to deploy.
 + Large-Scale Dataset Training [Detail](https://github.com/ModelTC/rank_dataset)
++ Equalized Focal Loss for Dense Long-Tailed Object Detection 
 
 
 The master branch works with **PyTorch 1.8.1**.
@@ -50,7 +51,7 @@ dataset:
 Step2: train
 
 ```shell
-python -m eod train --config configs/yolox/yolox_tiny.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
+python -m eod train --config configs/det/yolox/yolox_tiny.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
 ```
 * --config: yamls in configs/
 * --nm: machine number
@@ -71,7 +72,7 @@ Step1: edit config of evaluating dataset
 Step2: test
 
 ```shell
-python -m eod train -e --config configs/yolox/yolox_tiny.yaml --nm 1 --ng 1 --launch pytorch 2>&1 | tee log.test
+python -m eod train -e --config configs/det/yolox/yolox_tiny.yaml --nm 1 --ng 1 --launch pytorch 2>&1 | tee log.test
 ```
 
 ### Demo
@@ -89,7 +90,7 @@ inference:
 Step2: inference
 
 ```shell
-python -m eod inference --config configs/yolox/yolox_tiny.yaml --ckpt ckpt_tiny.pth -i imgs -v vis_dir
+python -m eod inference --config configs/det/yolox/yolox_tiny.yaml --ckpt ckpt_tiny.pth -i imgs -v vis_dir
 ```
 * --ckpt: model for inferencing
 * -i: images directory or single image
@@ -111,7 +112,7 @@ make && make install
 Launch task
 
 ```shell
-mpirun -np 8 python -m eod train --config configs/yolox/yolox_tiny.yaml --launch mpi 2>&1 | tee log.train
+mpirun -np 8 python -m eod train --config configs/det/yolox/yolox_tiny.yaml --launch mpi 2>&1 | tee log.train
 ```
 
 * Add mpirun -np x; x indicates number of processes
@@ -126,6 +127,7 @@ mpirun -np 8 python -m eod train --config configs/yolox/yolox_tiny.yaml --launch
 ## Benckmark
 
 * [YOLOX](docs/benchmark.md) 
+* [YOLOX-Ret] (docs)/benchmark.md
 * [YOLOV5](docs/benchmark.md)
 * [RetinaNet](docs/benchmark.md)
 

@@ -1,0 +1,223 @@
+num_classes: &num_classes 81
+runtime:
+    aligned: True
+    async_norm: True
+    special_bn_init: True
+
+mosaic: &mosaic
+  type: mosaic
+  kwargs:
+    extra_input: True
+    tar_size: 640
+    fill_color: 0
+
+random_perspective: &random_perspective
+  type: random_perspective_yolox
+  kwargs:
+    degrees: 10.0 # 0.0
+    translate: 0.1
+    scale: [0.5, 1.5] # 0.5
+    shear: 2.0 # 0.0
+    perspective: 0.0
+    fill_color: 0  # 0
+    border: [-320, -320]
+
+augment_hsv: &augment_hsv
+  type: augment_hsv
+  kwargs:
+    hgain: 0.015
+    sgain: 0.7
+    vgain: 0.4
+    color_mode: 'BGR'
+
+flip: &flip
+  type: flip
+  kwargs:
+    flip_p: 0.5
+
+to_tensor: &to_tensor
+  type: custom_to_tensor
+
+train_resize: &train_resize
+  type: keep_ar_resize_max
+  kwargs:
+    random_size: [10, 20]
+    scale_step: 32
+    padding_type: left_top
+    padding_val: 0
+
+test_resize: &test_resize
+  type: keep_ar_resize_max
+  kwargs:
+    max_size: 416
+    padding_type: left_top
+    padding_val: 0
+
+dataset:
+  train:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: coco/annotations/instances_train2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: coco/train2017
+            color_mode: BGR
+        transformer: [*mosaic, *random_perspective, *augment_hsv, *flip, *train_resize, *to_tensor]
+        cache:
+            cache_dir: /mnt/lustre/share/shenmingzhu/coco_cache
+            cache_name: coco2017_train.pkl
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 8
+  test:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: &gt_file coco/annotations/instances_val2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: coco/val2017
+            color_mode: BGR
+        transformer: [*test_resize, *to_tensor]
+        cache:
+            cache_dir: /mnt/lustre/share/shenmingzhu/coco_cache
+            cache_name: coco2017_val.pkl
+        evaluator:
+          type: COCO
+          kwargs:
+            gt_file: *gt_file
+            iou_types: [bbox]
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 8
+  dataloader:
+    type: base
+    kwargs:
+      num_workers: 8
+      alignment: 32
+      worker_init: True
+      pad_type: batch_pad
+
+trainer: # Required.
+  max_epoch: &max_epoch 300             # total epochs for the training
+  save_freq: 5
+  test_freq: 5
+  only_save_latest: True
+  optimizer:                 # optimizer = SGD(params,lr=0.01,momentum=0.937,weight_decay=0.0005)
+    register_type: yolov5
+    type: SGD
+    kwargs:
+      lr: 0.0003125
+      momentum: 0.9
+      nesterov: True
+      weight_decay: 0.0005      # weight_decay = 0.0005 * batch_szie / 64
+  lr_scheduler:
+    lr_register_type: yolox_base
+    warmup_epochs: 5       # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_type: yolox_cos
+    type: YoloXCosineLR
+    kwargs:
+      T_max: *max_epoch
+      min_lr_scale: 0.05
+      no_aug_epoch: &no_aug_epoch 15
+
+saver:
+  save_dir: checkpoints/yolox_t_ret_a1_comloc
+  results_dir: results_dir/yolox_t_ret_a1_comloc
+  auto_resume: True
+
+hooks:
+  - type: yolox_noaug
+    kwargs:
+      no_aug_epoch: *no_aug_epoch
+      max_epoch: *max_epoch
+      transformer: [*augment_hsv, *flip, *train_resize, *to_tensor]
+  - type: auto_save_best
+
+ema:
+  enable: True
+  ema_type: exp
+  kwargs:
+    decay: 0.9998
+
+net:
+  - name: backbone
+    type: yolox_tiny
+    kwargs:
+      out_layers: [2, 3, 4]
+      out_strides: [8, 16, 32]
+      normalize: {'type': 'solo_bn' }
+      act_fn: {'type': 'Silu' }
+  - name: neck
+    prev: backbone
+    type: YoloxPAFPN
+    kwargs:
+      depth: 0.33
+      out_strides: [8, 16, 32]
+      act_fn: {'type': 'Silu'}
+  - name: roi_head
+    prev: neck
+    type: YoloXHead
+    kwargs:
+      num_classes: *num_classes  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      width: 0.375
+      num_point: &dense_points 2
+      act_fn: {'type': 'Silu'}
+  - name: post_process
+    prev: roi_head
+    type: retina_post_iou
+    kwargs:
+      num_classes: *num_classes   # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      cfg:
+        cls_loss:
+          type: quality_focal_loss
+          kwargs:
+            gamma: 2.0
+        iou_branch_loss:
+          type: sigmoid_cross_entropy
+        loc_loss:
+           type: compose_loc_loss
+           kwargs:
+              loss_cfg:
+                 - type: iou_loss
+                   kwargs:
+                      loss_type: giou
+                      loss_weight: 1.0
+                 - type: l1_loss
+                   kwargs:
+                      loss_weight: 1.0
+        anchor_generator:
+          type: hand_craft
+          kwargs:
+            anchor_ratios: [1]  # anchor strides are provided as feature strides by feature extractor
+            anchor_scales: [3, 4] # scale of anchors relative to feature map
+        roi_supervisor:
+          type: atss
+          kwargs:
+            top_n: 18
+            use_iou: True
+        roi_predictor:
+          type: base
+          kwargs:
+            pre_nms_score_thresh: 0.05  # to reduce computation
+            pre_nms_top_n: 1000
+            post_nms_top_n: 1000
+            roi_min_size: 0               # minimum scale of a valid roi
+            merger:
+              type: retina
+              kwargs:
+                top_n: 100
+                nms:
+                  type: naive
+                  nms_iou_thresh: 0.65
