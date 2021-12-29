@@ -8,20 +8,10 @@ import torch.nn as nn
 from eod.utils.model.normalize import build_norm_layer
 from eod.utils.model.bn_helper import PyTorchSyncBN
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from ..components import conv3x3, conv1x1
 
 
 __all__ = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
-
-
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-    """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=dilation, groups=groups, bias=False, dilation=dilation)
-
-
-def conv1x1(in_planes, out_planes, stride=1):
-    """1x1 convolution"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
 
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',

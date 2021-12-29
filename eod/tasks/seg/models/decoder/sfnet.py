@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from eod.utils.model.normalize import build_norm_layer
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from eod.models.losses import build_loss
+from ..components import ConvBnRelu, PSPModule
 
 __all__ = ['SFSegDecoder']
 
@@ -45,66 +46,6 @@ class AlignedModule(nn.Module):
 
         output = F.grid_sample(input, grid)
         return output
-
-
-class PSPModule(nn.Module):
-    """
-    Reference:
-        Zhao, Hengshuang, et al. *"Pyramid scene parsing network."*
-    """
-
-    def __init__(self, inplanes, out_planes=512, sizes=(1, 2, 3, 6), normalize={'type': 'solo_bn'}):
-        super(PSPModule, self).__init__()
-        self.stages = []
-        self.out_planes = out_planes
-        self.stages = nn.ModuleList([self._make_stage(inplanes, out_planes, size, normalize) for size in sizes])
-        self.bottleneck = nn.Sequential(
-            nn.Conv2d(inplanes + len(sizes) * out_planes, out_planes, kernel_size=1, padding=1, dilation=1, bias=False),
-            build_norm_layer(out_planes, normalize)[1],
-            nn.ReLU(),
-            nn.Dropout2d(0.1)
-        )
-
-    def _make_stage(self, inplanes, out_planes, size, normalize={'type': 'solo_bn'}):
-        prior = nn.AdaptiveAvgPool2d(output_size=(size, size))
-        conv = nn.Conv2d(inplanes, out_planes, kernel_size=1, bias=False)
-        bn = build_norm_layer(out_planes, normalize)[1]
-        return nn.Sequential(prior, conv, bn)
-
-    def forward(self, feats):
-        h, w = feats.size(2), feats.size(3)
-        priors = [F.upsample(input=stage(feats), size=(h, w), mode='bilinear', align_corners=True) for stage in
-                  self.stages] + [feats]
-        bottle = self.bottleneck(torch.cat(priors, 1))
-        return bottle
-
-    def get_outplanes(self):
-        return self.out_planes
-
-
-class ConvBnRelu(nn.Module):
-    def __init__(self, in_planes, out_planes, ksize, stride=1, pad=0, dilation=1,
-                 groups=1, has_bn=True, normalize={'type': 'solo_bn'}, bn_eps=1e-5,
-                 has_relu=True, inplace=True, has_bias=False):
-        super(ConvBnRelu, self).__init__()
-        self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=ksize,
-                              stride=stride, padding=pad,
-                              dilation=dilation, groups=groups, bias=has_bias)
-        self.has_bn = has_bn
-        if self.has_bn:
-            self.bn = build_norm_layer(out_planes, normalize)[1]
-        self.has_relu = has_relu
-        if self.has_relu:
-            self.relu = nn.ReLU(inplace=inplace)
-
-    def forward(self, x):
-        x = self.conv(x)
-        if self.has_bn:
-            x = self.bn(x)
-        if self.has_relu:
-            x = self.relu(x)
-
-        return x
 
 
 class AlignHead(nn.Module):

@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 from eod.utils.model.normalize import build_norm_layer
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from ..components import conv3x3
 
 __all__ = ['dfnetv1', 'dfnetv2']
 
@@ -14,12 +15,6 @@ model_urls = {
     'dfv1': '/mnt/lustre/share/HiLight/model_zoo/df1_imagenet.pth',
     'dfv2': '/mnt/lustre/share/HiLight/model_zoo/df2_imagenet.pth',
 }
-
-
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-    """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=dilation, groups=groups, bias=False, dilation=dilation)
 
 
 class BasicBlock(nn.Module):

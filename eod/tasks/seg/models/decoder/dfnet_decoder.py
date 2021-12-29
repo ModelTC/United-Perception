@@ -1,85 +1,13 @@
 # Author: Xiangtai Li
 # Email: lixiangtai@sensetime.com
 
-import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from eod.utils.model.normalize import build_norm_layer
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from eod.models.losses import build_loss
+from ..components import Aux_Module, PSPModule, FusionNode
 
 __all__ = ['DFSegDecoder']
-
-
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-    """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=dilation, groups=groups, bias=False, dilation=dilation)
-
-
-class Aux_Module(nn.Module):
-    def __init__(self, in_planes, num_classes=19, normalize={'type': 'solo_bn'}):
-        super(Aux_Module, self).__init__()
-
-        self.aux = nn.Sequential(
-            nn.Conv2d(in_planes, 256, kernel_size=3, stride=1, padding=1),
-            build_norm_layer(256, normalize)[1],
-            nn.ReLU(inplace=True),
-            nn.Dropout2d(0.1),
-            nn.Conv2d(256, num_classes, kernel_size=1, stride=1, padding=0, bias=True))
-
-    def forward(self, x):
-        res = self.aux(x)
-        return res
-
-
-class FusionNode(nn.Module):
-    def __init__(self, inplane):
-        super(FusionNode, self).__init__()
-        self.fusion = conv3x3(inplane * 2, inplane)
-
-    def forward(self, x):
-        x_h, x_l = x
-        size = x_l.size()[2:]
-        x_h = F.upsample(x_h, size, mode="bilinear", align_corners=True)
-        res = self.fusion(torch.cat([x_h, x_l], dim=1))
-        return res
-
-
-class PSPModule(nn.Module):
-    """
-    Reference:
-        Zhao, Hengshuang, et al. *"Pyramid scene parsing network."*
-    """
-
-    def __init__(self, inplanes, out_planes=512, sizes=(1, 2, 3, 6), normalize={'type': 'solo_bn'}):
-        super(PSPModule, self).__init__()
-        self.stages = []
-        self._normalize = normalize
-        self.out_planes = out_planes
-        self.stages = nn.ModuleList([self._make_stage(inplanes, out_planes, size, normalize) for size in sizes])
-        self.bottleneck = nn.Sequential(
-            nn.Conv2d(inplanes + len(sizes) * out_planes, out_planes, kernel_size=1, padding=1, dilation=1, bias=False),
-            build_norm_layer(out_planes, normalize)[1],
-            nn.ReLU(),
-            nn.Dropout2d(0.1)
-        )
-
-    def _make_stage(self, inplanes, out_planes, size, normalize={'type': 'solo_bn'}):
-        prior = nn.AdaptiveAvgPool2d(output_size=(size, size))
-        conv = nn.Conv2d(inplanes, out_planes, kernel_size=1, bias=False)
-        bn = build_norm_layer(out_planes, normalize)[1]
-        return nn.Sequential(prior, conv, bn)
-
-    def forward(self, feats):
-        h, w = feats.size(2), feats.size(3)
-        priors = [F.upsample(input=stage(feats), size=(h, w), mode='bilinear', align_corners=True) for stage in
-                  self.stages] + [feats]
-        bottle = self.bottleneck(torch.cat(priors, 1))
-        return bottle
-
-    def get_outplanes(self):
-        return self.out_planes
 
 
 @MODULE_ZOO_REGISTRY.register('dfnet_decoder')
