@@ -128,8 +128,8 @@ mpirun -np 8 python -m eod train --config configs/det/yolox/yolox_tiny.yaml --la
 ## Benckmark
 
 * [YOLOX](docs/benchmark.md) 
-* [YOLOX-Ret](docs/benchmark.md
-* [EFL] (docs/equalized_focal_loss.md)
+* [YOLOX-Ret](docs/benchmark.md)
+* [EFL](docs/equalized_focal_loss.md)
 * [YOLOV5](docs/benchmark.md)
 * [RetinaNet](docs/benchmark.md)
 
