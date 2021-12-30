@@ -1,4 +1,4 @@
-num_classes: &num_classes 1204
+num_classes: &num_classes 501
 
 flip: &flip
  type: flip
@@ -8,17 +8,14 @@ flip: &flip
 resize: &train_resize
  type: keep_ar_resize
  kwargs:
-   scales: [640, 672, 704, 736, 768, 800]
+   scales: [800]
    max_size: 1333
-   separate_wh: True
 
 resize: &test_resize
  type: keep_ar_resize
  kwargs:
    scales: [800]
    max_size: 1333
-   separate_wh: True
-
 
 to_tensor: &to_tensor
   type: to_tensor
@@ -32,43 +29,42 @@ normalize: &normalize
 dataset: # Required.
   train:
     dataset:
-      type: lvisv1
+      type: coco
       kwargs:
-        meta_file: annotations/lvis_v1_train.json
+        meta_file: openimages/annotations/openimages_challenge_2019_train_bbox.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: coco
+            image_dir: openimages/train
             color_mode: RGB
         transformer: [*flip, *train_resize, *to_tensor, *normalize]
+    batch_sampler:
+      type: aspect_ratio_group
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 1
+        aspect_grouping: [1,]
   test:
     dataset:
-      type: lvisv1
+      type: coco
       kwargs:
-        meta_file: &gt_file annotations/lvis_v1_val.json
+        meta_file: &gt_file openimages/annotations/openimages_challenge_2019_val_bbox.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: coco
+            image_dir: openimages/validation
             color_mode: RGB
         transformer: [*test_resize, *to_tensor, *normalize]
-        evaluator:
-          type: LVIS               # choices = {'COCO', 'VOC', 'MR'}
-          kwargs:
-            gt_file: *gt_file
-            iou_types: [bbox]
-  batch_sampler:
-    type: aspect_ratio_group
-    kwargs:
-      sampler:
-        type: repeat_factor
-        kwargs:
-          t: 0.001
-          ri_mode: ceil
-          pn: 0.5
-          static_size: False
-      batch_size: 2
-      aspect_grouping: [1,]
+    batch_sampler:
+      type: aspect_ratio_group
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 1
+        aspect_grouping: [1,]
   dataloader:
     type: base
     kwargs:
@@ -77,8 +73,8 @@ dataset: # Required.
 
 
 trainer: # Required.
-  max_epoch: 24             # total epochs for the training
-  test_freq: 24
+  max_epoch: 1.719425             # total epochs for the training
+  test_freq: 2
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
     kwargs:
@@ -86,18 +82,19 @@ trainer: # Required.
       momentum: 0.9
       weight_decay: 0.0001
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
-    warmup_epochs: 1        # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_epochs: 0.004776        # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
     warmup_type: linear
     warmup_ratio: 0.001     # warmup init lr =  warmup_ratio * base_lr
     type: MultiStepLR
     kwargs:
-      milestones: [16, 22]     # epochs to decay lr
+      milestones: [1.146283, 1.528377]     # epochs to decay lr
       gamma: 0.1             # decay rate
 
 saver: # Required.
   save_dir: checkpoints    # dir to save checkpoints
   pretrain_model: pretrain/pytorch/imagenet/resnet50-19c8e357.pth
   results_dir: results_dir  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_result: True
   auto_resume: True
 
 hooks:

@@ -66,11 +66,11 @@ dataset:
     dataset:
       type: lvisv1
       kwargs:
-        meta_file: annotations/lvis_v1_train.json
+        meta_file: lvis/annotations/lvis_v1_train.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: coco
+            image_dir: lvis
             color_mode: BGR
         transformer: [*mosaic, *random_perspective, *mixup, *augment_hsv, *flip, *train_resize, *to_tensor]
     batch_sampler:
@@ -88,11 +88,11 @@ dataset:
     dataset:
       type: lvisv1
       kwargs:
-        meta_file: &gt_file annotations/lvis_v1_val.json
+        meta_file: &gt_file lvis/annotations/lvis_v1_val.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: coco
+            image_dir: lvis
             color_mode: BGR
         transformer: [*test_resize, *to_tensor]
         evaluator:

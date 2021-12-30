@@ -1,0 +1,197 @@
+num_classes: &num_classes 501
+
+flip: &flip
+ type: flip
+ kwargs:
+   flip_p: 0.5
+
+resize: &train_resize
+ type: keep_ar_resize
+ kwargs:
+   scales: [800]
+   max_size: 1333
+
+resize: &test_resize
+ type: keep_ar_resize
+ kwargs:
+   scales: [800]
+   max_size: 1333
+
+to_tensor: &to_tensor
+  type: to_tensor
+
+normalize: &normalize
+ type: normalize
+ kwargs:
+   mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
+   std: [0.229, 0.224, 0.225]
+
+dataset: # Required.
+  train:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: openimages/annotations/openimages_challenge_2019_train_bbox.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: openimages/train
+            color_mode: RGB
+        transformer: [*flip, *train_resize, *to_tensor, *normalize]
+    batch_sampler:
+      type: aspect_ratio_group
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 1
+        aspect_grouping: [1,]
+  test:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: &gt_file openimages/annotations/openimages_challenge_2019_val_bbox.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: openimages/validation
+            color_mode: RGB
+        transformer: [*test_resize, *to_tensor, *normalize]
+    batch_sampler:
+      type: aspect_ratio_group
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 1
+        aspect_grouping: [1,]
+  dataloader:
+    type: base
+    kwargs:
+      num_workers: 4
+      alignment: 64
+
+
+trainer: # Required.
+  max_epoch: 1.719425             # total epochs for the training
+  test_freq: 2
+  optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
+    type: SGD
+    kwargs:
+      lr: 0.00125
+      momentum: 0.9
+      weight_decay: 0.0001
+  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
+    warmup_epochs: 0.004776        # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_type: linear
+    warmup_ratio: 0.001     # warmup init lr =  warmup_ratio * base_lr
+    type: MultiStepLR
+    kwargs:
+      milestones: [1.146283, 1.528377]     # epochs to decay lr
+      gamma: 0.1             # decay rate
+
+saver: # Required.
+  save_dir: checkpoints    # dir to save checkpoints
+  pretrain_model: pretrain/pytorch/imagenet/resnet101-5d3b4d8f.pth
+  results_dir: results_dir  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_result: True
+  auto_resume: True
+
+hooks:
+  - type: auto_checkpoint
+  - type: gradient_collector
+    kwargs:
+      hook_head: roi_head
+      hook_cls_head: cls_subnet_pred
+  - type: grad_clipper
+    kwargs:
+      mode: pre_defined
+      norm_type: 2
+      max_norm: 35
+
+net:
+  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+    type: resnet101
+    kwargs:
+      frozen_layers: [0,1]     # layer0...1 is fixed
+      out_layers: [2,3,4]       # layer1...4, commonly named Conv2...5
+      out_strides: [8,16,32]    # tell the strides of output features
+      normalize:
+        type: freeze_bn
+      initializer:
+        method: msra
+  - name: neck
+    prev: backbone
+    type: FPN
+    kwargs:
+      outplanes: 256
+      start_level: 3
+      num_level: 5                # if num_level>len(backbone.out_layers), additional conv with be stacked.
+      out_strides: [8,16,32,64,128] # strides of output features. aka., anchor strides for roi_head
+      downsample: conv            # method to downsample, for FPN, it's pool, for RetienaNet, it's conv
+      upsample: nearest           # method to interp, nearest or bilinear
+      initializer:
+        method: xavier
+  - name: roi_head
+    prev: neck
+    type: RetinaHeadWithIOU
+    kwargs:
+      feat_planes: 256        # channels of intermediate conv
+      num_classes: *num_classes   # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      initializer:
+        method: normal
+        std: 0.01
+      normalize:
+        type: gn
+        kwargs:
+          num_groups: 32
+      init_prior: 0.001
+      num_anchors: 2
+      class_activation: sigmoid
+  - name: post_process
+    prev: roi_head
+    type: retina_post_iou
+    kwargs:
+      num_classes: *num_classes   # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      cfg:
+        cls_loss:
+          type: equalized_focal_loss
+          kwargs:
+            num_classes: *num_classes
+            focal_alpha: 0.25
+            focal_gamma: 2.0
+            scale_factor: 8.0
+            fpn_levels: 5
+        loc_loss:
+          type: iou_loss
+          kwargs:
+            loss_type: giou
+            loss_weight: 1.0
+        iou_branch_loss:
+          type: sigmoid_cross_entropy
+          kwargs:
+            loss_weight: 1.0
+        anchor_generator:
+          type: hand_craft
+          kwargs:
+            anchor_ratios: [1]  # anchor strides are provided as feature strides by feature extractor
+            anchor_scales: [6, 8] # scale of anchors relative to feature map
+        roi_supervisor:
+          type: atss
+          kwargs:
+            top_n: 18
+            use_iou: True
+        roi_predictor:
+          type: base_multicls
+          kwargs:
+            pre_nms_score_thresh: 0  # to reduce computation
+            pre_nms_top_n: 6000
+            post_nms_top_n: 1000
+            roi_min_size: 0               # minimum scale of a valid roi
+            merger:
+              type: retina_multicls
+              kwargs:
+                top_n: 300
+                nms:
+                  type: naive
+                  nms_iou_thresh: 0.5     # Required in RetinaNet. DO not nms in FPN across levels
