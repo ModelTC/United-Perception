@@ -12,6 +12,7 @@ It aim on provide two key feature about Object Detection:
 + Large-Scale Dataset Training [Detail](https://github.com/ModelTC/rank_dataset)
 + Equalized Focal Loss for Dense Long-Tailed Object Detection [EFL](docs/equalized_focal_loss.md)
 + Improve-YOLOX [YOLOX-RET](docs/benchmark.md)
++ Quantization Aware Training(QAT) interface based on [MQBench](https://github.com/ModelTC/MQBench).
 
 
 The master branch works with **PyTorch 1.8.1**.
