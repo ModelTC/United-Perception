@@ -7,7 +7,7 @@ Easy and Efficient Object Detector
 **EOD** (**E**asy and **E**fficient **O**bject **D**etection) is a general object detection model production framework.
 It aim on provide two key feature about Object Detection:
 
-+ Efficient: we will focus on training **VERY HIGH ACCURARY** single-shot detection model, and model compress (quantization/sparsity) will be heavy address. 
++ Efficient: we will focus on training **VERY HIGH ACCURARY** single-shot detection model, and model compression (quantization/sparsity) will be well addressed. 
 + Easy: easy to use, easy to add new features(backbone/head/neck), easy to deploy.
 + Large-Scale Dataset Training [Detail](https://github.com/ModelTC/rank_dataset)
 + Equalized Focal Loss for Dense Long-Tailed Object Detection [EFL](docs/equalized_focal_loss.md)
