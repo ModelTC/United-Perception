@@ -10,7 +10,8 @@ It aim on provide two key feature about Object Detection:
 + Efficient: we will focus on training **VERY HIGH ACCURARY** single-shot detection model, and model compress (quantization/sparsity) will be heavy address. 
 + Easy: easy to use, easy to add new features(backbone/head/neck), easy to deploy.
 + Large-Scale Dataset Training [Detail](https://github.com/ModelTC/rank_dataset)
-+ Equalized Focal Loss for Dense Long-Tailed Object Detection 
++ Equalized Focal Loss for Dense Long-Tailed Object Detection [EFL](docs/equalized_focal_loss.md)
++ Improve-YOLOX [YOLOX-RET](docs/benchmark.md)
 
 
 The master branch works with **PyTorch 1.8.1**.
@@ -62,8 +63,7 @@ Step3: fp16, add fp16 setting into runtime config
 
 ```yaml
 runtime:
-  runner:
-    type: fp16
+    fp16: True
 ```
 
 ### Eval
@@ -121,13 +121,14 @@ mpirun -np 8 python -m eod train --config configs/det/yolox/yolox_tiny.yaml --la
 
 ## Custom Example
 
-* [custom dataset](configs/custom/custom_dataset.yaml)
-* [rank_dataset](configs/custom/rank_dataset.yaml)
+* [custom dataset](configs/det/custom/custom_dataset.yaml)
+* [rank_dataset](configs/det/custom/rank_dataset.yaml)
 
 ## Benckmark
 
 * [YOLOX](docs/benchmark.md) 
-* [YOLOX-Ret] (docs)/benchmark.md
+* [YOLOX-Ret](docs/benchmark.md
+* [EFL] (docs/equalized_focal_loss.md)
 * [YOLOV5](docs/benchmark.md)
 * [RetinaNet](docs/benchmark.md)
 
