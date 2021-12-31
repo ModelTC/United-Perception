@@ -17,7 +17,8 @@ _norm_cfg = {
     'caffe_freeze_bn': ('bn', CaffeFrozenBatchNorm2d),
     'gn': ('gn', GroupNorm),
     'pt_sync_bn': ('bn', PyTorchSyncBN),
-    'link_sync_bn': ('bn', GroupSyncBatchNorm)
+    'link_sync_bn': ('bn', GroupSyncBatchNorm),
+    'sync_bn': ('bn', GroupSyncBatchNorm)
 }
 
 
