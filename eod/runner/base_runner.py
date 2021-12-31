@@ -395,6 +395,22 @@ class BaseRunner(object):
         self.set_cur_eval_iter()
         return metrics
 
+    @torch.no_grad()
+    def tocaffe(self):
+        raise NotImplementedError
+
+    @torch.no_grad()
+    def to_kestrel(self):
+        raise NotImplementedError
+
+    @torch.no_grad()
+    def to_adela(self):
+        raise NotImplementedError
+
+    @torch.no_grad()
+    def latency(self):
+        raise NotImplementedError
+
     def batch2device(self, batch):
         model_dtype = torch.float32
         if self.fp16 and self.backend == 'linklink':
