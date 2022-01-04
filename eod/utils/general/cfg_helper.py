@@ -58,7 +58,7 @@ def merge_opts_into_cfg(opts, cfg):
     cfg = copy.deepcopy(cfg)
     if opts is None or len(opts) == 0:
         return cfg
-    
+
     assert len(opts) % 2 == 0
     keys, values = opts[0::2], opts[1::2]
     for key, val in zip(keys, values):

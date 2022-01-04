@@ -9,6 +9,8 @@ from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY, DEPLOY_REGISTRY
 
 __all__ = ['QuantDeploy']
+
+
 @SUBCOMMAND_REGISTRY.register('quant_deploy')
 class QuantDeploy(Subcommand):
     def add_subparser(self, name, parser):
