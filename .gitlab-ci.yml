@@ -1,0 +1,23 @@
+image: "registry.sensetime.com/spring/dka:pytorch1.5.0_fix"
+
+before_script:
+  - gcc --version
+  - nvcc --version
+  - nvidia-smi
+  - python -c "import torch; print(torch.__version__);"
+  - python -c "from torch.utils.collect_env import get_pretty_env_info; print(get_pretty_env_info())"
+  - python -c "from spring import nart"
+
+
+style:
+  tags:
+    - gpu
+    - diamond
+  stage: build
+  script:
+    - pip install flake8
+    - flake8 .
+  except:
+    - schedules
+
+
