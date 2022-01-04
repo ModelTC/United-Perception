@@ -14,6 +14,7 @@ from eod.data.metrics.base_evaluator import Metric
 from eod.utils.general.cfg_helper import merge_opts_into_cfg, format_cfg
 from eod.utils.env.gene_env import get_env_info, print_network
 from eod.utils.general.fp16_helper import register_float_module
+from eod.utils.model.normalize import is_bn
 from eod.utils.general.registry_factory import (
     SAVER_REGISTRY,
     RUNNER_REGISTRY,
@@ -157,7 +158,7 @@ class BaseRunner(object):
         pool = cfg_data.get('data_pool', ['train:train', 'test:test'])
         pool = self._check_data_pool(pool, cfg_data)
         self.train_pool = [source for source in pool if source.startswith('train')]
-        train_pool_idxs = [idx for idx in range(len(pool)) if pool[idx].startswith('train')]
+        # train_pool_idxs = [idx for idx in range(len(pool)) if pool[idx].startswith('train')]
         self.test_pool = [source for source in pool if source.startswith('test')]
         test_pool_idxs = [idx for idx in range(len(pool)) if pool[idx].startswith('test')]
         if not isinstance(builder_type, list):
@@ -516,7 +517,7 @@ class BaseRunner(object):
 
     def special_bn_init(self):
         for m in self.model.modules():
-            if isinstance(m, torch.nn.BatchNorm2d) or isinstance(m, torch.nn.SyncBatchNorm):
+            if is_bn(m):
                 m.eps = 1e-3
                 m.momentum = 0.03
 
@@ -542,7 +543,7 @@ class BaseRunner(object):
         flag = False
         for n in net_cfg:
             if 'normalize' in n['kwargs']:
-                if n['kwargs']['normalize']['type'] == 'pt_sync_bn':
+                if 'sync_bn' in n['kwargs']['normalize']['type']:
                     flag = True
                     n['kwargs']['normalize'] = normalize
         if flag:
@@ -558,7 +559,7 @@ class BaseRunner(object):
                 model = model.half()
             if self.config['runtime']['special_bn_init']:
                 for m in model.modules():
-                    if isinstance(m, torch.nn.BatchNorm2d) or isinstance(m, torch.nn.SyncBatchNorm):
+                    if is_bn(m):
                         m.eps = 1e-3
                         m.momentum = 0.03
             model.load(self.model.state_dict())

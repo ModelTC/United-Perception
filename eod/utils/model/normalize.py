@@ -22,6 +22,20 @@ _norm_cfg = {
 }
 
 
+def is_bn(m):
+    if isinstance(m, torch.nn.BatchNorm2d):
+        return True
+    if isinstance(m, FrozenBatchNorm2d):
+        return True
+    if isinstance(m, CaffeFrozenBatchNorm2d):
+        return True
+    if isinstance(m, PyTorchSyncBN):
+        return True
+    if isinstance(m, GroupSyncBatchNorm):
+        return True
+    return False
+
+
 def build_norm_layer(num_features, cfg, postfix=''):
     assert isinstance(cfg, dict) and 'type' in cfg
     cfg = cfg.copy()
