@@ -2,6 +2,7 @@ import copy
 
 # Import from third library
 import torch
+import math
 from torch.optim.lr_scheduler import MultiStepLR, StepLR, ReduceLROnPlateau, CosineAnnealingLR
 from ..general.registry_factory import WARM_LR_REGISTRY, LR_REGISTRY
 from ..general.registry_factory import LR_SCHEDULER_REGISTY, WARM_SCHEDULER_REGISTY
@@ -39,8 +40,8 @@ class _CosineAnnealingLR(CosineAnnealingLR):
         super(_CosineAnnealingLR, self).__init__(**kwargs)
 
     def get_lr(self):
-        return [self.eta_min + (base_lr - self.eta_min) *
-                (1 + math.cos(math.pi * (self.last_epoch - self.warmup_iter) / (self.T_max - self.warmup_iter))) / 2
+        return [self.eta_min + (base_lr - self.eta_min)
+                * (1 + math.cos(math.pi * (self.last_epoch - self.warmup_iter) / (self.T_max - self.warmup_iter))) / 2
                 for base_lr in self.base_lrs]
 
 
