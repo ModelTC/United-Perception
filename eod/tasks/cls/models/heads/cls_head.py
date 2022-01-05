@@ -1,6 +1,6 @@
 import torch.nn as nn
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
-from eod.utils.model.initializer import init_weights_msra
+# from eod.utils.model.initializer import init_weights_msra
 
 __all__ = ['BaseClsHead']
 
@@ -20,11 +20,10 @@ class BaseClsHead(nn.Module):
         self._init_weights()
 
     def _init_weights(self):
-        #init_weights_msra(self.classifier)
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 n = m.weight.size(1)
-                m.weight.data.normal_(0, 1.0/float(n))
+                m.weight.data.normal_(0, 1.0 / float(n))
                 m.bias.data.zero_()
 
     def forward_net(self, x):
@@ -39,4 +38,3 @@ class BaseClsHead(nn.Module):
 
     def forward(self, input):
         return self.forward_net(input)
-
