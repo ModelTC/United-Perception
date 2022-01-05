@@ -4,7 +4,8 @@ from eod.utils.model.bn_helper import (
     FrozenBatchNorm2d,
     CaffeFrozenBatchNorm2d,
     PyTorchSyncBN,
-    GroupNorm
+    GroupNorm,
+    GroupSyncBatchNorm
 )
 
 import numpy as np
@@ -49,7 +50,7 @@ def register_float_module(keep_fp32):
     import spring.linklink as linklink
     if keep_fp32:
         linklink.fp16.register_float_module(torch.nn.BatchNorm2d, cast_args=True)
-        # linklink.fp16.register_float_module(GroupSyncBatchNorm, cast_args=True)
+        linklink.fp16.register_float_module(GroupSyncBatchNorm, cast_args=True)
         linklink.fp16.register_float_module(FrozenBatchNorm2d, cast_args=True)
         linklink.fp16.register_float_module(PyTorchSyncBN, cast_args=True)
         linklink.fp16.register_float_module(CaffeFrozenBatchNorm2d, cast_args=True)

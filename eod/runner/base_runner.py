@@ -61,7 +61,8 @@ class BaseRunner(object):
                 self.scaler = torch.cuda.amp.GradScaler(enabled=True)
             else:
                 register_float_module(self.config['runtime']['fp16'].get('keep_batchnorm_fp32', True))
-                pass
+                loss_scale = self.config['runtime']['fp16'].get('scale_factor', 'dynamic')
+                self.config['trainer']['optimizer']['kwargs']['loss_scale'] = loss_scale
             self.fp16 = True
             FP16_FLAG.fp16 = True
 
@@ -637,7 +638,10 @@ class BaseRunner(object):
                 loss.backward()
         elif self.backend == 'linklink':
             loss = loss / env.world_size
-            loss.backward()
+            if self.fp16:
+                self.optimizer.backward(loss)
+            else:
+                loss.backward()
             reduce_gradients(self.model, not self.args['asynchronize'],
                              self.args.get('allow_dead_parameter', False))
         else:
