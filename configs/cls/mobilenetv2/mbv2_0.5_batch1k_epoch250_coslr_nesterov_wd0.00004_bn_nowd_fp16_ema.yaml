@@ -126,6 +126,7 @@ trainer: # Required.
     kwargs:
       T_max: 312500
       eta_min: 0.0
+      warmup_iter: 2500
 saver: # Required.
   save_dir: mbv2_0.5_e250_coslr_fp16_ema/checkpoints/cls     # dir to save checkpoints
   results_dir: mbv2_0.5_e250_coslr_fp16_ema/results_dir/cls  # dir to save detection results. i.e., bboxes, masks, keypoints
