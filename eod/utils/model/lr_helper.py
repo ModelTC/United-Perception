@@ -36,6 +36,9 @@ class _ReduceLROnPlateau(ReduceLROnPlateau):
 class _CosineAnnealingLR(CosineAnnealingLR):
     def __init__(self, **kwargs):
         kwargs['T_max'] = kwargs['T_max'] * kwargs["data_size"]
+        if kwargs.get('warmup_iter', -1) != -1:
+            self.warmup_iter = kwargs.get('warmup_iter', 0)
+            self.warmup_iter = kwargs.pop('warmup_iter')
         kwargs.pop('data_size')
         super(_CosineAnnealingLR, self).__init__(**kwargs)
 
