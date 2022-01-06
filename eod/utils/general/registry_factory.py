@@ -2,6 +2,7 @@ from .registry import Registry
 
 # model
 MODULE_ZOO_REGISTRY = Registry()
+MODEL_WRAPPER_REGISTRY = Registry()
 EMA_REGISTRY = Registry()
 
 # data
@@ -78,3 +79,4 @@ MODEL_HELPER_REGISTRY = Registry()
 
 # deploy
 DEPLOY_REGISTRY = Registry()
+TOCAFFE_REGISTRY = Registry()
