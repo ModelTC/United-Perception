@@ -18,7 +18,7 @@ class SegResize(Augmentation):
 
     def augment(self, data):
         data['image'] = cv2.resize(data['image'], dsize=self.size, interpolation=cv2.INTER_LINEAR)
-        data['gt_seg'] = cv2.resize(data['gt_seg'], dsize=self.size, interpolation=cv2.INTER_LINEAR)
+        data['gt_seg'] = cv2.resize(data['gt_seg'], dsize=self.size, interpolation=cv2.INTER_NEAREST)
         return data
 
 
