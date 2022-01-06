@@ -76,8 +76,8 @@ dataset:
 ## Benchmark Results
 
 We provide the benchmark results of the EFL (Equalized Focal Loss) and the EQFL (Equalized Quality Focal Loss).
-The results are divided into the improved baseline series and the YOLOX series.
-All models are trained with the repeat factor sampler (RFS) with 16 GPUs settings.
+The results are divided into the improved baseline series and the YOLOX* series (YOLOX trained with our improved settings).
+**All models are trained with the repeat factor sampler (RFS) with 16 GPUs settings**.
 
 **Improved Baseline Series**
 
@@ -86,21 +86,21 @@ All models are trained with the repeat factor sampler (RFS) with 16 GPUs setting
 |[Res50](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml)| EFL | imagenet | 24e | 27.5 | 20.2 | 26.1 | 32.4 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_improved_baseline_r50.pth) |
 |[Res101](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml) | EFL | imagenet | 24e | 29.2 | 23.5 | 27.4 | 33.8 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_improved_baseline_r101.pth) |
 
-**YOLOX-IP Series**
+**YOLOX\* Series**
 
 |config  | loss | pretrain | scheduler | AP | APr | APc | APf | weights |
 |------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---:|
-|[YOLOX-IP-S](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/efl_yolox_small.yaml)| EFL | None | 300e | 23.3 | 18.1 | 21.2 | 28.0 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_yolox_small.pth) |
-|[YOLOX-IP-S](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/eqfl_yolox_small.yaml)| EQFL | None | 300e | 24.2 | 16.3 | 22.7 | 29.4 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/eqfl_yolox_small.pth) |
-|[YOLOX-IP-M](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/efl_yolox_medium.yaml)| EFL | None | 300e | 30.0 | 23.8 | 28.2 | 34.7 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_yolox_medium.pth) |
-|[YOLOX-IP-M](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/eqfl_yolox_medium.yaml)| EQFL | None | 300e | 31.0 | 24.0 | 29.1 | 36.2 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/eqfl_yolox_medium.pth) |
+|[YOLOX-S*](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/efl_yolox_small.yaml)| EFL | None | 300e | 23.3 | 18.1 | 21.2 | 28.0 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_yolox_small.pth) |
+|[YOLOX-S*](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/eqfl_yolox_small.yaml)| EQFL | None | 300e | 24.2 | 16.3 | 22.7 | 29.4 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/eqfl_yolox_small.pth) |
+|[YOLOX-M*](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/efl_yolox_medium.yaml)| EFL | None | 300e | 30.0 | 23.8 | 28.2 | 34.7 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_yolox_medium.pth) |
+|[YOLOX-M*](https://github.com/ModelTC/EOD/blob/main/configs/det/efl/eqfl_yolox_medium.yaml)| EQFL | None | 300e | 31.0 | 24.0 | 29.1 | 36.2 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/eqfl_yolox_medium.pth) |
 
 ## Testing with Pretrained Models
 
-For example, if you want to test the pretrained model of YOLOX-IP-M with the EQFL (Equlized Quailty Focal Loss):
+For example, if you want to test the pretrained model of YOLOX-M* with the EQFL (Equlized Quailty Focal Loss):
 ```
 mkdir pretrain
-# download the weight of YOLOX-IP-M with the EQFL (eqfl_yolox_medium.pth)
+# download the weight of YOLOX-M* with the EQFL (eqfl_yolox_medium.pth)
 ``` 
 Edit the saver config of `configs/det/efl/eqfl_yolox_medium.yaml`:
 ```
@@ -133,7 +133,7 @@ hooks:
       hook_cls_head: cls_preds     # the last layer of the classification head
 ```
 - Tip 1: our gradient collection mechanism only support the `fp32` settings. Training with `fp16` will get unexpected results.
-- Tip 2: an alternate approach to obtain the gradient is by manual calculation just like the way in [EQLv2](https://github.com/tztztztztz/eqlv2/blob/master/mmdet/models/losses/eqlv2.py#L90). One thing need to be noticed is that you need to write you own code to calculate the gradient from the derivative of EFl or EQFL.
+- Tip 2: an alternate approach to obtain the gradient is by manual calculation just like the way in [EQLv2](https://github.com/tztztztztz/eqlv2/blob/master/mmdet/models/losses/eqlv2.py#L90). One thing need to be noticed is that you need to write you own code to calculate the gradient from the derivative of EFL or EQFL.
 
 
 ## How to Train EFL on OpenImages
