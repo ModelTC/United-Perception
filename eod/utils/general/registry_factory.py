@@ -80,3 +80,6 @@ MODEL_HELPER_REGISTRY = Registry()
 # deploy
 DEPLOY_REGISTRY = Registry()
 TOCAFFE_REGISTRY = Registry()
+KS_PROCESSOR_REGISTRY = Registry()
+KS_PARSER_REGISTRY = Registry()
+TOKESTREL_REGISTRY = Registry()
