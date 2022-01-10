@@ -59,7 +59,7 @@ def build_model(cfg):
     saver = Saver(cfg['saver'])
     state_dict = saver.load_pretrain_or_resume()
     model_dict = model.state_dict()
-    loaded_num = model.load(state_dict, strict=False)
+    loaded_num = model.load(state_dict['model'], strict=False)
     if loaded_num != len(model_dict.keys()):
         warnings.warn('checkpoint keys mismatch loaded keys:({len(model_dict.keys())} vs {loaded_num})')
     return model
@@ -146,7 +146,7 @@ def to_caffe(config, save_prefix='model', input_size=None, input_channel=3):
     tocaffe_ins = TOCAFFE_REGISTRY[tocaffe_type](config,
                                                  save_prefix,
                                                  input_size,
-                                                 None,  # self.model,
+                                                 None,
                                                  input_channel)
     caffemodel_name = tocaffe_ins.process()
 

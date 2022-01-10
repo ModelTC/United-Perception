@@ -172,6 +172,7 @@ def to_kestrel(config, save_to=None, serialize=False):
                                                   input_channel)
     save_to = tokestrel_ins.process()
 
+    return save_to
     # adela
     # if self.config.get('adela', None):
     # generate release.json
