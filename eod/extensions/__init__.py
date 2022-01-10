@@ -1,4 +1,5 @@
 from .python.roi_align import RoIAlignPool
+from .python.psroi_align import *
 
 
 def build_generic_roipool(pool_cfg):
@@ -11,7 +12,8 @@ def build_generic_roipool(pool_cfg):
     """
     ptype = pool_cfg['method']
     pool_cls = {
-        'roialignpool': RoIAlignPool
+        'roialignpool': RoIAlignPool,
+        'psroialign': PSRoIAlign
     }[ptype]
     # RoIAlignPool
     return pool_cls.from_params(pool_cfg)

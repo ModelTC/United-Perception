@@ -2,12 +2,15 @@
 import glob
 import os
 import subprocess
-
+import io
+import re
 # Import from third library
 import torch
 from setuptools import setup, find_packages
-from eod import __version__
 from torch.utils.cpp_extension import CppExtension, CUDAExtension
+
+with io.open("eod/__init__.py", "rt", encoding="utf8") as f:
+    __version__ = re.search(r'__version__ = "(\D*)(.*?)"', f.read(), re.M).group(2)
 
 
 def _find_cuda_home():
