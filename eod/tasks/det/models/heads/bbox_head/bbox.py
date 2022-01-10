@@ -4,7 +4,7 @@ import torch
 # import torch.nn.functional as F
 
 
-# from eod.extensions import nms
+from eod.extensions import nms
 from eod.tasks.det.models.utils.bbox_helper import (
     bbox2offset,
     clip_bbox,
