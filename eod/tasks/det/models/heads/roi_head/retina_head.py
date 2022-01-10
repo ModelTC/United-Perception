@@ -1,10 +1,8 @@
-import copy
 import torch.nn as nn
-import torch.nn.functional as F
 
 from eod.utils.model.normalize import build_conv_norm, build_norm_layer
 from eod.utils.model.initializer import init_bias_focal, initialize_from_cfg
-from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY, ANCHOR_GENERATOR_REGISTRY
+from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from eod.utils.general.global_flag import FP16_FLAG
 
 
@@ -20,8 +18,7 @@ class BaseNet(nn.Module):
         0 is always for the background class.
     """
 
-    def __init__(self, inplanes, num_classes, num_levels=5,
-                 class_activation=None, anchor_generator=None, out_strides=None):
+    def __init__(self, inplanes, num_classes, num_levels=5):
         """
         Arguments:
             - inplanes (:obj:`list` or :obj:`int`): input channel,
@@ -36,37 +33,12 @@ class BaseNet(nn.Module):
         self.num_classes = num_classes
         self.inplanes = inplanes
         self.num_levels = num_levels
-        self.tocaffe = False
-        self.class_activation = class_activation
-        anchor_generator = copy.deepcopy(anchor_generator)
-        anchor_generator['kwargs']['anchor_strides'] = out_strides
-        self.anchor_generator = ANCHOR_GENERATOR_REGISTRY.build(anchor_generator)
 
     def forward(self, input):
         features = input['features']
         mlvl_raw_preds = [self.forward_net(features[lvl], lvl) for lvl in range(self.num_levels)]
         output = {}
-        if self.tocaffe:
-            output = self.export(mlvl_raw_preds)
-        output.update({'preds': mlvl_raw_preds})
-        return output
-
-    def export(self, mlvl_preds):
-        output = {}
-        for idx, preds in enumerate(mlvl_preds):
-            cls_pred, loc_pred = preds[:2]
-            if self.class_activation == 'sigmoid':
-                cls_pred = cls_pred.sigmoid()
-            else:
-                assert self.class_activation == 'softmax'
-                _, _, h, w = cls_pred.shape
-                c = cls_pred.shape[1] // self.num_anchors
-                cls_pred = cls_pred.view(-1, c, h, w).permute(0, 2, 3, 1).contiguous()
-                cls_pred = F.softmax(cls_pred, dim=-1)
-                cls_pred = cls_pred.permute(0, 3, 1, 2).contiguous().view(-1, self.num_anchors * c, h, w)
-            output[self.prefix + '.blobs.cls' + str(idx)] = cls_pred
-            output[self.prefix + '.blobs.loc' + str(idx)] = loc_pred
-        output['base_anchors'] = self.anchor_generator.export()
+        output['preds'] = mlvl_raw_preds
         return output
 
 
@@ -86,18 +58,8 @@ class RetinaSubNet(BaseNet):
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
-                 num_levels=5,
-                 anchor_generator=None,
-                 out_strides=None):
-        super(
-            RetinaSubNet,
-            self).__init__(
-            inplanes,
-            num_classes,
-            num_levels,
-            class_activation,
-            anchor_generator,
-            out_strides)
+                 num_levels=5):
+        super(RetinaSubNet, self).__init__(inplanes, num_classes, num_levels)
 
         inplanes = self.inplanes
         self.class_activation = class_activation

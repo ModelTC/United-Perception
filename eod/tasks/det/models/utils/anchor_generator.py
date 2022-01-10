@@ -204,7 +204,7 @@ class HandCraftAnchorGenerator(BoxAnchorGenerator):
             'anchor_type': 'hand_craft',
             'anchor_ratios': self._anchor_ratios,
             'anchor_scales': self._anchor_scales,
-            'anchor_strides': self._anchor_strides,
+            'anchor_strides': [int(_) for _ in self._anchor_strides],
             'anchors': json_anchors
         }
 

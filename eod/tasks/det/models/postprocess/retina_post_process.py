@@ -2,6 +2,8 @@ import copy
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from eod.utils.model import accuracy as A  # noqa F401
 from eod.tasks.det.models.utils.anchor_generator import build_anchor_generator
@@ -29,6 +31,7 @@ class BasePostProcess(nn.Module):
     def __init__(self, num_classes, cfg):
         super(BasePostProcess, self).__init__()
         self.prefix = self.__class__.__name__
+        self.tocaffe = False
 
         self.num_classes = num_classes
         assert self.num_classes > 1
@@ -90,6 +93,24 @@ class BasePostProcess(nn.Module):
             mlvl_shapes.append((h, w, k))
         return mlvl_permuted_preds, mlvl_shapes
 
+    def export(self, mlvl_preds):
+        output = {}
+        for idx, preds in enumerate(mlvl_preds):
+            cls_pred, loc_pred = preds[:2]
+            if self.class_activation == 'sigmoid':
+                cls_pred = cls_pred.sigmoid()
+            else:
+                assert self.class_activation == 'softmax'
+                _, _, h, w = cls_pred.shape
+                c = cls_pred.shape[1] // self.num_anchors
+                cls_pred = cls_pred.view(-1, c, h, w).permute(0, 2, 3, 1).contiguous()
+                cls_pred = F.softmax(cls_pred, dim=-1)
+                cls_pred = cls_pred.permute(0, 3, 1, 2).contiguous().view(-1, self.num_anchors * c, h, w)
+            output[self.prefix + '.blobs.cls' + str(idx)] = cls_pred
+            output[self.prefix + '.blobs.loc' + str(idx)] = loc_pred
+        output['base_anchors'] = self.anchor_generator.export()
+        return output
+
     def forward(self, input):
         strides = input['strides']
         image_info = input['image_info']
@@ -104,6 +125,9 @@ class BasePostProcess(nn.Module):
         mlvl_anchors = self.anchor_generator.get_anchors(mlvl_shapes, device=device)
         self.mlvl_anchors = mlvl_anchors
         output = {}
+        # export preds
+        if self.tocaffe:
+            output = self.export(mlvl_raw_preds)
 
         if self.training:
             targets = self.supervisor.get_targets(mlvl_anchors, input, mlvl_preds)
