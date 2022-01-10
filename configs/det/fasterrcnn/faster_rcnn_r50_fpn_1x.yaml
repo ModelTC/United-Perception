@@ -138,7 +138,7 @@ net:
       #  type: solo_bn
   - name: post_process
     prev: roi_head
-    type: rpn_post
+    type: retina_post
     kwargs:
       num_classes: 2  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       cfg:

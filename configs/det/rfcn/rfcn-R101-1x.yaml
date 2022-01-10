@@ -115,7 +115,7 @@ net:
         std: 0.01
   - name: post_process
     prev: roi_head
-    type: rpn_post
+    type: retina_post
     kwargs:
       num_classes: 2
       cfg:
