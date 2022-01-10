@@ -12,9 +12,9 @@ __version__ = "0.0.1"  # Available for other modules to import
 # import for register
 
 from .commands import *
-from .runner import * 
+from .runner import *
 from .data import *
-from .models import * 
+from .models import *
 from .utils import *
 from .tasks import *
 from .apis import *

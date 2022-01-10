@@ -15,7 +15,7 @@ from .roi_supervisor import build_roi_supervisor
 from .roi_predictor import build_roi_predictor
 
 
-__all__ = ['BasePostProcess', 'IOUPostProcess']
+__all__ = ['BasePostProcess', 'IOUPostProcess', 'RPNPostProcess']
 
 
 @MODULE_ZOO_REGISTRY.register('retina_post')
@@ -48,6 +48,7 @@ class BasePostProcess(nn.Module):
 
         test_cfg = copy.deepcopy(cfg)
         test_cfg.update(test_cfg.get('test', {}))
+        self.test_predictor_type = test_cfg['roi_predictor']['type']
         self.test_predictor = build_roi_predictor(test_cfg['roi_predictor'])
 
         self.cls_loss = build_loss(cfg['cls_loss'])
@@ -205,7 +206,8 @@ class BasePostProcess(nn.Module):
         masked_tensors = []
         for tensor in tensors:
             n_dim = tensor.shape[-1]
-            masked_tensor = tensor.reshape(-1, n_dim)[mask]
+            tensor = tensor.reshape(-1, n_dim)
+            masked_tensor = tensor[mask]
             masked_tensors.append(masked_tensor)
         return masked_tensors
 
@@ -314,3 +316,44 @@ class IOUPostProcess(BasePostProcess):
         num_gpus = env.world_size
         ave_normalizer = max(ave_loc_mask.item(), 1) / float(num_gpus)
         return ave_normalizer
+
+
+@MODULE_ZOO_REGISTRY.register('rpn_post')
+class RPNPostProcess(BasePostProcess):
+    """
+    hzh_22_1_5
+    Classify Anchors (2 cls): foreground or background. This module is usually
+    used with :class:`~pod.models.heads.bbox_head.bbox_head.BboxNet`
+    """
+
+    def __init__(self, num_classes, cfg):
+        super(RPNPostProcess, self).__init__(num_classes, cfg)
+
+    def get_loss(self, targets, mlvl_preds, mlvl_shapes=None):
+        cls_target, loc_target, cls_mask, loc_mask = targets
+        mlvl_cls_pred, mlvl_loc_pred = zip(*mlvl_preds)
+        cls_pred = torch.cat(mlvl_cls_pred, dim=1)
+        loc_pred = torch.cat(mlvl_loc_pred, dim=1)
+        del mlvl_cls_pred, mlvl_loc_pred
+        num_pos = max(1, torch.sum(cls_mask.float()).item())
+        normalizer = num_pos if 'focal' in self.cls_loss.name else None
+        ### here can print loc_mask ##
+        cls_loss = self.cls_loss(cls_pred, cls_target, normalizer_override=normalizer)
+        ### here can not print loc_mask ##
+        loc_target, loc_pred = self._mask_tensor([loc_target, loc_pred], loc_mask)
+        if loc_mask.sum() == 0:
+            loc_loss = loc_pred.sum()
+        else:
+            loc_loss_key_fields = getattr(self.loc_loss, "key_fields", set())
+            loc_loss_kwargs = {}
+            if "anchor" in loc_loss_key_fields:
+                loc_loss_kwargs["anchor"] = self.get_sample_anchor(loc_mask)
+            loc_loss = self.loc_loss(loc_pred, loc_target, normalizer_override=num_pos, **loc_loss_kwargs)
+
+        acc = self._get_acc(cls_pred, cls_target)
+
+        return {
+            self.prefix + '.cls_loss': cls_loss,
+            self.prefix + '.loc_loss': loc_loss,
+            self.prefix + '.accuracy': acc
+        }
