@@ -5,6 +5,7 @@ import shutil
 
 # Import from third library
 import torch
+from collections import OrderedDict
 
 # Import from local
 from .log_helper import default_logger as logger
@@ -79,6 +80,33 @@ class Saver(object):
     def load_checkpoint(ckpt_path):
         """Load state_dict from checkpoint"""
 
+        def pod_resnet_convert(state_dict):
+            convert_dict = {
+                "backbone.conv1.weight": "backbone.layer0.0.weight",
+                "backbone.bn1.weight": "backbone.layer0.1.weight",
+                "backbone.bn1.bias": "backbone.layer0.1.bias",
+                "backbone.bn1.running_mean": "backbone.layer0.1.running_mean",
+                "backbone.bn1.running_var": "backbone.layer0.1.running_var",
+                "backbone.bn1.num_batches_tracked": "backbone.layer0.1.num_batches_tracked"
+            }
+            is_convert = False
+            count = 0
+            for k in convert_dict.keys():
+                if k in state_dict:
+                    count += 1
+            if count >= 5:  # num_batches_tracked maybe not exist
+                is_convert = True
+            if is_convert:
+                new_state_dict = OrderedDict()
+                for k, v in state_dict.items():
+                    if k in convert_dict:
+                        new_state_dict[convert_dict[k]] = v
+                    else:
+                        new_state_dict[k] = v
+                return new_state_dict
+            else:
+                return state_dict
+
         def remove_prefix(state_dict, prefix):
             """Old style model is stored with all names of parameters share common prefix 'module.'"""
             f = lambda x: x.split(prefix, 1)[-1] if x.startswith(prefix) else x
@@ -96,6 +124,7 @@ class Saver(object):
             state_dict = ckpt_dict
 
         state_dict = remove_prefix(state_dict, 'module.')
+        state_dict = pod_resnet_convert(state_dict)
         ckpt_dict['model'] = state_dict
 
         return ckpt_dict
