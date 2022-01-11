@@ -2,6 +2,7 @@
 #include "psroi_align/psroi_align.h"
 #include "psroi_pooling/psroi_pooling.h"
 #include "nms/nms.h"
+#include "focal_loss/focal_loss.h"
 #include <torch/torch.h>
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
@@ -33,4 +34,20 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
                                                  "vanilla nms method");
     naive_nms.def("gpu_nms", &gpu_nms, "gpu_nms (CUDA)");
     naive_nms.def("cpu_nms", &cpu_nms, "cpu_nms (CPU)");
+
+    // pybind focal loss
+    pybind11::module fl = m.def_submodule("focal_loss",
+                                          "focal loss for RetinaNet");
+    fl.def("sigmoid_forward_cuda",
+           &focal_loss_sigmoid_forward_cuda,
+           "sigmoid_forward_cuda forward (CUDA)");
+    fl.def("sigmoid_backward_cuda",
+           &focal_loss_sigmoid_backward_cuda,
+           "sigmoid_backward_cuda backward (CUDA)");
+    fl.def("softmax_forward_cuda",
+           &focal_loss_softmax_forward_cuda,
+           "softmax_forward_cuda forward (CUDA)");
+    fl.def("softmax_backward_cuda",
+           &focal_loss_softmax_backward_cuda,
+           "softmax_backward_cuda backward (CUDA)");
 }

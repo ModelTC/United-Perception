@@ -4,6 +4,10 @@ from .python.roi_align import RoIAlignPool
 from .python.psroi_align import *
 from .python.psroi_pool import PSRoIPool
 from .python.nms import naive_nms
+from .python.focal_loss import (
+    SigmoidFocalLossFunction,
+    SoftmaxFocalLossFunction
+)
 
 
 def build_generic_roipool(pool_cfg):

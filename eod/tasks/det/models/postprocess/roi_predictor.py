@@ -12,6 +12,7 @@ from eod.tasks.det.models.utils.bbox_helper import (
     offset2bbox
 )
 
+
 __all__ = [
     'RoiPredictor',
     'RoiPredictorMultiCls',
@@ -295,7 +296,7 @@ class RetinaMerger(object):
                 cls_rois = img_rois[img_rois[:, 6] == cls]
                 if cls_rois.numel() == 0:
                     continue  # noqa E701
-                _, indices = nms(cls_rois[:, 1:6], self.nms_cfg)
+                _, indices = nms(cls_rois[:, 1:6], self.nms_cfg, descending=False)
                 all_cls_rois.append(cls_rois[indices])
             if len(all_cls_rois) == 0:
                 continue  # noqa E701
