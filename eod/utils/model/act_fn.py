@@ -17,11 +17,11 @@ class Hardswish(nn.Module):  # export-friendly version of nn.Hardswish()
 
 
 _act_cfg = {
-    'Hardswish': ('act', torch.nn.Hardswish if hasattr(torch.nn, 'Hardswish') else None),
+    'Hardswish': ('act', torch.nn.Hardswish if hasattr(torch.nn, 'Hardswish') else Hardswish),
     'LeakyReLU': ('act', torch.nn.LeakyReLU),
     'ReLU': ('act', torch.nn.ReLU),
     'Identity': ('act', torch.nn.Identity),
-    'Silu': ('act', torch.nn.SiLU if hasattr(torch.nn, 'SiLU') else None)
+    'Silu': ('act', torch.nn.SiLU if hasattr(torch.nn, 'SiLU') else SiLU)
 }
 
 
