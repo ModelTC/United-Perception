@@ -12,5 +12,5 @@ pip uninstall -y kestrel==1.5.4-patch1
 # pip install --user -r requirements.txt
 
 partition=$1
-srun -p $partition --gres=gpu:1 python setup.py build_ext -i
+srun -p $partition --quotatype=spot --gres=gpu:1 python setup.py build_ext -i
 # python setup.py build_ext -i
