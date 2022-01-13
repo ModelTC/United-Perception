@@ -1,18 +1,19 @@
 # Import from third library
 import torch
 import torch.nn.functional as F
-
+import numpy as np
 
 from .entropy_loss import GeneralizedCrossEntropyLoss
 from eod.utils.general.registry_factory import LOSSES_REGISTRY
 from eod.models.losses.loss import _reduce
 from eod.extensions import (
     SigmoidFocalLossFunction,
-    SoftmaxFocalLossFunction
+    SoftmaxFocalLossFunction,
+    CrossSigmoidFocalLossFunction
 )
 
 
-__all__ = ['QualityFocalLoss', 'SigmoidFocalLoss', 'dynamic_normalizer']
+__all__ = ['QualityFocalLoss', 'SigmoidFocalLoss', 'dynamic_normalizer', 'CrossSigmoidFocalLoss']
 
 
 @LOSSES_REGISTRY.register('quality_focal_loss')
@@ -20,6 +21,7 @@ class QualityFocalLoss(GeneralizedCrossEntropyLoss):
     """
     Quality focal loss: https://arxiv.org/abs/2006.04388,
     """
+
     def __init__(self,
                  gamma,
                  init_prior=0.01,
@@ -204,6 +206,83 @@ class SigmoidFocalLoss(GeneralizedCrossEntropyLoss):
         return loss
 
 
+@LOSSES_REGISTRY.register('cross_sigmoid_focal_loss')
+class CrossSigmoidFocalLoss(SigmoidFocalLoss):
+    def __init__(self,
+                 num_classes,
+                 alpha,
+                 gamma,
+                 init_prior,
+                 name='cross_sigmoid_focal_loss',
+                 reduction='mean',
+                 loss_weight=1.0,
+                 ignore_index=-1,
+                 dynamic_normalizer=False,
+                 gt_class_to_avoid=None,
+                 neg_targets=None):
+        """
+        Arguments:
+            - name (:obj:`str`): name of the loss function
+            - reduction (:obj:`str`): reduction type, choice of mean, none, sum
+            - loss_weight (:obj:`float`): loss weight
+            - gamma (:obj:`float`): hyparam
+            - alpha (:obj:`float`): hyparam
+            - init_prior (:obj:`float`): init bias initialization
+            - num_classes (:obj:`int`): num_classes total, 81 for coco
+            - ignore index (:obj:`int`): ignore index in label
+            - gt_class_to_avoid (:obj: `list`): avoid label for gt_class
+            - dynamic_normalizer (:obj:`bool`): flag of using dynamic_normalizer
+        """
+        SigmoidFocalLoss.__init__(
+            self,
+            num_classes,
+            alpha,
+            gamma,
+            init_prior,
+            name=name,
+            reduction=reduction,
+            loss_weight=loss_weight,
+            ignore_index=ignore_index,
+            dynamic_normalizer=dynamic_normalizer)
+        if gt_class_to_avoid is None:
+            # if gt_class_to avoid is not provided, we set -2 for no neg label to avoid.
+            gt_class_to_avoid = [[-2]] * self.num_channels
+        self.gt_class_to_avoid = self._convert2tensor(gt_class_to_avoid)
+        self.neg_targets = neg_targets
+        assert ignore_index == -1, 'only -1 is allowed for ignore index'
+
+    def _convert2tensor(self, avoid_list):
+        cls_num = len(avoid_list)
+        data = []
+        data.append(cls_num)
+        for cls, neg in enumerate(avoid_list):
+            data.append(1 + len(neg))
+            data.append(cls + 1)
+            data.extend(neg)
+        data = np.require(data, dtype=np.int32)
+        data = torch.from_numpy(data).cuda()
+        return data
+
+    def forward(self, input, target, reduction, normalizer=None):
+        """
+        Arguments:
+            - input (FloatTenosor): [[M, N,]C]
+            - target (LongTenosor): [[M, N]]
+        """
+        # assert reduction != 'none', 'Not Supported none reduction yet'
+        input = input.reshape(target.numel(), -1)
+        target = target.reshape(-1).int()
+        normalizer = 1.0 if normalizer is None else normalizer
+        normalizer = torch.Tensor([normalizer]).type_as(input).to(input.device)
+        if self.dynamic_normalizer:
+            normalizer = cross_dynamic_normalizer(input, target, self.alpha, self.gamma, self.neg_targets)
+        return CrossSigmoidFocalLossFunction.apply(input, target, normalizer,
+                                                   self.gamma, self.alpha,
+                                                   self.num_channels,
+                                                   self.gt_class_to_avoid,
+                                                   reduction)
+
+
 def dynamic_normalizer(input, target, alpha, gamma):
     def reduce_(tensor, gamma):
         return tensor.pow(gamma).sum()
@@ -211,6 +290,29 @@ def dynamic_normalizer(input, target, alpha, gamma):
     input_p = input.detach().sigmoid()
     pos_mask = torch.nonzero(target >= 1).squeeze()
     valid_mask = torch.nonzero(target >= 0).squeeze()
+    pos_normalizer = reduce_((1 - input_p[pos_mask, target[pos_mask] - 1]), gamma)
+    neg_normalizer = reduce_(input_p[valid_mask], gamma) - reduce_(input_p[pos_mask, target[pos_mask] - 1], gamma)
+    pos_normalizer *= alpha
+    neg_normalizer *= 1 - alpha
+    normalizer = torch.clamp(pos_normalizer + neg_normalizer, min=1)
+    return normalizer
+
+
+def cross_dynamic_normalizer(input, target, alpha, gamma, neg_target=None):
+    def reduce_(tensor, gamma):
+        return tensor.pow(gamma).sum()
+    target = target.reshape(-1).long()
+    input_p = input.detach().sigmoid()
+    cls_num = input_p.size(1)
+    pos_mask = torch.nonzero((target >= 1) & (target <= cls_num)).squeeze()
+    valid_mask = input.new_zeros(input.size()).bool()
+    valid_mask[pos_mask, :] = True
+    for idx, nt in enumerate(neg_target):
+        if isinstance(nt, list):
+            for _nt in nt:
+                valid_mask[torch.nonzero(_nt == target), idx] = True
+        else:
+            valid_mask[torch.nonzero(nt == target), idx] = True
     pos_normalizer = reduce_((1 - input_p[pos_mask, target[pos_mask] - 1]), gamma)
     neg_normalizer = reduce_(input_p[valid_mask], gamma) - reduce_(input_p[pos_mask, target[pos_mask] - 1], gamma)
     pos_normalizer *= alpha

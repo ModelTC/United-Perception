@@ -8,6 +8,7 @@ from .python.focal_loss import (
     SigmoidFocalLossFunction,
     SoftmaxFocalLossFunction
 )
+from .python.cross_focal_loss import CrossSigmoidFocalLossFunction
 
 
 def build_generic_roipool(pool_cfg):

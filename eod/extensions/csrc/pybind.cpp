@@ -3,6 +3,7 @@
 #include "psroi_pooling/psroi_pooling.h"
 #include "nms/nms.h"
 #include "focal_loss/focal_loss.h"
+#include "cross_focal_loss/cross_focal_loss.h"
 #include <torch/torch.h>
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
@@ -50,4 +51,13 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     fl.def("softmax_backward_cuda",
            &focal_loss_softmax_backward_cuda,
            "softmax_backward_cuda backward (CUDA)");
+
+    // pybind cross focal loss
+    pybind11::module cross_fl = m.def_submodule("cross_focal_loss", "cross focal loss for RetinaNet");
+    cross_fl.def("cross_sigmoid_forward_cuda",
+                 &cross_focal_loss_sigmoid_forward_cuda,
+                 "sigmoid_forward_cuda forward (CUDA)");
+    cross_fl.def("cross_sigmoid_backward_cuda",
+                 &cross_focal_loss_sigmoid_backward_cuda,
+                 "sigmoid_backward_cuda backward (CUDA)");
 }
