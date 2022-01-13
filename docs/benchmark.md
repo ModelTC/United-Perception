@@ -11,8 +11,8 @@
 # YOLOX-Ret
 |Model  | size |mAP<sup>val<br>0.5:0.95 | weights |
 | ------|:---: | :---:                  | :---:   |
-|[YOLOX-nano-ret-a1](https://github.com/ModelTC/EOD/blob/main/configs/det/retiannet/yolox_n_ret_a1_comloc.yaml)|416  |25.8 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/yolox_n_ret_a1.pth) |
-|[YOLOX-nano-ret-a2](https://github.com/ModelTC/EOD/blob/main/configs/det/retiannet/yolox_n_ret_a2_comloc.yaml)|416  |26.4 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/yolox_n_ret_a2.pth) |
+|[YOLOX-nano-ret-a1](https://github.com/ModelTC/EOD/blob/main/configs/det/retinanet/yolox_n_ret_a1_comloc.yaml)|416  |25.8 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/yolox_n_ret_a1.pth) |
+|[YOLOX-nano-ret-a2](https://github.com/ModelTC/EOD/blob/main/configs/det/retinanet/yolox_n_ret_a2_comloc.yaml)|416  |26.4 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/yolox_n_ret_a2.pth) |
 |[YOLOX-nano-ret-a2-ada](https://github.com/ModelTC/EOD/blob/main/configs/det/retinanet/yolox_n_ret_a1_comloc_ada.yaml)|416  |27.2 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/yolox_n_ret_a2_ada.pth) |
 |[YOLOX-tiny-ret-a1](https://github.com/ModelTC/EOD/blob/main/configs/det/retinanet/yolox_t_ret_a1_comloc.yaml)    |416  |33.6 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/yolox_t_ret_a1.pth) |
 |[YOLOX-tiny-ret-a2](https://github.com/ModelTC/EOD/blob/main/configs/det/retinanet/yolox_t_ret_a2_comloc.yaml)    |416  |33.8 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/yolox_t_ret_a2.pth) |
