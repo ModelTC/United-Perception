@@ -7,6 +7,7 @@ import argparse
 from .subcommand import Subcommand
 from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY, DEPLOY_REGISTRY
+from eod.utils.general.user_analysis_helper import send_info
 
 __all__ = ['QuantDeploy']
 
@@ -52,6 +53,7 @@ def main(args):
     runner_cfg['kwargs'] = runner_cfg.get('kwargs', {})
     cfg['runtime']['runner'] = runner_cfg
 
+    send_info(cfg, func="quant_deploy")
     if runner_cfg['type'] == "quant":
         quant_deploy = DEPLOY_REGISTRY.get("quant")(cfg)
         quant_deploy.load_checkpoint()

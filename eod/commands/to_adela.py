@@ -11,6 +11,7 @@ from .subcommand import Subcommand
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.toadela_helper import to_adela
+from eod.utils.general.user_analysis_helper import send_info
 
 
 __all__ = ['ToAdela']
@@ -72,15 +73,10 @@ def main(args):
         'opts': args.opts
     }
 
+    send_info(cfg, func="to_adela")
     to_adela(cfg, args.release_json, args.save_to, args.serialize)
 
 
 def _main(args):
-    # DIST_BACKEND.backend = args.backend
-    # mp.set_start_method(args.fork_method, force=True)
-    # fork_method = mp.get_start_method(allow_none=True)
-    # assert fork_method == args.fork_method
-    # sys.stdout.flush()
-    # setup_distributed(args.port, args.launch, args.backend)
     logger.init_log()
     main(args)

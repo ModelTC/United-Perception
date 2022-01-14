@@ -10,6 +10,7 @@ from .subcommand import Subcommand
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.tocaffe_helper import to_caffe
+from eod.utils.general.user_analysis_helper import send_info
 
 
 __all__ = ['ToCaffe']
@@ -72,6 +73,7 @@ def main(args):
         'config_path': args.config,
         'opts': args.opts
     }
+    send_info(cfg, func="to_caffe")
     to_caffe(cfg, args.save_prefix, args.input_size)
 
 

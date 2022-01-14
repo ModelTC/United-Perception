@@ -11,6 +11,7 @@ from .subcommand import Subcommand
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.tokestrel_helper import to_kestrel
+from eod.utils.general.user_analysis_helper import send_info
 
 
 __all__ = ['ToKestrel']
@@ -74,6 +75,7 @@ def main(args):
         'config_path': args.config,
         'opts': args.opts
     }
+    send_info(cfg, func="to_kestrel")
     to_kestrel(cfg, args.save_to, args.serialize)
 
 
