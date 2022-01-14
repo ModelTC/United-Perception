@@ -184,3 +184,18 @@ def parse_dataset_param(dataset_cfg):
     dataset_param['rgb_flag'] = color_mode == 'RGB'
 
     return dataset_param  # , class_meta
+
+
+def process_sphinx_reshape(net, cls_channel_num, anchor_precede=True, serialize=False):
+    net_graph = graph.gen_graph(net)
+    for node in net_graph.nodes():
+        if node.content.type == 'Reshape':
+            if not serialize and (node.content.reshape_param.shape.dim == [0] * 4
+                                  or len(node.succ) == 0):
+                # remove useless reshape
+                transform.remove_layer(net, node)
+            elif len(node.succ) == 1 and 'Softmax' == node.succ[0].content.type:
+                # update reshape dim
+                node.content.reshape_param.shape.ClearField('dim')
+                node.content.reshape_param.shape.dim.extend([-1, cls_channel_num, 0, 0])
+    return net

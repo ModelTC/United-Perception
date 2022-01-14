@@ -3,18 +3,12 @@ from __future__ import division
 # Standard Library
 import argparse
 import os
-import sys
 
-# Import from third library
-import torch.multiprocessing as mp
-
-from eod.utils.env.dist_helper import setup_distributed, finalize
-from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
+from eod.utils.general.yaml_loader import load_yaml
 
 # Import from local
 from .subcommand import Subcommand
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY
-from eod.utils.general.global_flag import DIST_BACKEND
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.tokestrel_helper import to_kestrel
 
@@ -82,16 +76,7 @@ def main(args):
     }
     to_kestrel(cfg, args.save_to, args.serialize)
 
-    if len(cfg['dataset'].get('data_pool', ['train:train', 'test:test'])):
-        finalize()
-
 
 def _main(args):
-    DIST_BACKEND.backend = args.backend
-    mp.set_start_method(args.fork_method, force=True)
-    fork_method = mp.get_start_method(allow_none=True)
-    assert fork_method == args.fork_method
-    sys.stdout.flush()
-    setup_distributed(args.port, args.launch, args.backend)
     logger.init_log()
     main(args)

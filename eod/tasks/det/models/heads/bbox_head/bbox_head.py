@@ -40,19 +40,7 @@ class BboxNet(nn.Module):
         assert isinstance(inplanes, int)
         self.inplanes = inplanes
 
-        """
-        with config(cfg, 'train', allow_empty=True) as train_cfg:
-            self.supervisor = build_bbox_supervisor(train_cfg['bbox_supervisor'])
-        with config(cfg, 'test', allow_empty=True) as test_cfg:
-            self.predictor = build_bbox_predictor(test_cfg['bbox_predictor'])
-        """
-        # if 'train' in cfg:
-        #     train_cfg = copy.deepcopy(cfg)
-        #     train_cfg.update(train_cfg['train'])
         self.supervisor = build_bbox_supervisor(cfg['bbox_supervisor'])
-
-        # test_cfg = copy.deepcopy(cfg)
-        # test_cfg.update(test_cfg.get('test', {}))
         self.predictor = build_bbox_predictor(cfg['bbox_predictor'])
 
         cfg_fpn = cfg.get('fpn', None)
@@ -156,6 +144,8 @@ class BboxNet(nn.Module):
                 mlvl_features.append(x_features[lvl_idx])
                 mlvl_strides.append(x_strides[lvl_idx])
         assert len(mlvl_rois) > 0, "No rois provided for second stage"
+        if self.tocaffe and torch.is_tensor(mlvl_strides[0]):
+            mlvl_strides = [int(s) for s in mlvl_strides]
         pooled_feats = self.roi_extractor(mlvl_rois, mlvl_features, mlvl_strides)
         pred_cls, pred_loc = self.forward_net(pooled_feats)
         return pred_cls, pred_loc
@@ -191,6 +181,8 @@ class BboxNet(nn.Module):
         else:
             assert len(features) == 1 and len(strides) == 1, \
                 'please setup `fpn` first if you want to use pyramid features'
+            if self.tocaffe and torch.is_tensor(strides):
+                strides = strides.tolist()
             pooled_feats = self.roi_extractor([rois], features, strides)
             cls_pred, loc_pred = self.forward_net(pooled_feats)
             recover_inds = torch.arange(rois.shape[0], device=rois.device)
@@ -340,6 +332,11 @@ class FC(BboxNet):
             init_bias_focal(self.fc_rcnn_cls, 'sigmoid', init_prior, num_classes)
 
     def roi_extractor(self, mlvl_rois, mlvl_features, mlvl_strides):
+        if self.tocaffe:
+            if not isinstance(mlvl_strides, list):
+                mlvl_strides = mlvl_strides.tolist()
+            else:
+                mlvl_strides = [int(_) for _ in mlvl_strides]
         if self.with_drp:
             pooled_feats = [self.roipool[idx](*args)
                             for idx, args in enumerate(zip(mlvl_rois, mlvl_features, mlvl_strides))]

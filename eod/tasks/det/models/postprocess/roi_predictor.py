@@ -1,6 +1,9 @@
 # Import from third library
 import torch
-from eod.tasks.det.models.utils.nms_wrapper import nms
+
+from eod.extensions import nms
+# from eod.tasks.det.models.utils.nms_wrapper import nms
+from eod.utils.general.tocaffe_utils import ToCaffe
 from eod.utils.general.fp16_helper import to_float32
 from eod.utils.general.registry_factory import ROI_MERGER_REGISTRY, ROI_PREDICTOR_REGISTRY
 from eod.tasks.det.models.utils.bbox_helper import (
@@ -43,6 +46,7 @@ class RoiPredictor(object):
         else:
             self.merger = None
 
+    @ToCaffe.disable_trace
     @torch.no_grad()
     @to_float32
     def predict(self, mlvl_anchors, mlvl_preds, image_info):

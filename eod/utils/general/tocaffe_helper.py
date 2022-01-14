@@ -122,7 +122,7 @@ class PodToCaffe(object):
         import spring.nart.tools.pytorch as pytorch
         input_names = ['data']
         with pytorch.convert_mode():
-            pytorch.convert_v2(
+            pytorch.convert(
                 self.model, [self.input_size],
                 filename=self.save_prefix,
                 input_names=input_names,

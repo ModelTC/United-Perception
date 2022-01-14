@@ -109,8 +109,6 @@ class BoxAnchorGenerator(AnchorGenerator):
         generate anchor (reference) windows by enumerating aspect ratios X
         scales wrt a reference (0, 0, base_size - 1, base_size - 1) window.
         """
-        if not isinstance(stride, int):
-            stride = stride.item()
         if ALIGNED_FLAG.aligned:
             w = stride
             h = stride

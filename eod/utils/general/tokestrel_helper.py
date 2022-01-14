@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import json
 import copy
+import torch
 
 from eod.utils.general.tocaffe_helper import to_caffe
 from eod.utils.general.log_helper import default_logger as logger
@@ -118,6 +119,10 @@ class ToKestrel(object):
         version = config['to_kestrel'].get('version', "1.0.0")
         # kestrel_model = '{}_{}.tar'.format(detector, version)
         parameters_json = 'tmp_parameters_json'
+        # convert torch.tensor in parameters to int or list
+        for key in self.parameters:
+            if torch.is_tensor(self.parameters[key]):
+                self.parameters[key] = self.parameters[key].tolist()
         with open(parameters_json, 'w') as f:
             json.dump(self.parameters, f, indent=2)
         resize_hw = config['to_kestrel'].get('resize_hw', '')

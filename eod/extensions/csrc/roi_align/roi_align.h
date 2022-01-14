@@ -9,6 +9,13 @@
 #define CHECK_CONTIGUOUS(x) AT_ASSERTM(x.is_contiguous(), #x " must be contiguous")
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
+// for tocaffe
+int roi_align_forward(
+    bool aligned, 
+    int aligned_height, int aligned_width,
+    float spatial_scale, int sampling_ratio,
+    at::Tensor features, at::Tensor rois, at::Tensor output);
+
 int roi_align_avg_forward_cuda(
     bool aligned, int aligned_height, int aligned_width,
     float spatial_scale, int sampling_ratio,
