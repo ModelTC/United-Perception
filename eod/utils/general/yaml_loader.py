@@ -2,6 +2,7 @@ import yaml
 import re
 import os.path
 import json
+import copy
 
 
 class IncludeLoader(yaml.Loader):
@@ -15,7 +16,8 @@ class IncludeLoader(yaml.Loader):
 
     def _split(self, path):
         splits = path.split('//', 1)
-        if len(splits) == 1: return splits
+        if len(splits) == 1:
+            return splits
 
         path, split = splits
 
@@ -122,7 +124,78 @@ IncludeLoader.add_constructor('!include', IncludeLoader.include)
 
 def load_yaml(path):
     with open(path, "r")as f:
-        return yaml.load(f, IncludeLoader)
+        yaml_data = yaml.load(f, IncludeLoader)
+    if 'version' in yaml_data.keys():
+        return pod2up(yaml_data)
+    else:
+        return yaml_data
+        # return yaml.load(f, IncludeLoader)
+    # return pod2up(path)
+
+
+def pod2up(pod_config):
+    # f = open(pod_config,'r',encoding='utf-8')
+    # pod_c = yaml.load(open(pod_config, 'r'), Loader=IncludeLoader)
+    pod_c = pod_config
+    del pod_c['version']
+    # del pod_c['fp16']
+    del pod_c['dataset']['train']['dataset']['kwargs']['source']
+    del pod_c['dataset']['test']['dataset']['kwargs']['source']
+    net_c = pod_c['net']
+    for i, st in enumerate(net_c):
+        if st['name'] == 'roi_head' or st['name'] == 'backbone':
+            if st['name'] == 'backbone':
+                net_c[i] = changeBK(st)
+            elif st['name'] == 'roi_head':
+                net_c[i], new_post = changeRoI(st)
+                net_c.insert(i + 1, new_post)
+        else:
+            net_c[i] = changeNormal(st)
+    pod_c['net'] = net_c
+    # print(json.dumps(pod_c, indent=4))
+    return pod_c
+
+
+def changeNormal(normal):
+    tp = normal['type']
+    if 'pod' in tp:
+        normal['type'] = 'eod.tasks.det.models.' + tp.split('pod.models.')[-1]
+    return normal
+
+
+def changeBK(normal):
+    tp = normal['type']
+    normal['type'] = 'eod.models.backbones.' + tp.split('.')[-1]
+    return normal
+
+
+def changeRoI(roi_head):
+    tp = roi_head['type']
+    roi_head['type'] = 'eod.tasks.det.models.' + tp.split('pod.models.')[-1]
+    # for network
+    kwargs = copy.deepcopy(roi_head['kwargs'])
+    kwargs_p = copy.deepcopy(roi_head['kwargs'])
+    head_k = {}
+    head_k.update({'feat_planes': kwargs['feat_planes']})
+    head_k.update({'num_classes': kwargs['num_classes']})
+    head_k.update({'initializer': kwargs['initializer']})
+    if 'init_prior' in kwargs['cfg']['cls_loss']['kwargs'].keys():
+        init_prior = kwargs['cfg']['cls_loss']['kwargs']['init_prior']
+        head_k.update({'init_prior': init_prior})
+    num_anchor = len(kwargs['cfg']['anchor_generator']['kwargs']['anchor_ratios']) * \
+        len(kwargs['cfg']['anchor_generator']['kwargs']['anchor_scales'])
+    head_k.update({'num_anchors': num_anchor})
+    head_k.update({'class_activation': kwargs['cfg']['cls_loss']['type'].split('_')[0]})
+    roi_head['kwargs'] = head_k
+    # for postprocess
+    post = {}
+    post.update({'name': 'post_process'})
+    post.update({'prev': roi_head['name']})
+    post.update({'type': kwargs_p['cfg']['roi_supervisor']['type'] + '_post'})
+    del kwargs_p['feat_planes']
+    del kwargs_p['initializer']
+    post.update({'kwargs': kwargs_p})
+    return roi_head, post
 
 
 if __name__ == '__main__':
