@@ -35,10 +35,10 @@ class _ReduceLROnPlateau(ReduceLROnPlateau):
 @LR_REGISTRY.register('CosineAnnealingLR')
 class _CosineAnnealingLR(CosineAnnealingLR):
     def __init__(self, **kwargs):
-        kwargs['T_max'] = kwargs['T_max'] * kwargs["data_size"]
-        if kwargs.get('warmup_iter', -1) != -1:
-            self.warmup_iter = kwargs.get('warmup_iter', 0)
+        self.warmup_iter = 0
+        if 'warmup_iter' in kwargs:
             self.warmup_iter = kwargs.pop('warmup_iter')
+        kwargs['T_max'] = kwargs['T_max'] * kwargs["data_size"]
         kwargs.pop('data_size')
         super(_CosineAnnealingLR, self).__init__(**kwargs)
 
@@ -151,11 +151,12 @@ class NoScaleWarmScheduler(BaseWarmScheduler):
 
 @LR_SCHEDULER_REGISTY.register('base')
 class BaseLRScheduler(object):
-    def __init__(self, cfg_scheduler, optimizer, data_size, lr_scale):
+    def __init__(self, cfg_scheduler, optimizer, data_size, lr_scale, align=False):
         self.cfg_scheduler = copy.deepcopy(cfg_scheduler)
         self.optimizer = optimizer
         self.data_size = data_size
         self.lr_scale = lr_scale
+        self.align = align
 
     def build_scheduler(self):
         standard_scheduler_class = LR_REGISTRY.get(self.cfg_scheduler['type'])
@@ -186,6 +187,8 @@ class BaseLRScheduler(object):
             @property
             def last_iter(self):
                 return self.last_epoch
+        if hasattr(standard_scheduler_class, 'warmup_iter') and not self.align:
+            self.cfg_scheduler['kwargs']['warmup_iter'] = warmup_scheduler.warmup_iter
 
         return ChainIterLR(**self.cfg_scheduler['kwargs'])
 
