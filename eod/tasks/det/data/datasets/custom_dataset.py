@@ -20,6 +20,7 @@ from eod.data.image_reader import get_cur_image_dir
 from eod.data.datasets.base_dataset import BaseDataset
 from eod.data.data_utils import get_image_size
 from torch.nn.modules.utils import _pair
+from eod.utils.general.petrel_helper import PetrelHelper
 
 # TODO: Check GPU usage after move this setting down from upper line
 cv2.ocl.setUseOpenCL(False)
@@ -104,7 +105,7 @@ class CustomDataset(BaseDataset):
         if not isinstance(self.meta_file, list):
             self.meta_file = [self.meta_file]
         for idx, meta_file in enumerate(self.meta_file):
-            with open(meta_file, "r") as f:
+            with PetrelHelper.open(meta_file) as f:
                 for line in f:
                     data = json.loads(line)
                     if self.label_mapping is not None:
@@ -289,10 +290,14 @@ class RankCustomDataset(CustomDataset):
         buffer = 1024 * 1024 * 8
         dataset_size_sum = 0
         for meta_file in meta_files:
-            # only support lustre read
-            with open(meta_file, "r") as f:
-                buf_gen = takewhile(lambda x: x, (f.read(buffer) for _ in repeat(None)))
-                size = sum(buf.count('\n') for buf in buf_gen)
+            with PetrelHelper.open(meta_file) as f:
+                try:
+                    buf_gen = takewhile(lambda x: x, (f.read(buffer) for _ in repeat(None)))
+                    size = sum(buf.count('\n') for buf in buf_gen)
+                except Exception as e:  # noqa
+                    size = 0
+                    for _ in f:
+                        size += 1
                 dataset_size_sum += size
         return dataset_size_sum
 
@@ -337,7 +342,7 @@ class RankCustomDataset(CustomDataset):
         rank_indices = set(rank_indices)
         _index = 0
         for idx, meta_file in enumerate(self.meta_file):
-            with open(meta_file, "r") as f:
+            with PetrelHelper.open(meta_file) as f:
                 for line in f:
                     if _index in rank_indices:
                         data = json.loads(line)
