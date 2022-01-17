@@ -174,6 +174,17 @@ class POD2UP:
         del pod_c['version']
         del pod_c['dataset']['train']['dataset']['kwargs']['source']
         del pod_c['dataset']['test']['dataset']['kwargs']['source']
+        # runner setting
+        pod_c['runner'] = {}
+        runner_phases = ['rank_init', 'random_seed', 'aligned', 'iter_base', 'device', 'async_norm', 'special_bn_init']
+        if pod_c.get('fp16'):
+            pod_c['runner']['fp16'] = pod_c['fp16']
+            del pod_c['fp16']
+        for phase in runner_phases:
+            if phase in pod_c:
+                pod_c['runner'][phase] = pod_c[phase]
+                del pod_c[phase]
+
         net_c = pod_c['net']
         for i, st in enumerate(net_c):
             if st['name'] == 'roi_head' or st['name'] == 'backbone':
