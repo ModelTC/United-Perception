@@ -22,18 +22,6 @@ class ToCaffe(Subcommand):
         sub_parser = parser.add_parser(name,
                                        description='subcommand for to caffe',
                                        help='convert a model to caffe model')
-        sub_parser.add_argument(
-            '--fork-method',
-            dest='fork_method',
-            type=str,
-            default='fork',
-            choices=['spawn', 'fork'],
-            help='method to fork subprocess, especially for dataloader')
-        sub_parser.add_argument('--backend',
-                                dest='backend',
-                                type=str,
-                                default='dist',
-                                help='model backend')
         sub_parser.add_argument('--config',
                                 dest='config',
                                 required=True,
@@ -47,16 +35,6 @@ class ToCaffe(Subcommand):
                                 required=True,
                                 type=lambda x: tuple(map(int, x.split('x'))),
                                 help='input shape "CxHxW" to network, delimited by "x". e.g. 3x512x512')
-        sub_parser.add_argument('--launch',
-                                dest='launch',
-                                type=str,
-                                default='slurm',
-                                help='launch backend')
-        sub_parser.add_argument('--port',
-                                dest='port',
-                                type=int,
-                                default=13333,
-                                help='dist port')
         sub_parser.add_argument('--opts',
                                 help='options to replace yaml config',
                                 default=None,
@@ -69,7 +47,6 @@ class ToCaffe(Subcommand):
 def main(args):
     cfg = load_yaml(args.config)
     cfg['args'] = {
-        'ddp': args.backend == 'dist',
         'config_path': args.config,
         'opts': args.opts
     }

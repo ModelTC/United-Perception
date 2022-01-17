@@ -6,9 +6,9 @@ import spring.nart.tools.caffe.count as count
 import spring.nart.tools.caffe.utils.graph as graph
 import spring.nart.tools.kestrel.utils.scaffold as scaffold
 try:
-    import spring.nart.tools.proto.caffe_pb2 as caffe_pb2  # for nart==0.2.4
+    import spring.nart.tools.proto.caffe_pb2 as caffe_pb2
 except:  # noqa
-    from spring.nart.tools.proto import caffe_pb2  # # for nart==1.*.*
+    from spring.nart.tools.proto import caffe_pb2
 
 from . import parser as eod_parser
 from .parser import BaseProcessor
@@ -138,8 +138,6 @@ def generate_config(train_cfg):
         assert not hasattr(model, mname)
 
     kestrel_net_param = dict()
-    # with open(anchor_config, 'r') as f:
-    #     kestrel_net_param['anchors'] = json.load(f)
     strides = model.backbone.get_outstrides()
     assert len(strides) == 1, strides
     model.post_process.anchor_generator.build_base_anchors(strides)
@@ -164,8 +162,6 @@ def generate_config(train_cfg):
     # dataset param
     assert 'dataset' in train_cfg, 'config file incomplete: lack dataset'
     dataset_param = eod_parser.parse_dataset_param(train_cfg['dataset'])
-    # train_cfg['dataset'], thresh_name='confidence_thresh',
-    # default_conf_thresh=model.bbox_head.predictor.bbox_score_thresh)
 
     kestrel_param.update(dataset_param)
 

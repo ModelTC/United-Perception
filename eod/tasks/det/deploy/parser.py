@@ -111,7 +111,6 @@ def get_forground_class_threshes(dataset_cfg, to_kestrel_cfg, with_background_ch
 def add_reshape(net, net_graph, prev_layer, name, reshape_param, insert=True):
     import spring.nart.tools.caffe.convert as convert
     from spring.nart.tools.proto import caffe_pb2 as caffe_pb2
-    # prev_node = get_node(graph.gen_graph(net), prev_layer)
     old_top_name = prev_layer.top[0]
     new_top_name = 'reshape_out'
 
@@ -121,10 +120,6 @@ def add_reshape(net, net_graph, prev_layer, name, reshape_param, insert=True):
     layer.bottom.append(old_top_name)
     layer.top.append(new_top_name)
     layer.reshape_param.shape.dim.extend(reshape_param)
-    # if insert:
-    #     for succ in prev_node.succ:
-    #         succ.content.bottom.remove(old_top_name)
-    #         succ.content.bottom.append(new_top_name)
     idx = convert.insertNewLayer(layer, prev_layer.name, net)
     convert.updateNetGraph(net, net_graph)
     return net.layer[idx]
@@ -149,7 +144,6 @@ def process_reshape(net, anchor_num, cls_channel_num, anchor_precede=True):
 
 
 def parse_dataset_param(dataset_cfg):
-    # , class_threshes_file, thresh_name, default_conf_thresh):
 
     def get_transform(transformer_cfg, type_name):
         for cfg in transformer_cfg:
@@ -158,9 +152,6 @@ def parse_dataset_param(dataset_cfg):
         return None
 
     dataset_cfg.update(dataset_cfg.get('test', {}))
-
-    # forground_class_threshes = generate_forground_class_threshes(
-    #     dataset_cfg, class_threshes_file, thresh_name, default_conf_thresh)
 
     kwargs_cfg = getdotattr(dataset_cfg, 'dataset.kwargs')
     # has_keypoint has_mask
@@ -176,14 +167,13 @@ def parse_dataset_param(dataset_cfg):
     assert color_mode in ['RGB', 'GRAY']
 
     dataset_param = dict()
-    # dataset_param['class'] = forground_class_threshes
     dataset_param['short_scale'] = short_scale
     dataset_param['long_scale'] = long_scale
     dataset_param['pixel_means'] = [i * 255 for i in pixel_means]
     dataset_param['pixel_stds'] = [i * 255 for i in pixel_stds]
     dataset_param['rgb_flag'] = color_mode == 'RGB'
 
-    return dataset_param  # , class_meta
+    return dataset_param
 
 
 def process_sphinx_reshape(net, cls_channel_num, anchor_precede=True, serialize=False):

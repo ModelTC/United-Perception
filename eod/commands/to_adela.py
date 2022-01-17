@@ -4,7 +4,7 @@ from __future__ import division
 import argparse
 import os
 
-from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
+from eod.utils.general.yaml_loader import load_yaml
 
 # Import from local
 from .subcommand import Subcommand
@@ -23,18 +23,6 @@ class ToAdela(Subcommand):
         sub_parser = parser.add_parser(name,
                                        description='subcommand for to caffe',
                                        help='convert a model to caffe model')
-        sub_parser.add_argument(
-            '--fork-method',
-            dest='fork_method',
-            type=str,
-            default='fork',
-            choices=['spawn', 'fork'],
-            help='method to fork subprocess, especially for dataloader')
-        sub_parser.add_argument('--backend',
-                                dest='backend',
-                                type=str,
-                                default='dist',
-                                help='model backend')
         sub_parser.add_argument('--config',
                                 dest='config',
                                 required=True,
@@ -52,11 +40,6 @@ class ToAdela(Subcommand):
                                 dest='serialize',
                                 action='store_true',
                                 help='wether to do serialization, if your model runs on tensor-rt')
-        sub_parser.add_argument('--port',
-                                dest='port',
-                                type=int,
-                                default=13333,
-                                help='dist port')
         sub_parser.add_argument('--opts',
                                 help='options to replace yaml config',
                                 default=None,

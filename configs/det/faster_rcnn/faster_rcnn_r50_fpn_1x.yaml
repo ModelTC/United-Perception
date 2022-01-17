@@ -132,10 +132,6 @@ net:
       initializer:
         method: normal
         std: 0.01
-      #init_prior: 0.01
-      #num_levels: 5
-      #normalize:
-      #  type: solo_bn
   - name: post_process
     prev: roi_head
     type: rpn_post

@@ -57,7 +57,6 @@ class CustomDataset(BaseDataset):
         self.metas = []
         self.aspect_ratios = []
         self.cross_cfg = cross_cfg
-        print(self.cross_cfg)
         self._normal_init()
         self.clip_box = clip_box
 
@@ -291,7 +290,7 @@ class RankCustomDataset(CustomDataset):
                  evaluator=None,
                  label_mapping=None,
                  cross_cfg=None,
-                 reload_cfg={},):
+                 reload_cfg={}):
         self.mini_epoch = reload_cfg.get('mini_epoch', 1)
         self.seed = reload_cfg.get('seed', 0)
         self.mini_epoch_idx = reload_cfg.get('mini_epoch_idx', 0)

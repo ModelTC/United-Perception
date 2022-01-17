@@ -178,10 +178,3 @@ def to_kestrel(config, save_to=None, serialize=False):
     save_to = tokestrel_ins.process()
 
     return save_to
-    # adela
-    # if self.config.get('adela', None):
-    # generate release.json
-    #     release_name = 'release.json'
-    #     cmd = 'python -m spring_aux.adela.make_json {} -o {}'.format(save_to, release_name)
-    #     os.system(cmd)
-    #     self.to_adela(release_name)

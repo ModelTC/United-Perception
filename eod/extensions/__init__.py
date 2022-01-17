@@ -1,7 +1,7 @@
 # flake8: noqa
 
 from .python.roi_align import RoIAlignPool
-from .python.psroi_align import *
+from .python.psroi_align import PSRoIAlign 
 from .python.psroi_pool import PSRoIPool
 from .python.nms import naive_nms
 from .python.focal_loss import (
@@ -25,7 +25,6 @@ def build_generic_roipool(pool_cfg):
         'psroialign': PSRoIAlign,
         'psroipool': PSRoIPool
     }[ptype]
-    # RoIAlignPool
     return pool_cls.from_params(pool_cfg)
 
 

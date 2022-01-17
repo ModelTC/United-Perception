@@ -150,13 +150,4 @@ def to_caffe(config, save_prefix='model', input_size=None, input_channel=3):
                                                  input_channel)
     caffemodel_name = tocaffe_ins.process()
 
-    # cfg_gdbp = self.config.get('gdbp', None)
-    # onnx_file = tocaffe_ins.save_prefix + '.onnx'
-    # convert onnx for multi-batch latency test
-    # logger.info('Converting onnx start...')
-    # onnx_file_fix = self.convert_onnx_for_mbs(onnx_file)
-    # if cfg_gdbp is not None:
-    #     logger.info(f'gdbp:{onnx_file_fix}')
-    #     self.latency_test(cfg_gdbp, onnx_file_fix)
-
     return caffemodel_name

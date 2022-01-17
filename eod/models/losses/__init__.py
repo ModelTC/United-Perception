@@ -1,5 +1,4 @@
 from eod.utils.general.registry_factory import LOSSES_REGISTRY
-from .ohem import * # noqa
 
 
 def build_loss(loss_cfg):

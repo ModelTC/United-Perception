@@ -209,13 +209,10 @@ def generate_config(train_cfg):
         assert hasattr(model, mname)
 
     kestrel_net_param = dict()
-    # with open(anchor_config, 'r') as f:
-    #     kestrel_net_param['anchors'] = json.load(f)
     strides = model.neck.get_outstrides()
     model.post_process.anchor_generator.build_base_anchors(strides)
     kestrel_anchors = model.post_process.anchor_generator.export()
     kestrel_net_param.update(kestrel_anchors)
-    # kestrel_net_param['anchors'] = model.roi_head.anchor_generator.export()
 
     # net param
     kestrel_net_param['detection_strides'] = strides
@@ -251,8 +248,6 @@ def generate_config(train_cfg):
     # dataset param
     assert 'dataset' in train_cfg, 'config file incomplete: lack dataset'
     dataset_param = eod_parser.parse_dataset_param(train_cfg['dataset'])
-    # train_cfg['dataset'], thresh_name='confidence_thresh',
-    # default_conf_thresh=model.bbox_head.predictor.bbox_score_thresh)
     kestrel_param.update(dataset_param)
 
     # threshes for each class

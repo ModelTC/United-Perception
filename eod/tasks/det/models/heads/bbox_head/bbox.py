@@ -1,8 +1,4 @@
-# import copy
 import torch
-# import torch.nn as nn
-# import torch.nn.functional as F
-
 
 from eod.extensions import nms
 from eod.tasks.det.models.utils.bbox_helper import (

@@ -37,34 +37,24 @@ def generate_config(train_cfg):
         assert not hasattr(model, mname)
 
     kestrel_net_param = dict()
-    # with open(anchor_config, 'r') as f:
-    #     kestrel_net_param['anchors'] = json.load(f)
 
     if hasattr(model, 'neck'):
         strides = model.neck.get_outstrides()
     else:
         strides = model.backbone.get_outstrides()
 
-    # model.roi_head.anchor_generator.build_base_anchors(strides)
     if torch.is_tensor(strides):
         strides = strides.tolist()
     model.post_process.anchor_generator.build_base_anchors(strides)
-    # kestrel_anchors = model.roi_head.anchor_generator.export()
     kestrel_anchors = model.post_process.anchor_generator.export()
     kestrel_net_param.update(kestrel_anchors)
-    # kestrel_net_param['anchors'] = model.roi_head.anchor_generator.export()
 
     kestrel_net_param['rpn_stride'] = strides
-    # kestrel_net_param['num_anchors'] = model.roi_head.num_anchors
     kestrel_net_param['num_anchors'] = model.post_process.num_anchors
-    # topk = model.roi_head.test_predictor.post_nms_top_n
     topk = model.post_process.test_predictor.post_nms_top_n
     kestrel_net_param['rpn_top_n'] = [topk] * len(strides)
-    # kestrel_net_param['aft_top_k'] = model.roi_head.test_predictor.merger.top_n
     kestrel_net_param['aft_top_k'] = model.post_process.test_predictor.merger.top_n
-    # kestrel_net_param['nms_thresh'] = model.roi_head.test_predictor.merger.nms_cfg['nms_iou_thresh']
     kestrel_net_param['nms_thresh'] = model.post_process.test_predictor.merger.nms_cfg.get('nms_iou_thresh', 0.5)
-    # kestrel_net_param['with_background_class'] = model.roi_head.with_background_channel
     kestrel_net_param['with_background_class'] = model.post_process.with_background_channel
 
     kestrel_param.update(kestrel_net_param)
@@ -72,7 +62,6 @@ def generate_config(train_cfg):
     # dataset param
     assert 'dataset' in train_cfg, 'config file incomplete: lack dataset'
     dataset_param = eod_parser.parse_dataset_param(train_cfg['dataset'])
-    # train_cfg['dataset'], kestrel_config, thresh_name='thresh', default_conf_thresh=0)
     kestrel_param.update(dataset_param)
 
     # threshes for each class

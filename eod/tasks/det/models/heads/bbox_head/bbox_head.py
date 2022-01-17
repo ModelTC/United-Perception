@@ -6,8 +6,9 @@ import torch.nn.functional as F
 from eod import extensions as E
 from eod.utils.model import accuracy as A
 from eod.tasks.det.models.utils.assigner import map_rois_to_level
+from eod.tasks.det.models.losses import ohem_loss
 from eod.utils.model.initializer import init_weights_normal, initialize_from_cfg, init_bias_focal
-from eod.models.losses import build_loss, ohem_loss
+from eod.models.losses import build_loss
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 # Import from local
@@ -320,7 +321,6 @@ class FC(BboxNet):
         if self.cfg.get('share_location', False):
             self.fc_rcnn_loc = nn.Linear(feat_planes, 4)
         else:
-            # self.fc_rcnn_loc = nn.Linear(feat_planes, num_classes * 4)
             self.fc_rcnn_loc = nn.Linear(feat_planes, cls_out_channel * 4)
 
         initialize_from_cfg(self, initializer)
@@ -387,12 +387,10 @@ class RFCN(BboxNet):
 
         self.new_conv = nn.Conv2d(inplanes, feat_planes, kernel_size=1, bias=False)
         cls_out_channel = num_classes if self.cls_loss.activation_type == 'softmax' else num_classes - 1
-        # self.rfcn_score = nn.Conv2d(feat_planes, ps * ps * num_classes, kernel_size=1)
         self.rfcn_score = nn.Conv2d(feat_planes, ps * ps * cls_out_channel, kernel_size=1)
         if self.cfg.get('share_location', False):
             self.rfcn_bbox = nn.Conv2d(feat_planes, ps * ps * 4, kernel_size=1)
         else:
-            # self.rfcn_bbox = nn.Conv2d(feat_planes, ps * ps * 4 * num_classes, kernel_size=1)
             self.rfcn_bbox = nn.Conv2d(feat_planes, ps * ps * 4 * cls_out_channel, kernel_size=1)
         self.pool = nn.AvgPool2d((ps, ps), stride=(ps, ps))
 
