@@ -18,6 +18,8 @@ def get_cur_image_dir(image_dir, idx):
 class ImageReader(object):
     def __init__(self, image_dir, color_mode, memcached=None):
         super(ImageReader, self).__init__()
+        if image_dir == '/' or image_dir == '//':
+            image_dir = ''
         self.image_dir = image_dir
         self.color_mode = color_mode
 
@@ -38,6 +40,8 @@ class ImageReader(object):
         return self.fs_read(filename)
 
     def __call__(self, filename, image_dir_idx=0):
+        if filename.startswith("//"):
+            filename = filename[1:]
         image_dir = get_cur_image_dir(self.image_dir, image_dir_idx)
         filename = os.path.join(image_dir, filename)
         img = self.read(filename)
@@ -122,6 +126,8 @@ class CephSystemCVReader(ImageReader):
             return os.path.join(root, filename)
 
     def __call__(self, filename, image_dir_idx=0):
+        if filename.startswith("//"):
+            filename = filename[1:]
         image_dir = get_cur_image_dir(self.image_dir, image_dir_idx)
         filename = self.ceph_join(image_dir, filename)
         if not self.initialized:
