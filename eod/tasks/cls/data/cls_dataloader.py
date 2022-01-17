@@ -22,7 +22,11 @@ class ClassDataLoader(DataLoader):
 
     def _collate_fn(self, batch):
         images = torch.stack([_.image for _ in batch])
-        gts = torch.from_numpy(np.array([_.gt for _ in batch]))
+        if type(batch[0].gt) == int:
+            gts = torch.from_numpy(np.array([_.gt for _ in batch]))
+        elif batch[0].gt.dim() > 0:
+            gts = torch.stack([_.gt for _ in batch])
+
         output = EasyDict({
             'image': images,
             'gt': gts,

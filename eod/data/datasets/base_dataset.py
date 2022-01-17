@@ -39,7 +39,7 @@ class BaseDataset(Dataset):
         if transformer is not None:
             # add datset handler in transform kwargs in need of mosaic/mixup etc.
             for trans in transformer:
-                if 'kwargs' in trans and trans['kwargs'].get('extra_input', False):
+                if 'kwargs' in trans and (trans['kwargs'].get('extra_input', False) or trans['type'] == 'torch_mixup'):
                     trans['kwargs']['dataset'] = self
             self.transformer = build_transformer(transformer)
             self.visable_transformer = build_partially_inverse_transformer(self.transformer)

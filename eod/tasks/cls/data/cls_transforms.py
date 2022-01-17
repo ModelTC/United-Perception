@@ -1,7 +1,8 @@
 import torch
+import numpy as np
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
-
+from PIL import Image
 from eod.data.datasets.transforms import Augmentation
 from eod.utils.general.registry_factory import AUGMENTATION_REGISTRY
 import copy
@@ -13,7 +14,8 @@ __all__ = [
     'RandomHorizontalFlip',
     'PILColorJitter',
     'TorchResize',
-    'TorchCenterCrop']
+    'TorchCenterCrop',
+    'TorchMixUp']
 
 
 class TorchAugmentation(Augmentation):
@@ -60,3 +62,44 @@ class TorchResize(TorchAugmentation):
 class TorchCenterCrop(TorchAugmentation):
     def __init__(self, size, **kwargs):
         self.op = transforms.CenterCrop(size, **kwargs)
+
+
+@AUGMENTATION_REGISTRY.register('torch_mixup')
+class TorchMixUp(TorchAugmentation):
+    def __init__(self, dataset, alpha=1.0, num_classes=1000):
+        self.alpha = alpha
+        self.num_classes = num_classes
+        self.dataset = dataset
+    def augment(self, data):
+        output = copy.copy(data)
+        idx_other = np.random.randint(0, len(self.dataset))
+        data_other = self.dataset.get_input(idx_other)
+        if self.alpha > 0:
+            lam = np.random.beta(self.alpha, self.alpha)
+        else:
+            lam = 1
+
+        data['image'] = np.array(data['image'])
+        data_other['image'] = np.array(data_other['image'])
+        nh = max(data['image'].shape[0], data_other['image'].shape[0])
+        nw = max(data['image'].shape[1], data_other['image'].shape[1])
+
+        hmin = min(data['image'].shape[0], data_other['image'].shape[0])
+        wmin = min(data['image'].shape[1], data_other['image'].shape[1])
+
+        image_tmp = np.empty((nh, nw, 3), dtype=np.float32)
+        image_tmp[:, :] = 0.
+
+        image_tmp[0:data['image'].shape[0], 0:data['image'].shape[1]] = lam * data['image']
+        image_tmp[0:data_other['image'].shape[0], 0:data_other['image'].shape[1]] += (1. - lam) * data_other['image']
+        image_tmp = image_tmp.astype(np.uint8)
+        image_tmp = Image.fromarray(image_tmp)
+
+        label = torch.zeros(self.num_classes)
+        label_other = torch.zeros(self.num_classes)
+        label[data.gt] = 1
+        label_other[data_other.gt] = 1
+        output.gt = lam * label + (1 - lam) * label_other
+        return output
+
+
