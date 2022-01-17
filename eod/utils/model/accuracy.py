@@ -22,6 +22,8 @@ def binary_accuracy(output, target, thresh=0.5, ignore_index=-1):
 
 def accuracy(output, target, topk=(1, ), ignore_indices=[-1]):
     """Computes the precision@k for the specified values of k"""
+    if target.dim() > 1:
+        target = target.argmax(dim=1)
     if output.numel() != target.numel():
         C = output.shape[-1]
         output = output.view(-1, C)
