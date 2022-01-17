@@ -51,6 +51,8 @@ def to_device(input, device="cuda", dtype=None):
         elif isinstance(x, list):
             return [transfer(_) for _ in x]
         elif isinstance(x, Mapping):
+            if 'image' in x:
+                x['image'] = x['image'].to(dtype=dtype)
             return type(x)({k: transfer(v) for k, v in x.items()})
         else:
             return x
