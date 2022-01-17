@@ -48,7 +48,6 @@ class BasePostProcess(nn.Module):
 
         test_cfg = copy.deepcopy(cfg)
         test_cfg.update(test_cfg.get('test', {}))
-        self.test_predictor_type = test_cfg['roi_predictor']['type']
         self.test_predictor = build_roi_predictor(test_cfg['roi_predictor'])
 
         self.cls_loss = build_loss(cfg['cls_loss'])

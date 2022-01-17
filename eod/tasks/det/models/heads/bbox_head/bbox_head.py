@@ -332,11 +332,6 @@ class FC(BboxNet):
             init_bias_focal(self.fc_rcnn_cls, 'sigmoid', init_prior, num_classes)
 
     def roi_extractor(self, mlvl_rois, mlvl_features, mlvl_strides):
-        if self.tocaffe:
-            if not isinstance(mlvl_strides, list):
-                mlvl_strides = mlvl_strides.tolist()
-            else:
-                mlvl_strides = [int(_) for _ in mlvl_strides]
         if self.with_drp:
             pooled_feats = [self.roipool[idx](*args)
                             for idx, args in enumerate(zip(mlvl_rois, mlvl_features, mlvl_strides))]

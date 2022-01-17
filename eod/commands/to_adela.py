@@ -1,7 +1,6 @@
 from __future__ import division
 
 # Standard Library
-import argparse
 import os
 
 from eod.utils.general.yaml_loader import load_yaml
@@ -40,10 +39,6 @@ class ToAdela(Subcommand):
                                 dest='serialize',
                                 action='store_true',
                                 help='wether to do serialization, if your model runs on tensor-rt')
-        sub_parser.add_argument('--opts',
-                                help='options to replace yaml config',
-                                default=None,
-                                nargs=argparse.REMAINDER)
 
         sub_parser.set_defaults(run=_main)
         return sub_parser
@@ -52,9 +47,6 @@ class ToAdela(Subcommand):
 def main(args):
     assert (os.path.exists(args.config)), args.config
     cfg = load_yaml(args.config)
-    cfg['args'] = {
-        'opts': args.opts
-    }
 
     send_info(cfg, func="to_adela")
     to_adela(cfg, args.release_json, args.save_to, args.serialize)

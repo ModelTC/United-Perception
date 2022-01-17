@@ -1,11 +1,7 @@
 from __future__ import division
 
-# Standard Library
-import argparse
-
-from eod.utils.general.yaml_loader import load_yaml
-
 # Import from local
+from eod.utils.general.yaml_loader import load_yaml
 from .subcommand import Subcommand
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY
 from eod.utils.general.log_helper import default_logger as logger
@@ -35,10 +31,6 @@ class ToCaffe(Subcommand):
                                 required=True,
                                 type=lambda x: tuple(map(int, x.split('x'))),
                                 help='input shape "CxHxW" to network, delimited by "x". e.g. 3x512x512')
-        sub_parser.add_argument('--opts',
-                                help='options to replace yaml config',
-                                default=None,
-                                nargs=argparse.REMAINDER)
 
         sub_parser.set_defaults(run=_main)
         return sub_parser
@@ -46,10 +38,6 @@ class ToCaffe(Subcommand):
 
 def main(args):
     cfg = load_yaml(args.config)
-    cfg['args'] = {
-        'config_path': args.config,
-        'opts': args.opts
-    }
     send_info(cfg, func="to_caffe")
     to_caffe(cfg, args.save_prefix, args.input_size)
 
