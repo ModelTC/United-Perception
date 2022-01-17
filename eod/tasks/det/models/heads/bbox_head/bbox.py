@@ -18,7 +18,6 @@ from eod.tasks.det.models.utils.box_sampler import build_roi_sampler
 from eod.tasks.det.models.utils.matcher import build_matcher
 from eod.utils.general.fp16_helper import to_float32
 from eod.utils.general.log_helper import default_logger as logger
-from eod.extensions import nms
 # from eod.tasks.det.models.utils.nms_wrapper import nms
 from eod.utils.general.registry_factory import BBOX_SUPERVISOR_REGISTRY, BBOX_PREDICTOR_REGISTRY
 from eod.utils.general.tocaffe_utils import ToCaffe

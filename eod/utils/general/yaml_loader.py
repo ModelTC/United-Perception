@@ -126,76 +126,108 @@ def load_yaml(path):
     with open(path, "r")as f:
         yaml_data = yaml.load(f, IncludeLoader)
     if 'version' in yaml_data.keys():
-        return pod2up(yaml_data)
+        ConvertTool = POD2UP()
+        return ConvertTool.forward(yaml_data)
     else:
         return yaml_data
-        # return yaml.load(f, IncludeLoader)
-    # return pod2up(path)
 
 
-def pod2up(pod_config):
-    # f = open(pod_config,'r',encoding='utf-8')
-    # pod_c = yaml.load(open(pod_config, 'r'), Loader=IncludeLoader)
-    pod_c = pod_config
-    del pod_c['version']
-    # del pod_c['fp16']
-    del pod_c['dataset']['train']['dataset']['kwargs']['source']
-    del pod_c['dataset']['test']['dataset']['kwargs']['source']
-    net_c = pod_c['net']
-    for i, st in enumerate(net_c):
-        if st['name'] == 'roi_head' or st['name'] == 'backbone':
-            if st['name'] == 'backbone':
-                net_c[i] = changeBK(st)
-            elif st['name'] == 'roi_head':
-                net_c[i], new_post = changeRoI(st)
-                net_c.insert(i + 1, new_post)
+class POD2UP:
+    # convert the configs of POD to UP.
+    def forward(self, pod_config):
+        pod_c = pod_config
+        del pod_c['version']
+        del pod_c['dataset']['train']['dataset']['kwargs']['source']
+        del pod_c['dataset']['test']['dataset']['kwargs']['source']
+        net_c = pod_c['net']
+        for i, st in enumerate(net_c):
+            if st['name'] == 'roi_head' or st['name'] == 'backbone':
+                if st['name'] == 'backbone':
+                    net_c[i] = self.changeBK(st)
+                elif st['name'] == 'roi_head':
+                    net_c[i], new_post = self.changeRoI(st)
+                    net_c.insert(i + 1, new_post)
+            else:
+                net_c[i] = self.changeNormal(st)
+        pod_c['net'] = net_c
+        # checkbyeys(pod_c)
+        return pod_c
+
+    def checkbyeys(self, config):
+        print(json.dumps(config, indent=4))
+
+    def changeNormal(self, normal):
+        tp = normal['type']
+        if 'pod' in tp:
+            normal['type'] = 'eod.tasks.det.models.' + tp.split('pod.models.')[-1]
+        return normal
+
+    def changeBK(self, backb):
+        tp = backb['type']
+        backb['type'] = 'eod.models.backbones.' + tp.split('.')[-1]
+        return backb
+
+    def changeRoI(self, roi_head):
+        tp = roi_head['type']
+        roi_head['type'] = 'eod.tasks.det.models.' + tp.split('pod.models.')[-1]
+        # for network
+        kwargs = copy.deepcopy(roi_head['kwargs'])
+        kwargs_p = copy.deepcopy(roi_head['kwargs'])
+        head_k = {}
+        for key in kwargs.keys():
+            if key == 'cfg':
+                continue
+            elif key == 'dense_points':
+                head_k.update({'num_point': kwargs[key]})
+            else:
+                head_k.update({key: kwargs[key]})
+        if 'initializer' in kwargs.keys():
+            if 'init_prior' in kwargs['cfg']['cls_loss']['kwargs'].keys():
+                init_prior = kwargs['cfg']['cls_loss']['kwargs']['init_prior']
+                head_k.update({'init_prior': init_prior})
+            num_anchor = len(kwargs['cfg']['anchor_generator']['kwargs']['anchor_ratios']) * \
+                len(kwargs['cfg']['anchor_generator']['kwargs']['anchor_scales'])
+            head_k.update({'num_anchors': num_anchor})
+            head_k.update({'class_activation': kwargs['cfg']['cls_loss']['type'].split('_')[0]})
+            roi_head['kwargs'] = head_k
+            # for retinanet and faster-rcnn
+            post = {}
+            post.update({'name': 'post_process'})
+            post.update({'prev': roi_head['name']})
+            post.update({'type': kwargs_p['cfg']['roi_supervisor']['type'] + '_post'})
+            if 'feat_planes' in kwargs_p.keys():
+                del kwargs_p['feat_planes']
+            if 'initializer' in kwargs_p.keys():
+                del kwargs_p['initializer']
+            post.update({'kwargs': kwargs_p})
+        """
+        # wait for furture exploiting
         else:
-            net_c[i] = changeNormal(st)
-    pod_c['net'] = net_c
-    # print(json.dumps(pod_c, indent=4))
-    return pod_c
+            # for yolox
+            post = {}
+            post.update({'name': 'yolox_post'})
+            post.update({'prev': roi_head['name']})
+            post.update({'type': 'yolox_post'})
+            if 'width' in kwargs_p.keys():
+                del kwargs_p['width']
+            if 'dense_points' in kwargs_p.keys():
+                del kwargs_p['dense_points']
+            if 'act_fn' in kwargs_p.keys():
+                del kwargs_p['act_fn']
+            cfg = kwargs_p['cfg']
+            self.changeKname(cfg, 'center_loss', 'obj_loss')
+            self.changeKname(cfg, 'center_generator', 'anchor_generator')
+            self.changeKname(cfg, 'fcos_supervisor', 'roi_supervisor')
+            self.changeKname(cfg, 'fcos_predictor', 'roi_predictor')
+            kwargs_p['cfg'] = cfg
+            post.update({'kwargs': kwargs_p})
+        """
+        return roi_head, post
 
-
-def changeNormal(normal):
-    tp = normal['type']
-    if 'pod' in tp:
-        normal['type'] = 'eod.tasks.det.models.' + tp.split('pod.models.')[-1]
-    return normal
-
-
-def changeBK(normal):
-    tp = normal['type']
-    normal['type'] = 'eod.models.backbones.' + tp.split('.')[-1]
-    return normal
-
-
-def changeRoI(roi_head):
-    tp = roi_head['type']
-    roi_head['type'] = 'eod.tasks.det.models.' + tp.split('pod.models.')[-1]
-    # for network
-    kwargs = copy.deepcopy(roi_head['kwargs'])
-    kwargs_p = copy.deepcopy(roi_head['kwargs'])
-    head_k = {}
-    head_k.update({'feat_planes': kwargs['feat_planes']})
-    head_k.update({'num_classes': kwargs['num_classes']})
-    head_k.update({'initializer': kwargs['initializer']})
-    if 'init_prior' in kwargs['cfg']['cls_loss']['kwargs'].keys():
-        init_prior = kwargs['cfg']['cls_loss']['kwargs']['init_prior']
-        head_k.update({'init_prior': init_prior})
-    num_anchor = len(kwargs['cfg']['anchor_generator']['kwargs']['anchor_ratios']) * \
-        len(kwargs['cfg']['anchor_generator']['kwargs']['anchor_scales'])
-    head_k.update({'num_anchors': num_anchor})
-    head_k.update({'class_activation': kwargs['cfg']['cls_loss']['type'].split('_')[0]})
-    roi_head['kwargs'] = head_k
-    # for postprocess
-    post = {}
-    post.update({'name': 'post_process'})
-    post.update({'prev': roi_head['name']})
-    post.update({'type': kwargs_p['cfg']['roi_supervisor']['type'] + '_post'})
-    del kwargs_p['feat_planes']
-    del kwargs_p['initializer']
-    post.update({'kwargs': kwargs_p})
-    return roi_head, post
+    def changeKname(self, conf, name1, name2):
+        if name1 in conf.keys():
+            conf.updata({name2: conf[name1]})
+            del conf[name1]
 
 
 if __name__ == '__main__':
