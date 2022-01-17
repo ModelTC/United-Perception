@@ -4,6 +4,8 @@ import os.path
 import json
 import copy
 
+from .user_analysis_helper import get_task_from_cfg
+
 
 class IncludeLoader(yaml.Loader):
     _cache = {}
@@ -119,6 +121,37 @@ class IncludeLoader(yaml.Loader):
         return data
 
 
+def check_cfg(cfg):
+    cfg = copy.deepcopy(cfg)
+    if get_task_from_cfg(cfg) == 'det':
+        net = cfg.get('net', [])
+        assert len(net) > 0, "net doesn't exist."
+        net_parse, idx2name = {}, {}
+        for idx in range(len(net)):
+            name = net[idx]['name']
+            net_parse[name] = net[idx]
+            idx2name[name] = idx
+        # NaiveRPN: num_classes
+        roi_head_type = net_parse['roi_head']['type']
+        if roi_head_type == 'NaiveRPN':
+            cfg['net'][idx2name['roi_head']]['kwargs']['num_classes'] = 2
+            cfg['net'][idx2name['post_process']]['kwargs']['num_classes'] = 2
+        # roi_head: class_activation
+        cls_loss_type = net_parse['post_process']['kwargs']['cfg']['cls_loss']['type']
+        class_activation = 'sigmoid' if 'sigmoid' in cls_loss_type else 'softmax'
+        cfg['net'][idx2name['roi_head']]['kwargs']['class_activation'] = class_activation
+        # roi_head: num_anchors
+        anchors = cfg['net'][idx2name['post_process']]['kwargs']['cfg']['anchor_generator']
+        anchor_ratios = anchors['kwargs']['anchor_ratios']
+        anchor_scales = anchors['kwargs']['anchor_scales']
+        num_anchors = len(anchor_ratios) * len(anchor_scales)
+        cfg['net'][idx2name['roi_head']]['kwargs']['num_anchors'] = num_anchors
+    else:
+        pass
+
+    return cfg
+
+
 IncludeLoader.add_constructor('!include', IncludeLoader.include)
 
 
@@ -127,9 +160,11 @@ def load_yaml(path):
         yaml_data = yaml.load(f, IncludeLoader)
     if 'version' in yaml_data.keys():
         ConvertTool = POD2UP()
-        return ConvertTool.forward(yaml_data)
+        yaml_data = ConvertTool.forward(yaml_data)
     else:
-        return yaml_data
+        pass
+    # cfg check
+    return check_cfg(yaml_data)
 
 
 class POD2UP:

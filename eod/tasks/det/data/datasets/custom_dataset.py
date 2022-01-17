@@ -51,8 +51,9 @@ class CustomDataset(BaseDataset):
             class_names=class_names)
 
         self._num_classes = num_classes
-        if class_names is not None:
-            assert self._num_classes == len(class_names)
+        if class_names is None:
+            class_names = list(range(num_classes))
+        assert self._num_classes == len(class_names)
         self.label_mapping = label_mapping
         self.metas = []
         self.aspect_ratios = []
