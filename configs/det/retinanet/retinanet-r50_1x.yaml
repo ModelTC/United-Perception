@@ -128,7 +128,7 @@ net:
     type: RetinaSubNet
     kwargs:
       feat_planes: 256        # channels of intermediate conv
-      num_classes: 81         # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      num_classes: *num_classes         # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       initializer:
         method: normal
         std: 0.01
@@ -139,12 +139,12 @@ net:
     prev: roi_head
     type: retina_post
     kwargs:
-      num_classes: 81  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      num_classes: *num_classes  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       cfg:
         cls_loss:
           type: sigmoid_focal_loss
           kwargs:
-            num_classes: 81
+            num_classes: *num_classes
             alpha: 0.25
             gamma: 2.0
         loc_loss:

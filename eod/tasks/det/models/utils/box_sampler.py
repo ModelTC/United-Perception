@@ -5,11 +5,43 @@ from eod.utils.general.registry_factory import ROI_SAMPLER_REGISTRY
 
 
 __all__ = [
+    'KeepBatchA100RoiSampler',
     'KeepBatchRoiSampler',
     'IouBalacneRoiSampler',
     'KeepAllRoiSampler',
     'KeepRatioRoiSampler',
     'NoRandomRoiSampler']
+
+
+# sample fixed batch size
+@ROI_SAMPLER_REGISTRY.register('naive_a100')
+class KeepBatchA100RoiSampler(object):
+    """Sample positives up to pos_percent, if positive num is not enough,
+    sample more negatives to make it up to the batch_size
+    """
+    def __init__(self, batch_size, positive_percent):
+        self.batch_size = batch_size
+        self.positive_percent = positive_percent
+
+    def sample(self, match_target, **kwargs):
+        """
+        Arguments:
+            - match_target (``LongTensor``): [N] output of :meth:`~pod.models.heads.utils.matcher.match` function,
+            matched gt index for N RoIs.
+        """
+        positive = torch.nonzero(match_target >= 0).reshape(-1)
+        negative = torch.nonzero(match_target == -1).reshape(-1)
+
+        expected_pos_num = int(self.batch_size * self.positive_percent)
+        if positive.numel() > expected_pos_num:
+            shuffle_pos = torch.randperm(positive.numel(), device='cpu')[:expected_pos_num]
+            positive = positive[shuffle_pos]
+
+        expected_neg_num = self.batch_size - positive.numel()
+        if negative.numel() > expected_neg_num:
+            shuffle_neg = torch.randperm(negative.numel(), device='cpu')[:expected_neg_num]
+            negative = negative[shuffle_neg]
+        return positive, negative
 
 
 # sample fixed batch size
