@@ -1,17 +1,23 @@
 num_classes: &num_classes 81
-runtime:
-    fp16: True
 
 flip: &flip
  type: flip
  kwargs:
    flip_p: 0.5
 
-resize: &resize
+resize: &train_resize
+ type: keep_ar_resize
+ kwargs:
+   scales: [640, 672, 704, 736, 768, 800]
+   max_size: 1333
+   separate_wh: True
+
+resize: &test_resize
  type: keep_ar_resize
  kwargs:
    scales: [800]
    max_size: 1333
+   separate_wh: True
 
 to_tensor: &to_tensor
   type: to_tensor
@@ -34,7 +40,7 @@ dataset: # Required.
           kwargs:
             image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
             color_mode: RGB
-        transformer: [*flip, *resize, *to_tensor, *normalize]
+        transformer: [*flip, *train_resize, *to_tensor, *normalize]
   test:
     dataset:
       type: coco
@@ -46,7 +52,7 @@ dataset: # Required.
           kwargs:
             image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
             color_mode: RGB
-        transformer: [*resize, *to_tensor, *normalize]
+        transformer: [*test_resize, *to_tensor, *normalize]
         evaluator:
           type: COCO               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
@@ -68,8 +74,8 @@ dataset: # Required.
 
 
 trainer: # Required.
-  max_epoch: 14              # total epochs for the training
-  test_freq: 14
+  max_epoch: 12              # total epochs for the training
+  test_freq: 12
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
     kwargs:
@@ -77,17 +83,17 @@ trainer: # Required.
       momentum: 0.9
       weight_decay: 0.0001
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
-    warmup_epochs: 1         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_iter: 500         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
     type: MultiStepLR
     kwargs:
-      milestones: [9,12]     # epochs to decay lr
+      milestones: [8,11]     # epochs to decay lr
       gamma: 0.1             # decay rate
 
 saver: # Required.
-  save_dir: checkpoints     # dir to save checkpoints
+  save_dir: checkpoints/fpn50     # dir to save checkpoints
   pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth
-  results_dir: results_dir  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: False # find last checkpoint from save_dir and resume from it automatically
+  results_dir: results_dir/fpn50  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 
@@ -124,7 +130,7 @@ net:
       feat_planes: 256    # channels of intermediate conv
       num_classes: 2      # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       num_anchors: 3
-      class_activation: softmax
+      class_activation: sigmoid
       num_levels: 5
       initializer:
         method: normal
@@ -136,13 +142,9 @@ net:
       num_classes: 2  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       cfg:
         cls_loss:
-          type: softmax_cross_entropy
-          kwargs:
-            class_dim: -1  # last dim is the class dim
+          type: sigmoid_cross_entropy
         loc_loss:
-          type: smooth_l1_loss
-          kwargs:
-            sigma: 3.0
+          type: l1_loss
         anchor_generator:
           type: hand_craft
           kwargs:
@@ -151,7 +153,7 @@ net:
         roi_supervisor:
           type: rpn
           kwargs:
-            allowed_border: 0
+            allowed_border: -1
             matcher:
               type: max_iou
               kwargs:
@@ -159,7 +161,7 @@ net:
                 negative_iou_thresh: 0.3
                 ignore_iou_thresh:   0.5
                 allow_low_quality_match: True
-                low_quality_thresh: 0.1  # !this option is not supported yet, but we have future plan
+                low_quality_thresh: 0.3  # !this option is not supported yet, but we have future plan
             sampler:
               type: naive
               kwargs:
@@ -171,7 +173,7 @@ net:
             kwargs:
               pre_nms_score_thresh: 0.0
               pre_nms_top_n: 2000
-              post_nms_top_n: 2000
+              post_nms_top_n: 1000
               roi_min_size: 0
               nms:
                 type: naive
@@ -179,7 +181,7 @@ net:
               merger:
                 type: rpn
                 kwargs:
-                  top_n: 2000
+                  top_n: 1000
         test:
           roi_predictor:
             type: base
@@ -209,16 +211,14 @@ net:
           kwargs:
             class_dim: -1  # last dim is the class dim
         loc_loss:
-          type: smooth_l1_loss
-          kwargs:
-            sigma: 1.0
+          type: l1_loss
         fpn:
           fpn_levels: [0,1,2,3]   # indices of fpn features used for this stage. these levels are supposed to be continuous
           base_scale: 56          # target level of a RoI is floor(log2((w*h)**0.5/base_scale))
         roipooling:
           method: 'roialignpool'      # choices=['roialignpool', 'psroipool', 'roipool', 'psroimaskpool']. note that 'psroipool' is for RFCN head
           pool_size: 7
-          sampling_ratio: 2           # number of sampling points in each bin. 0 means densely sampled
+          sampling_ratio: 0           # number of sampling points in each bin. 0 means densely sampled
         bbox_normalize: &bbox_norm
           means: [0, 0, 0, 0]         # statics to normalize localization predictions.
           stds: [0.1, 0.1, 0.2, 0.2]
@@ -234,6 +234,7 @@ net:
                 positive_iou_thresh: 0.5
                 negative_iou_thresh: 0.5
                 allow_low_quality_match: False  # positive if a anchor has highest iou with any gt
+                low_quality_thresh: 0.5
             sampler:
               type: naive
               kwargs:
