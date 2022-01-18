@@ -60,28 +60,28 @@ dataset: # Required.
     dataset:
       type: coco
       kwargs:
-        meta_file: coco/annotations/instances_train2017.json
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: coco/train2017
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
             color_mode: RGB
         transformer: [*stitch_expand, *crop, *flip, *color_jitter, *fix_output_resize,*to_tensor, *normalize]
   test:
     dataset:
       type: coco
       kwargs:
-        meta_file: &gt_file coco/annotations/instances_val2017.json
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: coco/val2017
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
             color_mode: RGB
         transformer: [*test_resize, *to_tensor, *normalize]
         evaluator:
           type: COCO               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
-            gt_file: *gt_file
+            gt_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
             iou_types: [bbox]
   batch_sampler:
     type: aspect_ratio_group
@@ -119,7 +119,7 @@ trainer: # Required.
 
 saver: # Required.
   save_dir: checkpoints/ret18    # dir to save checkpoints
-  pretrain_model: resnet18-5c106cde.pth
+  # pretrain_model: resnet18-5c106cde.pth
   results_dir: results_dir/ret18  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
