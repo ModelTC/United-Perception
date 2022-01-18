@@ -10,6 +10,7 @@ from eod.tasks.det.models.losses import ohem_loss
 from eod.utils.model.initializer import init_weights_normal, initialize_from_cfg, init_bias_focal
 from eod.models.losses import build_loss
 from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from eod.utils.general.global_flag import QUANT_FLAG
 
 # Import from local
 from .bbox import build_bbox_predictor, build_bbox_supervisor
@@ -332,6 +333,11 @@ class FC(BboxNet):
             init_bias_focal(self.fc_rcnn_cls, 'sigmoid', init_prior, num_classes)
 
     def roi_extractor(self, mlvl_rois, mlvl_features, mlvl_strides):
+        if not QUANT_FLAG.flag and not self.tocaffe:
+            if isinstance(mlvl_strides, list):
+                mlvl_strides = [int(s) for s in mlvl_strides]
+            else:
+                mlvl_strides = mlvl_strides.tolist()
         if self.with_drp:
             pooled_feats = [self.roipool[idx](*args)
                             for idx, args in enumerate(zip(mlvl_rois, mlvl_features, mlvl_strides))]
@@ -392,6 +398,11 @@ class RFCN(BboxNet):
         initialize_from_cfg(self, initializer)
 
     def roi_extractor(self, mlvl_rois, mlvl_features, mlvl_strides):
+        if not QUANT_FLAG.flag and not self.tocaffe:
+            if isinstance(mlvl_strides, list):
+                mlvl_strides = [int(s) for s in mlvl_strides]
+            else:
+                mlvl_strides = mlvl_strides.tolist()
         pooled_cls = []
         pooled_loc = []
         for rois, feat, stride in zip(mlvl_rois, mlvl_features, mlvl_strides):

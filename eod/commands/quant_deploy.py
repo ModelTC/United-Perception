@@ -8,6 +8,7 @@ from .subcommand import Subcommand
 from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY, DEPLOY_REGISTRY
 from eod.utils.general.user_analysis_helper import send_info
+from eod.utils.general.global_flag import QUANT_FLAG
 
 __all__ = ['QuantDeploy']
 
@@ -52,6 +53,7 @@ def main(args):
     runner_cfg['type'] = runner_cfg.get('type', 'base')
     runner_cfg['kwargs'] = runner_cfg.get('kwargs', {})
     cfg['runtime']['runner'] = runner_cfg
+    QUANT_FLAG.flag = True
 
     send_info(cfg, func="quant_deploy")
     if runner_cfg['type'] == "quant":
