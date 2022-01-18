@@ -5,6 +5,7 @@ import json
 import copy
 
 from .user_analysis_helper import get_task_from_cfg
+from .log_helper import default_logger as logger
 
 
 class IncludeLoader(yaml.Loader):
@@ -134,17 +135,20 @@ def check_cfg(cfg):
         # NaiveRPN: num_classes
         roi_head_type = net_parse['roi_head']['type']
         if roi_head_type == 'NaiveRPN':
+            logger.info("auto reset rpn num_classes = 2")
             cfg['net'][idx2name['roi_head']]['kwargs']['num_classes'] = 2
             cfg['net'][idx2name['post_process']]['kwargs']['num_classes'] = 2
         # roi_head: class_activation
         cls_loss_type = net_parse['post_process']['kwargs']['cfg']['cls_loss']['type']
         class_activation = 'sigmoid' if 'sigmoid' in cls_loss_type else 'softmax'
+        logger.info('auto reset class activation')
         cfg['net'][idx2name['roi_head']]['kwargs']['class_activation'] = class_activation
         # roi_head: num_anchors
         anchors = cfg['net'][idx2name['post_process']]['kwargs']['cfg']['anchor_generator']
         anchor_ratios = anchors['kwargs']['anchor_ratios']
         anchor_scales = anchors['kwargs']['anchor_scales']
         num_anchors = len(anchor_ratios) * len(anchor_scales)
+        logger.info('auto reset num anchor base on anchor generator')
         cfg['net'][idx2name['roi_head']]['kwargs']['num_anchors'] = num_anchors
     else:
         pass
@@ -159,6 +163,7 @@ def load_yaml(path):
     with open(path, "r")as f:
         yaml_data = yaml.load(f, IncludeLoader)
     if 'version' in yaml_data.keys():
+        logger.warning("auto convert pod config -> UP config !!!")
         ConvertTool = POD2UP()
         yaml_data = ConvertTool.forward(yaml_data)
     else:
@@ -175,14 +180,14 @@ class POD2UP:
         del pod_c['dataset']['train']['dataset']['kwargs']['source']
         del pod_c['dataset']['test']['dataset']['kwargs']['source']
         # runner setting
-        pod_c['runner'] = {}
+        pod_c['runtime'] = {}
         runner_phases = ['rank_init', 'random_seed', 'aligned', 'iter_base', 'device', 'async_norm', 'special_bn_init']
         if pod_c.get('fp16'):
-            pod_c['runner']['fp16'] = pod_c['fp16']
+            pod_c['runtime']['fp16'] = pod_c['fp16']
             del pod_c['fp16']
         for phase in runner_phases:
             if phase in pod_c:
-                pod_c['runner'][phase] = pod_c[phase]
+                pod_c['runtime'][phase] = pod_c[phase]
                 del pod_c[phase]
 
         net_c = pod_c['net']
