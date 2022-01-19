@@ -144,7 +144,7 @@ class TrainEvalLogger(Hook):
             - summary_writer (:obj:`str`): "tensorboard" or "pavi"
         """
         super(TrainEvalLogger, self).__init__(runner)
-        self.freq = freq
+        self.freq = runner.args.get('display', freq),
         SmoothedValue.skip_fist_k = skip_first_k
         if env.is_master():
             self.summary_writer = get_summary_writer_class(summary_writer)(os.path.join(runner.work_dir, logdir))
