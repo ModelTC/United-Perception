@@ -34,15 +34,22 @@ class LabelSmoothCELoss(_Loss):
 class BCE_LOSS(_Loss):
     def __init__(self):
         super().__init__()
-        self.bce_loss = torch.nn.BCEWithLogitsLoss()
+        self.bce_loss = torch.nn.BCEWithLogitsLoss(size_average=False, reduce=False)
 
     def forward(self, input, label):
-        one_hot = torch.zeros_like(input).cuda()
         C = input.size(1)
-        label = label.reshape(one_hot.shape[0], 1)
-        one_hot.scatter_(1, label, 1)
-        loss = self.bce_loss(input - math.log(C), one_hot) * C
-        return loss
+        if label.dim() == 1:
+            one_hot = torch.zeros_like(input).cuda()
+            label = label.reshape(one_hot.shape[0], 1)
+            one_hot.scatter_(1, label, 1)
+            loss = self.bce_loss(input - math.log(C), one_hot) * C
+        elif label.dim() > 1:
+            one_hot = label.clone()
+            one_hot[one_hot != 0.] = 1.
+            loss = self.bce_loss(input - math.log(C), one_hot) * C
+            label[label == 0.] = 1
+            loss = loss * label 
+        return loss.mean()
 
 
 LOSSES_REGISTRY.register('ce', torch.nn.CrossEntropyLoss)
