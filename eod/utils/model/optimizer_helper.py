@@ -9,13 +9,16 @@ import copy
 import torch
 
 # Import from local
+from  eod.utils.model import optim
 from ..general.log_helper import default_logger as logger
+from ..general.log_helper import MetricLogger
 from ..general.registry_factory import OPTIMIZER_REGISTRY
 from collections import defaultdict
 
 
 def build_cls_instance(module, cfg):
     """Build instance for given cls"""
+    print(module)
     cls = getattr(module, cfg['type'])
     return cls(**cfg['kwargs'])
 
@@ -162,6 +165,8 @@ class BaseOptimizer(object):
             if optim_type == 'FusedFP16AdamW':
                 linklink.optim.FusedFP16AdamW.reload = fused_sgd_reload
             optimizer = build_cls_instance(linklink.optim, cfg_optim)
+        elif optim_type == 'LARS' or optim_type == 'LAMB':
+            optimizer = build_cls_instance(optim, cfg_optim)
         else:
             optimizer = build_cls_instance(torch.optim, cfg_optim)
         logger.info('build optimizer done')
