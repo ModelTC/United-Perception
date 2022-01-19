@@ -1,21 +1,5 @@
 num_classes: &num_classes 81
 
-
-runtime:
-   runner:
-      type: quant
-
-quant:
-    deploy_backend: tensorrt
-    cali_batch_size: 900
-    prepare_args:
-      extra_qconfig_dict:
-        w_observer: MinMaxObserver
-        a_observer: EMAMinMaxObserver
-        w_fakequantize: FixedFakeQuantize
-        a_fakequantize: FixedFakeQuantize
-
-
 flip: &flip
  type: flip
  kwargs:
@@ -76,28 +60,34 @@ dataset: # Required.
     dataset:
       type: coco
       kwargs:
-        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
+        meta_file: coco/annotations/instances_train2017.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+            image_dir: coco/train2017
             color_mode: RGB
         transformer: [*stitch_expand, *crop, *flip, *color_jitter, *fix_output_resize,*to_tensor, *normalize]
+        cache:
+            cache_dir: /mnt/lustre/share/shenmingzhu/coco_cache
+            cache_name: coco2017_train.pkl
   test:
     dataset:
       type: coco
       kwargs:
-        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
+        meta_file: &gt_file coco/annotations/instances_val2017.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
+            image_dir: coco/val2017
             color_mode: RGB
         transformer: [*test_resize, *to_tensor, *normalize]
+        cache:
+            cache_dir: /mnt/lustre/share/shenmingzhu/coco_cache
+            cache_name: coco2017_val.pkl
         evaluator:
           type: COCO               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
-            gt_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
+            gt_file: *gt_file
             iou_types: [bbox]
   batch_sampler:
     type: aspect_ratio_group
@@ -114,32 +104,38 @@ dataset: # Required.
       alignment: 32
       pin_memory: True
 
+ema:
+ enable: True
+ ema_type: exp
+ kwargs:
+   decay: 0.9998
 
 trainer: # Required.
-  max_epoch: 6             # total epochs for the training
-  test_freq: 1
-  save_freq: 1
+  max_epoch: &max_epoch 100             # total epochs for the training
+  test_freq: 10
+  save_freq: 10
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
     kwargs:
-      lr: 0.00000625
+      lr: 0.000625
       momentum: 0.9
-      weight_decay: 0.0
+      weight_decay: 0.0001
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
-    warmup_epochs: 0        # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_iter: 1000        # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
     warmup_type: linear
     warmup_ratio: 0.001
-    type: MultiStepLR
+    type: CosineAnnealingLR
     kwargs:
-      milestones: [2, 4]     # epochs to decay lr
-      gamma: 0.1             # decay rate
+      T_max: *max_epoch     # epochs to decay lr
+      eta_min: 0.00001             # decay rate
 
 saver: # Required.
-  save_dir: checkpoints/retinanet-r18-improve_quant_trt    # dir to save checkpoints
-  # pretrain_model: pretrained_fp32/ckpt_e100.pth
-  results_dir: results_dir/retinanet-r18-improve_quant_trt  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
+  save_dir: checkpoints/ret18_cos_ema_iou    # dir to save checkpoints
+  pretrain_model:  resnet18-5c106cde.pth
+  results_dir: results_dir/ret18_cos_ema_iou  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+  save_result: True
 
 
 hooks:
@@ -153,7 +149,7 @@ net:
       out_layers: [2,3,4]       # layer1...4, commonly named Conv2...5
       out_strides: [8,16,32]    # tell the strides of output features
       normalize:
-        type: freeze_bn
+        type: solo_bn
       initializer:
         method: msra
   - name: neck
@@ -169,10 +165,10 @@ net:
       initializer:
         method: xavier
       normalize:
-        type: freeze_bn
+        type: solo_bn
   - name: roi_head
     prev: neck
-    type: RetinaHeadWithBNSep
+    type: RetinaHeadWithBNIOU
     kwargs:
       feat_planes: 256        # channels of intermediate conv
       num_classes: *num_classes   # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
@@ -184,22 +180,30 @@ net:
       num_levels: 5
       class_activation: sigmoid
       normalize:
-        type: freeze_bn
+        type: solo_bn
   - name: post_process
     prev: roi_head
-    type: retina_post
+    type: retina_post_iou
     kwargs:
       num_classes: *num_classes   # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       cfg:
         cls_loss:
           type: quality_focal_loss
           kwargs:
-            gamma: 2.0
+           gamma: 2.0
+        iou_branch_loss:
+          type: sigmoid_cross_entropy
         loc_loss:
-          type: iou_loss
-          kwargs:
-            loss_type: giou
-            loss_weight: 1.0
+           type: compose_loc_loss
+           kwargs:
+              loss_cfg:
+                 - type: iou_loss
+                   kwargs:
+                      loss_type: giou
+                      loss_weight: 1.0
+                 - type: l1_loss
+                   kwargs:
+                      loss_weight: 1.0
         anchor_generator:
           type: hand_craft
           kwargs:
@@ -209,6 +213,7 @@ net:
           type: atss
           kwargs:
             top_n: 18
+            use_iou: True
         roi_predictor:
           type: base
           kwargs:
@@ -222,4 +227,4 @@ net:
                 top_n: 100
                 nms:
                   type: naive
-                  nms_iou_thresh: 0.5
+                  nms_iou_thresh: 0.65

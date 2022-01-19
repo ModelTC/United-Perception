@@ -73,6 +73,7 @@ dataset: # Required.
     kwargs:
       num_workers: 4
       alignment: 32
+      pin_memory: True
 
 
 trainer: # Required.
