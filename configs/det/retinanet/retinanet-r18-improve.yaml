@@ -205,3 +205,4 @@ net:
                 top_n: 100
                 nms:
                   type: naive
+                  nms_iou_thresh: 0.5
