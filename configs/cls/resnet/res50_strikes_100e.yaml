@@ -67,7 +67,7 @@ dataset: # Required.
     dataloader:
         type: cls_base
         kwargs:
-          num_workers: 4
+          num_workers: 12
           pin_memory: True
   test:
     dataset:
@@ -95,7 +95,7 @@ dataset: # Required.
     dataloader:
       type: cls_base
       kwargs:
-        num_workers: 4
+        num_workers: 8
         pin_memory: False
 
 trainer: # Required.
@@ -115,7 +115,7 @@ trainer: # Required.
     warmup_ratio: 0.02
     type: CosineAnnealingLR
     kwargs:
-        T_max: 250400
+        T_max: 200
         eta_min: 0.0
         warmup_iter: 6260
 saver: # Required.
