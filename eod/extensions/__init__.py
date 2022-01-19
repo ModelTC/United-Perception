@@ -9,6 +9,7 @@ from .python.focal_loss import (
     SoftmaxFocalLossFunction
 )
 from .python.cross_focal_loss import CrossSigmoidFocalLossFunction
+import torch
 
 
 def build_generic_roipool(pool_cfg):
