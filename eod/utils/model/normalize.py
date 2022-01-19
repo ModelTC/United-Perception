@@ -17,6 +17,13 @@ _norm_cfg = {
     'pt_sync_bn': ('bn', PyTorchSyncBN),
 }
 
+try:
+    from mqbench.nn.modules import FrozenBatchNorm2d as MqbenchFrozenBatchNorm2d
+    _norm_cfg.update({'mqbench_freeze_bn': ('bn', MqbenchFrozenBatchNorm2d)})
+except Exception as err:
+    print(err)
+    print("If you need Mqbench to quantize model, you should add Mqbench to this project. Or just ignore this error.")
+
 
 def build_norm_layer(num_features, cfg, postfix=''):
     assert isinstance(cfg, dict) and 'type' in cfg

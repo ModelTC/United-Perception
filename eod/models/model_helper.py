@@ -19,7 +19,7 @@ __all__ = ['ModelHelper']
 class ModelHelper(nn.Module):
     """Build model from cfg"""
 
-    def __init__(self, cfg, quant=True):
+    def __init__(self, cfg, deploy=False):
         super(ModelHelper, self).__init__()
 
         if 'net' in cfg:
@@ -41,7 +41,7 @@ class ModelHelper(nn.Module):
             self.add_module(mname, module)
         self.dtype = torch.float32
         self.device = torch.device('cpu')
-        self.quant = quant
+        self.deploy = deploy
 
         self._init_functional(**functional_kwargs)
         self.train()
@@ -94,20 +94,13 @@ class ModelHelper(nn.Module):
         return super(ModelHelper, self).cpu()
 
     def forward(self, input):
-        """
-        Note:
-            Input should not be updated inplace !!!
-            In Mimic task, input may be fed into teacher & student networks respectivly,
-            inplace update may cause the input dict only keep the last forward results, which is unexpected.
-        """
-        if not self.quant:
-            input = copy.copy(input)
-            if input['image'].device != self.device or input['image'].dtype != self.dtype:
-                input = to_device(input, device=self.device, dtype=self.dtype)
         for submodule in self.children():
             output = submodule(input)
             input.update(output)
-        return input
+        if not self.deploy:
+            return input
+        else:
+            return input['preds']
 
     def load(self, other_state_dict, strict=False):
         """
