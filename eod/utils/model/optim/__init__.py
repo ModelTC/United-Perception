@@ -1,2 +1,2 @@
-from .lars import LARS
-from .lamb import LAMB
+from .lars import LARS  # noqa
+from .lamb import LAMB  # noqa

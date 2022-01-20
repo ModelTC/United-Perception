@@ -80,7 +80,7 @@ class BaseRunner(object):
         self.config['runtime']['async_norm'] = self.config['runtime'].setdefault('async_norm', False)
         self.config['runtime']['special_bn_init'] = self.config['runtime'].setdefault('special_bn_init', False)
         model_helper_cfg = self.config['runtime'].get('model_helper', {})
-        print("model_helper:  ",model_helper_cfg)
+        # print("model_helper:  ",model_helper_cfg)
         model_helper_cfg['type'] = model_helper_cfg.get('type', 'base')
         model_helper_cfg['kwargs'] = model_helper_cfg.get('kwargs', {})
         self.config['runtime']['model_helper'] = model_helper_cfg

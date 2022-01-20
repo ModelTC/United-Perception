@@ -70,6 +70,7 @@ class TorchMixUp(TorchAugmentation):
         self.alpha = alpha
         self.num_classes = num_classes
         self.dataset = dataset
+
     def augment(self, data):
         output = copy.copy(data)
         idx_other = np.random.randint(0, len(self.dataset))
@@ -84,8 +85,8 @@ class TorchMixUp(TorchAugmentation):
         nh = max(data['image'].shape[0], data_other['image'].shape[0])
         nw = max(data['image'].shape[1], data_other['image'].shape[1])
 
-        hmin = min(data['image'].shape[0], data_other['image'].shape[0])
-        wmin = min(data['image'].shape[1], data_other['image'].shape[1])
+        # hmin = min(data['image'].shape[0], data_other['image'].shape[0])
+        # wmin = min(data['image'].shape[1], data_other['image'].shape[1])
 
         image_tmp = np.empty((nh, nw, 3), dtype=np.float32)
         image_tmp[:, :] = 0.
@@ -148,7 +149,7 @@ class TorchCutMix(TorchAugmentation):
         bby1 = min(nw2, bby2)
         bby2 = min(nw2, bby2)
 
-        data['image'][bbx1:bbx2, bby1:bby2] = data_other['image'][bbx1:bbx2, bby1:bby2] 
+        data['image'][bbx1:bbx2, bby1:bby2] = data_other['image'][bbx1:bbx2, bby1:bby2]
         data['image'] = data['image'].astype(np.uint8)
         data['image'] = Image.fromarray(data['image'])
 
@@ -177,7 +178,7 @@ class TorchCutMixUp(TorchAugmentation):
         if use_cutmix:
             return self.cutmix(data)
         return self.mixup(data)
-    
+
     def rand_bbox(self, size, lam):
         W = size[0]
         H = size[1]
@@ -210,8 +211,8 @@ class TorchCutMixUp(TorchAugmentation):
         nh = max(data['image'].shape[0], data_other['image'].shape[0])
         nw = max(data['image'].shape[1], data_other['image'].shape[1])
 
-        hmin = min(data['image'].shape[0], data_other['image'].shape[0])
-        wmin = min(data['image'].shape[1], data_other['image'].shape[1])
+        # hmin = min(data['image'].shape[0], data_other['image'].shape[0])
+        # wmin = min(data['image'].shape[1], data_other['image'].shape[1])
 
         image_tmp = np.empty((nh, nw, 3), dtype=np.float32)
         image_tmp[:, :] = 0.
@@ -249,7 +250,7 @@ class TorchCutMixUp(TorchAugmentation):
         bby1 = min(nw2, bby2)
         bby2 = min(nw2, bby2)
 
-        data['image'][bbx1:bbx2, bby1:bby2] = data_other['image'][bbx1:bbx2, bby1:bby2] 
+        data['image'][bbx1:bbx2, bby1:bby2] = data_other['image'][bbx1:bbx2, bby1:bby2]
         data['image'] = data['image'].astype(np.uint8)
         data['image'] = Image.fromarray(data['image'])
 

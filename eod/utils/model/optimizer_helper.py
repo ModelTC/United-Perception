@@ -9,9 +9,8 @@ import copy
 import torch
 
 # Import from local
-from  eod.utils.model import optim
+from eod.utils.model import optim
 from ..general.log_helper import default_logger as logger
-from ..general.log_helper import MetricLogger
 from ..general.registry_factory import OPTIMIZER_REGISTRY
 from collections import defaultdict
 

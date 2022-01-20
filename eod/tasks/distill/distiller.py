@@ -334,7 +334,7 @@ class BaseDistiller(object):
         if 'weight' in mimic_kwargs:
             del mimic_kwargs['weight']
 
-        custom_info = 'mimic type: {}'.format(mimic_job['type'])
+        # custom_info = 'mimic type: {}'.format(mimic_job['type'])
         # threading.Thread(target=send, args=(custom_info,))
 
         mimic_job_func = self.mimic_job_loss.get(mimic_job['name'], None)

@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from eod.utils.general.registry_factory import LOSSES_REGISTRY
 
 
 __all__ = ['KLLoss']

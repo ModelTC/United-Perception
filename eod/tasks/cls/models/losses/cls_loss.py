@@ -23,7 +23,7 @@ class LabelSmoothCELoss(_Loss):
             one_hot.scatter_(1, y, 1 - self.smooth_ratio + self.v)
         elif label.dim() > 1:
             one_hot = label.clone()
-            one_hot -= one_hot *  (self.smooth_ratio - self.v) 
+            one_hot -= one_hot * (self.smooth_ratio - self.v)
             one_hot[one_hot == 0.] += self.v
         loss = - torch.sum(F.log_softmax(input, 1) * (one_hot.detach())) / input.size(0)
 
@@ -48,7 +48,7 @@ class BCE_LOSS(_Loss):
             one_hot[one_hot != 0.] = 1.
             loss = self.bce_loss(input - math.log(C), one_hot) * C
             label[label == 0.] = 1
-            loss = loss * label 
+            loss = loss * label
         return loss.mean()
 
 

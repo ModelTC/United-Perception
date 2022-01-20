@@ -91,7 +91,5 @@ class LARS(Optimizer):
                         d_p = d_p.add(momentum, buf)
                     else:
                         d_p = buf
-
-                p.data.add_(-group['lr']*local_lr, d_p)
-
+                p.data.add_(-group['lr'] * local_lr, d_p)
         return loss
