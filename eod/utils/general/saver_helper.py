@@ -81,7 +81,15 @@ class Saver(object):
         """Load state_dict from checkpoint"""
 
         def pod_resnet_convert(state_dict):
-            convert_dict = {
+            convert_dict1 = {
+                "conv1.weight": "layer0.0.weight",
+                "bn1.weight": "layer0.1.weight",
+                "bn1.bias": "layer0.1.bias",
+                "bn1.running_mean": "layer0.1.running_mean",
+                "bn1.running_var": "layer0.1.running_var",
+                "bn1.num_batches_tracked": "layer0.1.num_batches_tracked"
+            }
+            convert_dict2 = {
                 "backbone.conv1.weight": "backbone.layer0.0.weight",
                 "backbone.bn1.weight": "backbone.layer0.1.weight",
                 "backbone.bn1.bias": "backbone.layer0.1.bias",
@@ -90,17 +98,24 @@ class Saver(object):
                 "backbone.bn1.num_batches_tracked": "backbone.layer0.1.num_batches_tracked"
             }
             is_convert = False
-            count = 0
-            for k in convert_dict.keys():
+            count1 = 0
+            count2 = 0
+            for k in convert_dict1.keys():
                 if k in state_dict:
-                    count += 1
-            if count >= 5:  # num_batches_tracked maybe not exist
+                    count1 += 1
+            for k in convert_dict2.keys():
+                if k in state_dict:
+                    count2 += 1
+
+            if count1 >= 5 or count2 >= 5:  # num_batches_tracked maybe not exist
                 is_convert = True
             if is_convert:
                 new_state_dict = OrderedDict()
                 for k, v in state_dict.items():
-                    if k in convert_dict:
-                        new_state_dict[convert_dict[k]] = v
+                    if k in convert_dict1:
+                        new_state_dict[convert_dict1[k]] = v
+                    elif k in convert_dict2:
+                        new_state_dict[convert_dict2[k]] = v
                     else:
                         new_state_dict[k] = v
                 return new_state_dict

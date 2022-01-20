@@ -467,10 +467,10 @@ class ResNet(nn.Module):
 
         super(ResNet, self).__init__()
         if not deep_stem:
-            self.conv1 = nn.Conv2d(input_channel, layer_out_planes[0], kernel_size=7, stride=2, padding=3, bias=False)
+            conv1 = nn.Conv2d(input_channel, layer_out_planes[0], kernel_size=7, stride=2, padding=3, bias=False)
         else:
             inner_planes = layer_out_planes[0] // 2
-            self.conv1 = nn.Sequential(
+            conv1 = nn.Sequential(
                 nn.Conv2d(input_channel, inner_planes, kernel_size=3, stride=2, padding=1, bias=False),
                 build_norm_layer(inner_planes, normalize)[1],
                 nn.ReLU(inplace=True),
@@ -479,12 +479,12 @@ class ResNet(nn.Module):
                 nn.ReLU(inplace=True),
                 nn.Conv2d(inner_planes, layer_out_planes[0], kernel_size=3, stride=1, padding=1, bias=False),
             )
-        self.add_module(self.norm1_name, norm1)
-        self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        # self.add_module(self.norm1_name, norm1)
+        relu = nn.ReLU(inplace=True)
+        maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         if nnie:
-            self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0, ceil_mode=True)
-        self.layer0 = nn.Sequential(self.conv1, self.norm1, self.relu, self.maxpool)
+            maxpool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0, ceil_mode=True)
+        self.layer0 = nn.Sequential(conv1, norm1, relu, maxpool)
         self.layer1 = self._make_layer(block, layer_in_planes[1], layers[0], normalize=normalize)
         self.layer2 = self._make_layer(block, layer_in_planes[2], layers[1], stride=2,
                                        normalize=normalize,
@@ -617,7 +617,7 @@ class ResNet(nn.Module):
 
     def freeze_layer(self):
         layers = [
-            nn.Sequential(self.conv1, self.norm1, self.relu, self.maxpool),
+            self.layer0,
             self.layer1, self.layer2, self.layer3, self.layer4
         ]
         for layer_idx in self.frozen_layers:
