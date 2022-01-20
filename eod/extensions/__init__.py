@@ -4,6 +4,7 @@ from .python.roi_align import RoIAlignPool
 from .python.psroi_align import PSRoIAlign 
 from .python.psroi_pool import PSRoIPool
 from .python.nms import naive_nms
+from .python.deformable_conv import DeformableConv
 from .python.focal_loss import (
     SigmoidFocalLossFunction,
     SoftmaxFocalLossFunction

@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
+from eod.extensions import DeformableConv
 from eod.utils.model.initializer import initialize_from_cfg
 from eod.utils.model.normalize import build_norm_layer
 
@@ -90,6 +91,64 @@ class BasicBlock(nn.Module):
         return out
 
 
+class DeformBasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self,
+                 inplanes,
+                 planes,
+                 stride=1,
+                 dilation=2,
+                 downsample=None,
+                 normalize={'type': 'solo_bn'},
+                 stride_in_1x1=False):
+        super(DeformBasicBlock, self).__init__()
+
+        self.norm1_name, norm1 = build_norm_layer(planes, normalize, 1)
+        self.norm2_name, norm2 = build_norm_layer(planes, normalize, 2)
+
+        kernel_size = 3
+        padding = dilation * (kernel_size - 1) // 2
+
+        self.deform_offset = nn.Conv2d(
+            inplanes, 18, kernel_size=3, stride=stride, padding=padding, dilation=dilation)
+        self.conv1 = DeformableConv(
+            inplanes, planes, kernel_size=3, stride=stride, padding=padding, dilation=dilation)
+        self.add_module(self.norm1_name, norm1)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = conv3x3(planes, planes)
+        self.add_module(self.norm2_name, norm2)
+        self.downsample = downsample
+        self.stride = stride
+
+    @property
+    def norm1(self):
+        return getattr(self, self.norm1_name)
+
+    @property
+    def norm2(self):
+        return getattr(self, self.norm2_name)
+
+    def forward(self, x):
+        residual = x
+        offset = self.deform_offset(x)
+
+        out = self.conv1(x, offset)
+        out = self.norm1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.norm2(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -154,6 +213,86 @@ class Bottleneck(nn.Module):
         out = self.relu(out)
 
         out = self.conv2(out)
+        out = self.norm2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.norm3(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
+class DeformBlock(nn.Module):
+    expansion = 4
+
+    def __init__(self,
+                 inplanes,
+                 planes,
+                 stride=1,
+                 dilation=2,
+                 downsample=None,
+                 normalize={'type': 'solo_bn'},
+                 stride_in_1x1=False):
+        super(DeformBlock, self).__init__()
+
+        self.norm1_name, norm1 = build_norm_layer(planes, normalize, 1)
+        self.norm2_name, norm2 = build_norm_layer(planes, normalize, 2)
+        self.norm3_name, norm3 = build_norm_layer(planes * self.expansion, normalize, 3)
+
+        stride_1x1, stride_3x3 = (stride, 1) if stride_in_1x1 else (1, stride)
+
+        self.conv1 = nn.Conv2d(
+            inplanes,
+            planes,
+            kernel_size=1,
+            stride=stride_1x1,
+            bias=False)
+        self.add_module(self.norm1_name, norm1)
+
+        kernel_size = 3
+        padding = dilation * (kernel_size - 1) // 2
+
+        self.deform_offset = nn.Conv2d(
+            planes, 18, kernel_size=3, stride=stride_3x3, padding=padding, dilation=dilation)
+        self.conv2 = DeformableConv(
+            planes, planes, kernel_size=3, stride=stride_3x3, padding=padding, dilation=dilation)
+
+        self.add_module(self.norm2_name, norm2)
+        self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
+        self.add_module(self.norm3_name, norm3)
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
+
+    @property
+    def norm1(self):
+        return getattr(self, self.norm1_name)
+
+    @property
+    def norm2(self):
+        return getattr(self, self.norm2_name)
+
+    @property
+    def norm3(self):
+        return getattr(self, self.norm3_name)
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.norm1(out)
+        out = self.relu(out)
+
+        offset = self.deform_offset(out)
+
+        out = self.conv2(out, offset)
+
         out = self.norm2(out)
         out = self.relu(out)
 

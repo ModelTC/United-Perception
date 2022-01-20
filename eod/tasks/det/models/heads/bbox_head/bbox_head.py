@@ -15,7 +15,7 @@ from eod.utils.general.global_flag import QUANT_FLAG
 # Import from local
 from .bbox import build_bbox_predictor, build_bbox_supervisor
 
-__all__ = ['FC', 'BboxNet', 'RFCN']
+__all__ = ['FC', 'BboxNet', 'RFCN', 'Res5']
 
 
 class BboxNet(nn.Module):
@@ -356,6 +356,100 @@ class FC(BboxNet):
         x = self.relu(self.fc7(x))
         cls_pred = self.fc_rcnn_cls(x)
         loc_pred = self.fc_rcnn_loc(x)
+        return cls_pred, loc_pred
+
+
+@MODULE_ZOO_REGISTRY.register('BboxRes5')
+class Res5(BboxNet):
+    """
+    Conv5 head to predict RoIs' feature
+    """
+
+    def __init__(self,
+                 inplanes,
+                 backbone,
+                 num_classes,
+                 cfg,
+                 deformable=False,
+                 normalize={'type': 'freeze_bn'},
+                 initializer=None):
+        """
+        Arguments:
+            - inplanes (:obj:`list` or :obj:`int`): input channel, which is
+              a number or list contains a single element
+            - num_classes (:obj:`int`): number of classes, including the background class
+            - cfg (:obj:`dict`): config for training or test
+            - backbone (:obj:`str`): model type of backbone e.g. ``resnet18``, ``resnet34``
+            - deformable (:obj:`bool`): whether to use deformable block
+            - initializer (:obj:`dict`): config for module parameters initialization,
+              This is only for conv layer, we always use norm initilization for the last fc layer.
+            - normalize (:obj:`dict`): config of Normalization Layer
+
+        `Res5 example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/blob/
+        master/configs/baselines/faster-rcnn-R50-C4-1x.yaml#L107-137>`_
+
+
+        """
+        super(Res5, self).__init__(inplanes, num_classes, cfg)
+
+        from eod.models.backbones.resnet import BasicBlock
+        from eod.models.backbones.resnet import Bottleneck
+        from eod.models.backbones.resnet import DeformBasicBlock
+        from eod.models.backbones.resnet import DeformBlock
+        from eod.models.backbones.resnet import make_layer4
+
+        if backbone in ['resnet18', 'resnet34']:
+            if deformable:
+                block = DeformBasicBlock
+            else:
+                block = BasicBlock
+        elif backbone in ['resnet50', 'resnet101', 'resnet152']:
+            if deformable:
+                block = DeformBlock
+            else:
+                block = Bottleneck
+        else:
+            raise NotImplementedError(f'{backbone} is not supported for Res5 head')
+
+        layer = {
+            'resnet18': [2, 2, 2, 2],
+            'resnet34': [3, 4, 6, 3],
+            'resnet50': [3, 4, 6, 3],
+            'resnet101': [3, 4, 23, 3],
+            'resnet152': [3, 8, 36, 3]
+        }[backbone]
+
+        stride = cfg['roipooling']['pool_size'] // 7
+        self.layer4 = make_layer4(self.inplanes, block, 512, layer[3], stride=stride, normalize=normalize)
+        self.avgpool = nn.AvgPool2d(7, stride=1)
+
+        cls_out_channel = num_classes if self.cls_loss.activation_type == 'softmax' else num_classes - 1
+        # self.fc_cls = nn.Linear(512 * block.expansion, num_classes)
+        self.fc_cls = nn.Linear(512 * block.expansion, cls_out_channel)
+        if self.cfg.get('share_location', False):
+            self.fc_loc = nn.Linear(512 * block.expansion, 4)
+        else:
+            # self.fc_loc = nn.Linear(512 * block.expansion, num_classes * 4)
+            self.fc_loc = nn.Linear(512 * block.expansion, cls_out_channel * 4)
+
+        initialize_from_cfg(self, initializer)
+        init_weights_normal(self.fc_cls, 0.01)
+        init_weights_normal(self.fc_loc, 0.001)
+
+    def roi_extractor(self, mlvl_rois, mlvl_features, mlvl_strides):
+        pooled_feats = [self.roipool(*args) for args in zip(mlvl_rois, mlvl_features, mlvl_strides)]
+        # ONNX concat requires at least one tensor
+        if len(pooled_feats) == 1:
+            return pooled_feats[0]
+        return torch.cat(pooled_feats, dim=0)
+
+    def forward_net(self, pooled_feats):
+        x = self.layer4(pooled_feats)
+        x = self.avgpool(x)
+        c = x.numel() // x.shape[0]
+        x = x.view(-1, c)
+        cls_pred = self.fc_cls(x)
+        loc_pred = self.fc_loc(x)
         return cls_pred, loc_pred
 
 

@@ -1,3 +1,4 @@
+#include "deform_conv/deformable_conv.h"
 #include "roi_align/roi_align.h"
 #include "psroi_align/psroi_align.h"
 #include "psroi_pooling/psroi_pooling.h"
@@ -7,6 +8,22 @@
 #include <torch/torch.h>
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+    // pybind deform conv v1
+    pybind11::module dc_v1 = m.def_submodule("deform_conv_v1",
+                                           "deformable convolution v1");
+    dc_v1.def("backward_parameters_cuda",
+              &deform_conv_backward_parameters_cuda,
+              "deform_conv_backward_parameters_cuda (CUDA)");
+    dc_v1.def("backward_input_cuda",
+              &deform_conv_backward_input_cuda,
+              "deform_conv_backward_input_cuda (CUDA)");
+    dc_v1.def("forward_cuda",
+              &deform_conv_forward_cuda,
+              "deform_conv_forward_cuda (CUDA)");
+    dc_v1.def("forward_cpu",
+              &deform_conv_forward,
+              "deform_conv_forward_cpu (CPU)");
+    
     // pybind ROIAlignPooling
     pybind11::module ra = m.def_submodule("roi_align",
                                           "roi alignment pooling");
