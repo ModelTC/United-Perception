@@ -109,7 +109,6 @@ class BoxAnchorGenerator(AnchorGenerator):
         generate anchor (reference) windows by enumerating aspect ratios X
         scales wrt a reference (0, 0, base_size - 1, base_size - 1) window.
         """
-        stride = stride.item()
         if ALIGNED_FLAG.aligned:
             w = stride
             h = stride
@@ -203,7 +202,7 @@ class HandCraftAnchorGenerator(BoxAnchorGenerator):
             'anchor_type': 'hand_craft',
             'anchor_ratios': self._anchor_ratios,
             'anchor_scales': self._anchor_scales,
-            'anchor_strides': self._anchor_strides,
+            'anchor_strides': [int(_) for _ in self._anchor_strides],
             'anchors': json_anchors
         }
 

@@ -37,28 +37,28 @@ dataset: # Required.
     dataset:
       type: coco
       kwargs:
-        meta_file: coco/annotations/instances_train2017.json
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instance          jss_train2017.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: coco/train2017
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
             color_mode: RGB
         transformer: [*flip, *train_resize, *to_tensor, *normalize]
   test:
     dataset:
       type: coco
       kwargs:
-        meta_file: &gt_file coco/annotations/instances_val2017.json
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: coco/val2017
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
             color_mode: RGB
         transformer: [*test_resize, *to_tensor, *normalize]
         evaluator:
           type: COCO               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
-            gt_file: *gt_file
+            gt_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
             iou_types: [bbox]
   batch_sampler:
     type: aspect_ratio_group
@@ -73,6 +73,7 @@ dataset: # Required.
     kwargs:
       num_workers: 4
       alignment: 32
+      pin_memory: True
 
 
 trainer: # Required.
@@ -147,6 +148,7 @@ net:
         cls_loss:
           type: sigmoid_focal_loss
           kwargs:
+            num_classes: *num_classes
             alpha: 0.25
             gamma: 2.0
         loc_loss:
@@ -183,3 +185,4 @@ net:
                 top_n: 100
                 nms:
                   type: naive
+                  nms_iou_thresh: 0.5

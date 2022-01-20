@@ -2,6 +2,7 @@ from .registry import Registry
 
 # model
 MODULE_ZOO_REGISTRY = Registry()
+MODEL_WRAPPER_REGISTRY = Registry()
 EMA_REGISTRY = Registry()
 
 # data
@@ -13,9 +14,11 @@ BATCHING_REGISTRY = Registry()
 
 # predictor
 ROI_PREDICTOR_REGISTRY = Registry()
+BBOX_PREDICTOR_REGISTRY = Registry()
 
 # supervisior
 ROI_SUPERVISOR_REGISTRY = Registry()
+BBOX_SUPERVISOR_REGISTRY = Registry()
 
 # matcher
 MATCHER_REGISTRY = Registry()
@@ -78,3 +81,7 @@ MODEL_HELPER_REGISTRY = Registry()
 
 # deploy
 DEPLOY_REGISTRY = Registry()
+TOCAFFE_REGISTRY = Registry()
+KS_PROCESSOR_REGISTRY = Registry()
+KS_PARSER_REGISTRY = Registry()
+TOKESTREL_REGISTRY = Registry()

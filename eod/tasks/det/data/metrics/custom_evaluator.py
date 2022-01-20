@@ -19,7 +19,7 @@ __all__ = ['MREvaluator']
 
 
 class CustomEvaluator(Evaluator):
-    def __init__(self, gt_file, num_classes, iou_thresh=0.5, ign_iou_thresh=0.5, metrics_csv='metrics.csv', label_mapping=None, ignore_mode=0): # noqa
+    def __init__(self, gt_file, num_classes, iou_thresh=0.5, ign_iou_thresh=0.5, metrics_csv='metrics.csv', label_mapping=None, ignore_mode=0, cross_cfg=None): # noqa
         super(CustomEvaluator, self).__init__()
         self.gt_file = gt_file
         self.iou_thresh = iou_thresh
@@ -29,11 +29,15 @@ class CustomEvaluator(Evaluator):
         self.metrics_csv = metrics_csv
         self.label_mapping = label_mapping
         self.class_from = {}
+        self.cross_cfg = cross_cfg
+        if self.cross_cfg is not None:
+            self.label_mapping = self.cross_cfg.get('label_mapping', [[]])
         if self.label_mapping is not None:
             for idx, label_map in enumerate(self.label_mapping):
                 for label in label_map:
                     self.class_from[label] = [idx]
         else:
+            self.label_mapping = [[]]
             if not isinstance(gt_file, list):
                 gt_file = [gt_file]
             for label in range(1, self.num_classes):
@@ -71,6 +75,8 @@ class CustomEvaluator(Evaluator):
                 for i, line in enumerate(f):
                     img = json.loads(line)
                     if self.label_mapping is not None:
+                        img = self.set_label_mapping(img, gt_file_idx)
+                    if self.cross_cfg is not None:
                         img = self.set_label_mapping(img, gt_file_idx)
                     image_id = img['filename']
                     original_gt[img['filename']] = copy.deepcopy(img)
@@ -285,7 +291,8 @@ class MREvaluator(CustomEvaluator):
                  ignore_mode=0,
                  ign_iou_thresh=0.5,
                  iou_types=['bbox'],
-                 eval_class_idxs=[]):
+                 eval_class_idxs=[],
+                 cross_cfg=None):
 
         super(MREvaluator, self).__init__(gt_file,
                                           num_classes,
@@ -293,7 +300,8 @@ class MREvaluator(CustomEvaluator):
                                           metrics_csv=metrics_csv,
                                           label_mapping=label_mapping,
                                           ignore_mode=ignore_mode,
-                                          ign_iou_thresh=ign_iou_thresh)
+                                          ign_iou_thresh=ign_iou_thresh,
+                                          cross_cfg=cross_cfg)
 
         if len(eval_class_idxs) == 0:
             eval_class_idxs = list(range(1, num_classes))

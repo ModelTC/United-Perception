@@ -6,7 +6,7 @@ from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from eod.utils.general.global_flag import FP16_FLAG
 
 
-__all__ = ['BaseNet', 'RetinaSubNet', 'RetinaHeadWithBN', 'RetinaHeadWithBNIOU', 'RetinaHeadWithBNSep']
+__all__ = ['BaseNet', 'RetinaSubNet', 'RetinaHeadWithBN', 'RetinaHeadWithBNIOU', 'RetinaHeadWithBNSep', 'NaiveRPN']
 
 
 class BaseNet(nn.Module):
@@ -31,8 +31,16 @@ class BaseNet(nn.Module):
         super(BaseNet, self).__init__()
         self.prefix = self.__class__.__name__
         self.num_classes = num_classes
-        self.inplanes = inplanes
         self.num_levels = num_levels
+
+        if isinstance(inplanes, list):
+            inplanes_length = len(inplanes)
+            for i in range(1, inplanes_length):
+                if inplanes[i] != inplanes[0]:
+                    raise ValueError('list inplanes elements are inconsistent with {}'.format(inplanes[i]))
+            inplanes = inplanes[0]
+        assert isinstance(inplanes, int)
+        self.inplanes = inplanes
 
     def forward(self, input):
         features = input['features']
@@ -40,6 +48,48 @@ class BaseNet(nn.Module):
         output = {}
         output['preds'] = mlvl_raw_preds
         return output
+
+
+@MODULE_ZOO_REGISTRY.register('NaiveRPN')
+class NaiveRPN(BaseNet):
+    """
+    Classify Anchors (2 cls): foreground or background. This module is usually
+    used with :class:`~pod.models.heads.bbox_head.bbox_head.BboxNet`
+    """
+
+    def __init__(self,
+                 inplanes,
+                 feat_planes,
+                 num_classes,
+                 num_anchors,
+                 class_activation,
+                 num_levels=5,
+                 Normalize=None,
+                 initializer=None):
+        assert num_classes == 2
+        super(NaiveRPN, self).__init__(inplanes, num_classes, num_levels)
+
+        inplanes = self.inplanes
+        num_levels = self.num_levels
+        self.class_activation = class_activation
+        self.conv3x3 = nn.Conv2d(inplanes, feat_planes, kernel_size=3, stride=1, padding=1)
+        self.relu3x3 = nn.ReLU(inplace=True)
+
+        class_channel = {'sigmoid': 1, 'softmax': 2}[self.class_activation]
+        self.conv_cls = nn.Conv2d(feat_planes, num_anchors * class_channel, kernel_size=1, stride=1)
+        self.conv_loc = nn.Conv2d(feat_planes, num_anchors * 4, kernel_size=1, stride=1)
+
+        initialize_from_cfg(self, initializer)
+
+    def forward_net(self, x, lvl=None):
+        x = self.conv3x3(x)
+        x = self.relu3x3(x)
+        cls_pred = self.conv_cls(x)
+        loc_pred = self.conv_loc(x)
+        if FP16_FLAG.fp16:
+            cls_pred = cls_pred.float()
+            loc_pred = loc_pred.float()
+        return cls_pred, loc_pred
 
 
 @MODULE_ZOO_REGISTRY.register('RetinaSubNet')

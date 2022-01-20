@@ -2,6 +2,7 @@ import json
 from .subcommand import Subcommand
 import functools
 from eod.utils.general.registry_factory import EVALUATOR_REGISTRY, SUBCOMMAND_REGISTRY
+from eod.utils.general.user_analysis_helper import send_info
 
 __all__ = ['Eval']
 
@@ -19,6 +20,7 @@ class Eval(Subcommand):
 
 
 def _main(evaluator_cls, args):
+    send_info(func='evaluate')
     print('building evaluator')
     evaluator = evaluator_cls.from_args(args)
     print('evaluator builded, start to evaluate')

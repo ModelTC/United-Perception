@@ -10,6 +10,7 @@ import torch.multiprocessing as mp
 from eod.utils.env.dist_helper import setup_distributed, finalize, env
 from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from eod.utils.env.launch import launch
+from eod.utils.general.user_analysis_helper import send_info
 
 # Import from local
 from .subcommand import Subcommand
@@ -124,6 +125,7 @@ def main(args):
     if args.evaluate:
         training = False
         train_phase = "eval"
+    send_info(cfg, train_phase)
     runner_cfg['kwargs']['training'] = training
     runner = RUNNER_REGISTRY.get(runner_cfg['type'])(cfg, **runner_cfg['kwargs'])
     train_func = {"train": runner.train, "eval": runner.evaluate}

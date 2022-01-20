@@ -22,6 +22,7 @@ from eod.data.data_utils import get_image_size
 from torch.nn.modules.utils import _pair
 from eod.utils.general.petrel_helper import PetrelHelper
 
+
 # TODO: Check GPU usage after move this setting down from upper line
 cv2.ocl.setUseOpenCL(False)
 
@@ -36,17 +37,27 @@ class CustomDataset(BaseDataset):
                  image_reader,
                  transformer,
                  num_classes,
+                 class_names=None,
                  evaluator=None,
                  label_mapping=None,
                  cache=None,
-                 clip_box=True):
+                 clip_box=True,
+                 cross_cfg=None):
         super(CustomDataset, self).__init__(
-            meta_file, image_reader, transformer, evaluator=evaluator)
+            meta_file,
+            image_reader,
+            transformer,
+            evaluator=evaluator,
+            class_names=class_names)
 
         self._num_classes = num_classes
+        if class_names is None:
+            class_names = list(range(num_classes))
+        assert self._num_classes == len(class_names)
         self.label_mapping = label_mapping
         self.metas = []
         self.aspect_ratios = []
+        self.cross_cfg = cross_cfg
         self._normal_init()
         self.clip_box = clip_box
 
@@ -104,13 +115,21 @@ class CustomDataset(BaseDataset):
     def _normal_init(self):
         if not isinstance(self.meta_file, list):
             self.meta_file = [self.meta_file]
+        # cross training cfg
+        if self.cross_cfg is not None:
+            self.label_mapping = self.cross_cfg.get('label_mapping', [[]])
+            neg_targets = self.cross_cfg.get("neg_targets")
         for idx, meta_file in enumerate(self.meta_file):
             with PetrelHelper.open(meta_file) as f:
                 for line in f:
                     data = json.loads(line)
                     if self.label_mapping is not None:
-                        data = self.set_label_mapping(data, self.label_mapping[idx], 0)
-                        data['image_source'] = idx
+                        if self.cross_cfg is not None:
+                            data = self.set_label_mapping(data, self.label_mapping[idx], neg_targets[idx])
+                            data['image_source'] = self.cross_cfg.get('image_sources', range(len(self.meta_file)))[idx]
+                        else:
+                            data = self.set_label_mapping(data, self.label_mapping[idx], 0)
+                            data['image_source'] = idx
                     self.metas.append(data)
                     if 'image_height' not in data or 'image_width' not in data:
                         logger.warning('image size is not provided, '
@@ -210,7 +229,7 @@ class CustomDataset(BaseDataset):
                 cache = True
             else:
                 img = self.image_reader(filename, data.get('image_source', 0))
-        except:  # noqa 
+        except:  # noqa
             img = self.image_reader(filename, data.get('image_source', 0))
         input = EasyDict({
             'image': img,
@@ -268,8 +287,10 @@ class RankCustomDataset(CustomDataset):
                  image_reader,
                  transformer,
                  num_classes,
+                 class_names=None,
                  evaluator=None,
                  label_mapping=None,
+                 cross_cfg=None,
                  reload_cfg={}):
         self.mini_epoch = reload_cfg.get('mini_epoch', 1)
         self.seed = reload_cfg.get('seed', 0)
@@ -282,8 +303,10 @@ class RankCustomDataset(CustomDataset):
             image_reader,
             transformer,
             num_classes,
+            class_names=class_names,
             evaluator=evaluator,
-            label_mapping=label_mapping)
+            label_mapping=label_mapping,
+            cross_cfg=cross_cfg)
 
     def count_dataset_size(self, meta_files):
         from itertools import (takewhile, repeat)
@@ -338,6 +361,9 @@ class RankCustomDataset(CustomDataset):
     def _normal_init(self):
         if not isinstance(self.meta_file, list):
             self.meta_file = [self.meta_file]
+        if self.cross_cfg is not None:
+            self.label_mapping = self.cross_cfg.get('label_mapping', [[]])
+            neg_targets = self.cross_cfg.get("neg_targets")
         rank_indices, rank_num_samples = self.get_rank_indices(self.meta_file)
         rank_indices = set(rank_indices)
         _index = 0
@@ -347,8 +373,13 @@ class RankCustomDataset(CustomDataset):
                     if _index in rank_indices:
                         data = json.loads(line)
                         if self.label_mapping is not None:
-                            data = self.set_label_mapping(data, self.label_mapping[idx], 0)
-                            data['image_source'] = idx
+                            if self.cross_cfg is not None:
+                                data = self.set_label_mapping(data, self.label_mapping[idx], neg_targets[idx])
+                                data['image_source'] = self.cross_cfg.get(
+                                    'image_sources', range(len(self.meta_file)))[idx]
+                            else:
+                                data = self.set_label_mapping(data, self.label_mapping[idx], 0)
+                                data['image_source'] = idx
                         self.metas.append(data)
                         if 'image_height' not in data or 'image_width' not in data:
                             logger.warning('image size is not provided, '

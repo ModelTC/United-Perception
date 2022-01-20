@@ -113,7 +113,7 @@ class SmoothedValue(object):
         self.count = 0
 
     def __iadd__(self, value):
-        if self.skip_first_k > 0:
+        if (self.skip_first_k > 0):
             self.count = 1
             self.total = value
             self.deque.clear()
@@ -156,7 +156,9 @@ class SmoothedValue(object):
 class MetricLogger(object):
     def __init__(self, delimiter="\t", cur_iter=0, start_iter=0):
         self.meters = defaultdict(SmoothedValue)  # no instantiation here
-        self.first_iter_flag = True
+        # self.first_iter_flag = True
+        self.first_K_iter_flag = True
+        self.skip_iter = 100
         self.start_iter = start_iter
         self.delimiter = delimiter
         self.cur_iter = cur_iter
@@ -169,16 +171,28 @@ class MetricLogger(object):
     def set_window_size(self, window_size):
         SmoothedValue.window_size = window_size
 
-    def update(self, detail_time={}, **kwargs):
+    def update(self, cur_iter, detail_time={}, **kwargs):
         # As batch time of the first iter is much longer than normal time, we
         # exclude the first iter for more accurate speed statistics. If the window
         # size is 1, batch time and loss of the first iter will display, but will not
         # contribute to the global average data.
+        """
         if self.first_iter_flag and self.start_iter + 1 == self.cur_iter:
             self.first_iter_flag = False
             for name, meter in self.meters.items():
                 meter.count -= 1
                 meter.total -= meter.deque.pop()
+        """
+        if self.first_K_iter_flag:
+            self.cur_iter = cur_iter
+            if self.start_iter == 0:
+                self.start_iter = cur_iter
+            if self.cur_iter <= self.start_iter + self.skip_iter - 1:
+                for name, meter in self.meters.items():
+                    meter.count -= 1
+                    meter.total -= meter.deque.pop()
+            else:
+                self.first_K_iter_flag = False
 
         kwargs.update(detail_time)
         for k, v in kwargs.items():

@@ -144,7 +144,7 @@ class TrainEvalLogger(Hook):
             - summary_writer (:obj:`str`): "tensorboard" or "pavi"
         """
         super(TrainEvalLogger, self).__init__(runner)
-        self.freq = freq
+        self.freq = runner.args.get('display', freq)
         SmoothedValue.skip_fist_k = skip_first_k
         if env.is_master():
             self.summary_writer = get_summary_writer_class(summary_writer)(os.path.join(runner.work_dir, logdir))
@@ -204,8 +204,10 @@ class TrainEvalLogger(Hook):
         total_iter = runner.get_total_iter()
         train_size = runner.train_epoch_size
 
-        self.train_timers.update(data_time=self.t_after_data - self.t_before_data,
-                                 batch_time=time.time() - self.t_before_data)
+        self.train_timers.update(
+            cur_iter,
+            data_time=self.t_after_data - self.t_before_data,
+            batch_time=time.time() - self.t_before_data)
 
         eta_seconds = self.train_timers.batch_time.global_avg * (runner.get_total_iter() - cur_iter)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))

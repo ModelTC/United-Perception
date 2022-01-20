@@ -1,5 +1,10 @@
 
 
+class QuantFlag():
+    def __init__(self):
+        self.flag = False
+
+
 class Aligned():
     def __init__(self):
         self.aligned = False
@@ -30,3 +35,4 @@ ITER_BASE_FLAG = IterBase()
 FP16_FLAG = Fp16Flag()
 ALIGNED_FLAG = Aligned()
 DIST_BACKEND = DistBackend()
+QUANT_FLAG = QuantFlag()

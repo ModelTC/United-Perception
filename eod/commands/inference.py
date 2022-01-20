@@ -8,6 +8,7 @@ import argparse
 from .subcommand import Subcommand
 from eod.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from eod.utils.general.registry_factory import SUBCOMMAND_REGISTRY, INFERENCER_REGISTRY
+from eod.utils.general.user_analysis_helper import send_info
 
 
 __all__ = ['Inference']
@@ -55,6 +56,7 @@ def main(args):
     }
     if not os.path.exists(args.vis_dir):
         os.makedirs(args.vis_dir, exist_ok=True)
+    send_info(cfg, func="inference")
     cfg['runtime'] = cfg.setdefault('runtime', {})
     infer_cfg = cfg['runtime'].get('inferencer', {})
     infer_cfg['type'] = infer_cfg.get('type', 'base')
