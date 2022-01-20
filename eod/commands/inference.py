@@ -24,10 +24,6 @@ class Inference(Subcommand):
                                 dest='config',
                                 required=True,
                                 help='settings of detection in yaml format')
-        sub_parser.add_argument('--ckpt',
-                                dest='ckpt',
-                                required=True,
-                                help='ckpt loaded for inferencing')
         sub_parser.add_argument('-i',
                                 '--img_path',
                                 dest='image_path',
@@ -49,7 +45,6 @@ class Inference(Subcommand):
 def main(args):
     cfg = load_yaml(args.config)
     cfg['args'] = {
-        'ckpt': args.ckpt,
         'image_path': args.image_path,
         'vis_dir': args.vis_dir,
         'opts': args.opts

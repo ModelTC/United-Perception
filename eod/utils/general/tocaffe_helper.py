@@ -12,6 +12,7 @@ import warnings
 import torch
 
 # Import from pod
+from eod.utils.general.cfg_helper import merge_opts_into_cfg
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.saver_helper import Saver
 from eod.utils.general.tocaffe_utils import ToCaffe
@@ -142,6 +143,8 @@ class PodToCaffe(object):
 
 
 def to_caffe(config, save_prefix='model', input_size=None, input_channel=3):
+    opts = config.get('args', {}).get('opts', [])
+    config = merge_opts_into_cfg(opts, config)
     tocaffe_type = config.pop('tocaffe_type', 'pod')
     tocaffe_ins = TOCAFFE_REGISTRY[tocaffe_type](config,
                                                  save_prefix,

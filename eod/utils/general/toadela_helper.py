@@ -4,10 +4,13 @@ import time
 from spring_aux.adela.adela import Adela
 
 from .tokestrel_helper import to_kestrel
+from eod.utils.general.cfg_helper import merge_opts_into_cfg
 from eod.utils.general.log_helper import default_logger as logger
 
 
 def to_adela(config, release_name, save_to=None, serialize=False):
+    opts = config.get('args', {}).get('opts', [])
+    config = merge_opts_into_cfg(opts, config)
     # to kestrel
     kestrel_save_path = to_kestrel(config, save_to, serialize)
     # generate release.json

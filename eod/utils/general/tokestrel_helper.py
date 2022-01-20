@@ -6,6 +6,7 @@ import copy
 import torch
 
 from eod.utils.general.tocaffe_helper import to_caffe
+from eod.utils.general.cfg_helper import merge_opts_into_cfg
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.registry_factory import TOKESTREL_REGISTRY, KS_PROCESSOR_REGISTRY, KS_PARSER_REGISTRY
 
@@ -159,6 +160,8 @@ def get_kestrel_parameters(config):
 
 
 def to_kestrel(config, save_to=None, serialize=False):
+    opts = config.get('args', {}).get('opts', [])
+    config = merge_opts_into_cfg(opts, config)
     input_channel = config['to_kestrel'].get('input_channel', 3)
     resize_hw = None
     if config['to_kestrel'].get('resize_hw', '') != '':

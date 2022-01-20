@@ -7,6 +7,7 @@ from easydict import EasyDict
 
 from eod.data.datasets.transforms import build_transformer
 from eod.data.data_utils import get_image_size
+from eod.utils.general.cfg_helper import merge_opts_into_cfg
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.registry_factory import MODEL_HELPER_REGISTRY, BATCHING_REGISTRY, IMAGE_READER_REGISTRY
 from eod.utils.general.registry_factory import INFERENCER_REGISTRY, SAVER_REGISTRY, VISUALIZER_REGISTRY
@@ -18,11 +19,12 @@ __all__ = ['BaseInference']
 class BaseInference(object):
     def __init__(self, config, work_dir='./'):
         self.args = config.get('args', {})
+        opts = self.args.get('opts', [])
+        config = merge_opts_into_cfg(opts, config)
         self.config = config
         # cfg_infer = config['inference']
         self.class_names = config.get('class_names', None)
         self.work_dir = work_dir
-        self.ckpt = self.args['ckpt']
         self.vis_dir = self.args['vis_dir']
         self.image_path = self.args['image_path']
 
