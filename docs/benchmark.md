@@ -33,3 +33,4 @@
 | ------|:---: | :---:                  | :---:   |
 |[retinanet-R50](https://github.com/ModelTC/EOD/blob/main/configs/det/retinanet/retinanet-r50_1x.yaml)    |[800, 1333]  |37.0 | [model](https://github.com/ModelTC/EOD/releases/download/0.0.1/retinanet_r50.pth) |
 |[retinanet-R18-improve](https://github.com/ModelTC/EOD/blob/main/det/configs/retinanet/retinanet-r18-improve.yaml)    |[800, 1333]  |40.7 | [model](https://github.com/ModelTC/EOD/releases/download/0.0.1/retinanet_r18.pth) |
+|[POD-retinanet-R50](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/det-debug/configs/det/pod_convert/retinanet-R50-1x.yaml)    |[800, 1333]  |36.1 | [model]() |
