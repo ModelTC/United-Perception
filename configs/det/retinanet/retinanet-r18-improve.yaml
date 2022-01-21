@@ -120,7 +120,7 @@ trainer: # Required.
 
 saver: # Required.
   save_dir: checkpoints/ret18    # dir to save checkpoints
-  # pretrain_model: resnet18-5c106cde.pth
+  pretrain_model: resnet18-5c106cde.pth
   results_dir: results_dir/ret18  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
