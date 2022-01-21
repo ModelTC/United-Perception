@@ -44,11 +44,7 @@ class BCE_LOSS(_Loss):
             one_hot.scatter_(1, label, 1)
             loss = self.bce_loss(input - math.log(C), one_hot) * C
         elif label.dim() > 1:
-            one_hot = label.clone()
-            one_hot[one_hot != 0.] = 1.
-            loss = self.bce_loss(input - math.log(C), one_hot) * C
-            label[label == 0.] = 1
-            loss = loss * label
+            loss = self.bce_loss(input - math.log(C), label) * C
         return loss.mean()
 
 
