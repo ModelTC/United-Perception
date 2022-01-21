@@ -139,17 +139,19 @@ def check_cfg(cfg):
             cfg['net'][idx2name['roi_head']]['kwargs']['num_classes'] = 2
             cfg['net'][idx2name['post_process']]['kwargs']['num_classes'] = 2
         # roi_head: class_activation
-        cls_loss_type = net_parse['post_process']['kwargs']['cfg']['cls_loss']['type']
+        name_post = 'yolox_post' if 'yolox_post' in net_parse else 'post_process'
+        cls_loss_type = net_parse[name_post]['kwargs']['cfg']['cls_loss']['type']
         class_activation = 'sigmoid' if 'sigmoid' in cls_loss_type else 'softmax'
         logger.info('auto reset class activation')
         cfg['net'][idx2name['roi_head']]['kwargs']['class_activation'] = class_activation
         # roi_head: num_anchors
-        anchors = cfg['net'][idx2name['post_process']]['kwargs']['cfg']['anchor_generator']
-        anchor_ratios = anchors['kwargs']['anchor_ratios']
-        anchor_scales = anchors['kwargs']['anchor_scales']
-        num_anchors = len(anchor_ratios) * len(anchor_scales)
-        logger.info('auto reset num anchor base on anchor generator')
-        cfg['net'][idx2name['roi_head']]['kwargs']['num_anchors'] = num_anchors
+        anchors = cfg['net'][idx2name[name_post]]['kwargs']['cfg']['anchor_generator']
+        if name_post == 'post_process':
+            anchor_ratios = anchors['kwargs']['anchor_ratios']
+            anchor_scales = anchors['kwargs']['anchor_scales']
+            num_anchors = len(anchor_ratios) * len(anchor_scales)
+            logger.info('auto reset num anchor base on anchor generator')
+            cfg['net'][idx2name['roi_head']]['kwargs']['num_anchors'] = num_anchors
     else:
         pass
 
