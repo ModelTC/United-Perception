@@ -168,7 +168,6 @@ def load_yaml(path):
         logger.warning("auto convert yolox in pod config -> UP config !!!")
         ConvertTool = YOLOX2UP()
         yaml_data = ConvertTool.forward(yaml_data)
-        # return yaml_data
     elif 'version' in yaml_data.keys():
         logger.warning("auto convert pod config -> UP config !!!")
         ConvertTool = POD2UP()
@@ -176,8 +175,7 @@ def load_yaml(path):
     else:
         pass
     # cfg check
-    # return check_cfg(yaml_data)
-    return yaml_data
+    return check_cfg(yaml_data)
 
 
 class YOLOX2UP:
