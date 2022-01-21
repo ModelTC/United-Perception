@@ -34,7 +34,7 @@ class LabelSmoothCELoss(_Loss):
 class BCE_LOSS(_Loss):
     def __init__(self):
         super().__init__()
-        self.bce_loss = torch.nn.BCEWithLogitsLoss(size_average=False, reduce=False)
+        self.bce_loss = torch.nn.BCEWithLogitsLoss()
 
     def forward(self, input, label):
         C = input.size(1)
