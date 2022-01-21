@@ -176,13 +176,15 @@ class BaseRunner(object):
     def _remove_hooks(self, cfg_hooks):
         need_remove_hooks = ['auto_save_best', 'reload', 'auto_checkpoint']
         remove_set = set()
+        new_cfg_hooks = []
         for idx, hook in enumerate(cfg_hooks):
             for temp in need_remove_hooks:
                 if temp in hook['type']:
                     remove_set.add(idx)
-        for i in remove_set:
-            del cfg_hooks[i]
-        return cfg_hooks
+        for idx, hook in enumerate(cfg_hooks):
+            if idx not in remove_set:
+                new_cfg_hooks.append(hook)
+        return new_cfg_hooks
 
     def build_global_flags(self):
         if self.aligned:
