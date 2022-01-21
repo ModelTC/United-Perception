@@ -162,14 +162,123 @@ IncludeLoader.add_constructor('!include', IncludeLoader.include)
 def load_yaml(path):
     with open(path, "r")as f:
         yaml_data = yaml.load(f, IncludeLoader)
-    if 'version' in yaml_data.keys():
+    if 'version' in yaml_data.keys() and 'rank_init' in yaml_data.keys():
+        logger.warning("auto convert yolox in pod config -> UP config !!!")
+        ConvertTool = YOLOX2UP()
+        yaml_data = ConvertTool.forward(yaml_data)
+        # return yaml_data
+    elif 'version' in yaml_data.keys():
         logger.warning("auto convert pod config -> UP config !!!")
         ConvertTool = POD2UP()
         yaml_data = ConvertTool.forward(yaml_data)
     else:
         pass
     # cfg check
-    return check_cfg(yaml_data)
+    # return check_cfg(yaml_data)
+    return yaml_data
+
+
+class YOLOX2UP:
+    def forward(self, pod_config):
+        pod_c = pod_config
+        del pod_c['version']
+        # for runtime
+        run_time_par = ['aligned', 'async_norm', 'special_bn_init']
+        run_time = {}
+        for par in run_time_par:
+            if par in pod_c.keys():
+                run_time.update({par: pod_c[par]})
+                del pod_c[par]
+        pod_c.update({'runtime': run_time})
+        # for mosaic
+        self.changeKname(pod_c, 'mosaicv2', 'mosaic')
+        pod_c['mosaic']['type'] = 'mosaic'
+        # for ema
+        self.changeVname(pod_c['ema'], 'ema_type', 'yolov5', 'exp')
+        self.changeVname(pod_c['ema'], 'ema_type', 'yolov5_ema', 'exp')
+        self.changeVname(pod_c['ema'], 'ema_type', 'base', 'linear')
+        self.cancelpar(pod_c['ema']['kwargs'], ['copy_init', 'use_double'])
+        # for hook
+        for i in range(len(pod_c['hooks'])):
+            self.changeVname(pod_c['hooks'][i], 'type', 'yolox', 'yolox_noaug')
+        # for dataset
+        self.changeKname(pod_c['dataset']['dataloader']['kwargs'],
+                         'with_work_init',
+                         'worker_init')
+        # for network
+        self.ChangeNet(pod_c['net'])
+        # for showing
+        # self.checkbyeys(pod_config)
+        return pod_c
+
+    def RemoveK(self, conf, name):
+        if name in conf.keys():
+            del conf[name]
+
+    def checkbyeys(self, config):
+        print(json.dumps(config, indent=4))
+
+    def ChangeNet(self, net):
+        for i, modu in enumerate(net):
+            # change all type
+            if 'pod' in modu['type']:
+                tp = modu['type'].split('pod.')[-1]
+                modu['type'] = 'eod.tasks.det.' + tp
+            # for backbone
+            if modu['name'] == 'backbone':
+                self.RemoveK(modu['kwargs'], 'inplanes')
+                self.RemoveK(modu['kwargs'], 'ceil_mode')
+            # for neck
+            elif modu['name'] == 'neck':
+                continue
+            # for roi head
+            elif modu['name'] == 'roi_head':
+                head_k, post = self.SplitHead(modu)
+                net[i]['kwargs'] = head_k
+                net.insert(i + 1, post)
+
+    def SplitHead(self, roi_head):
+        kwargs = copy.deepcopy(roi_head['kwargs'])
+        kwargs_p = copy.deepcopy(roi_head['kwargs'])
+        head_k = {}
+        for key in kwargs.keys():
+            if key == 'cfg':
+                continue
+            elif key == 'dense_points':
+                head_k.update({'num_point': kwargs[key]})
+            else:
+                head_k.update({key: kwargs[key]})
+        # for post
+        post = {}
+        post.update({'name': 'yolox_post'})
+        post.update({'prev': roi_head['name']})
+        post.update({'type': 'yolox_post'})
+        key_name = list(kwargs_p.keys())
+        for key in key_name:
+            if (key != 'num_classes' and key != 'cfg'):
+                del kwargs_p[key]
+        cfg = kwargs_p['cfg']
+        self.changeKname(cfg, 'center_loss', 'obj_loss')
+        self.changeKname(cfg, 'center_generator', 'anchor_generator')
+        self.changeKname(cfg, 'fcos_supervisor', 'roi_supervisor')
+        self.changeKname(cfg, 'fcos_predictor', 'roi_predictor')
+        kwargs_p['cfg'] = cfg
+        post.update({'kwargs': kwargs_p})
+        return head_k, post
+
+    def cancelpar(self, conf, cancel_list):
+        for cancel in cancel_list:
+            if cancel in conf.keys():
+                del conf[cancel]
+
+    def changeKname(self, conf, name1, name2):
+        if name1 in conf.keys():
+            conf.update({name2: conf[name1]})
+            del conf[name1]
+
+    def changeVname(self, conf, key, name1, name2):
+        if conf[key] == name1:
+            conf[key] = name2
 
 
 class POD2UP:
@@ -251,33 +360,11 @@ class POD2UP:
             if 'initializer' in kwargs_p.keys():
                 del kwargs_p['initializer']
             post.update({'kwargs': kwargs_p})
-        """
-        # wait for furture exploiting
-        else:
-            # for yolox
-            post = {}
-            post.update({'name': 'yolox_post'})
-            post.update({'prev': roi_head['name']})
-            post.update({'type': 'yolox_post'})
-            if 'width' in kwargs_p.keys():
-                del kwargs_p['width']
-            if 'dense_points' in kwargs_p.keys():
-                del kwargs_p['dense_points']
-            if 'act_fn' in kwargs_p.keys():
-                del kwargs_p['act_fn']
-            cfg = kwargs_p['cfg']
-            self.changeKname(cfg, 'center_loss', 'obj_loss')
-            self.changeKname(cfg, 'center_generator', 'anchor_generator')
-            self.changeKname(cfg, 'fcos_supervisor', 'roi_supervisor')
-            self.changeKname(cfg, 'fcos_predictor', 'roi_predictor')
-            kwargs_p['cfg'] = cfg
-            post.update({'kwargs': kwargs_p})
-        """
         return roi_head, post
 
     def changeKname(self, conf, name1, name2):
         if name1 in conf.keys():
-            conf.updata({name2: conf[name1]})
+            conf.update({name2: conf[name1]})
             del conf[name1]
 
 
