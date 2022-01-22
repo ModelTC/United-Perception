@@ -36,6 +36,11 @@ class ToKestrel(Subcommand):
                                 dest='serialize',
                                 action='store_true',
                                 help='wether to do serialization, if your model runs on tensor-rt')
+        sub_parser.add_argument('--cfg_type',
+                                dest='cfg_type',
+                                type=str,
+                                default='up',
+                                help='config type (up or pod)')
         sub_parser.add_argument('--opts',
                                 help='options to replace yaml config',
                                 default=None,
@@ -46,7 +51,7 @@ class ToKestrel(Subcommand):
 
 def main(args):
     assert (os.path.exists(args.config)), args.config
-    cfg = load_yaml(args.config)
+    cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
         'opts': args.opts
     }

@@ -36,7 +36,11 @@ class Flops(Subcommand):
                                 type=int,
                                 default=0,
                                 help='recursive depth')
-
+        sub_parser.add_argument('--cfg_type',
+                                dest='cfg_type',
+                                type=str,
+                                default='up',
+                                help='config type (up or pod)')
         sub_parser.set_defaults(run=_main)
         return sub_parser
 
@@ -44,7 +48,7 @@ class Flops(Subcommand):
 def main(args):
     # Load, merge and upgrade cfg
     assert (os.path.exists(args.config))
-    cfg = load_yaml(args.config)
+    cfg = load_yaml(args.config, args.cfg_type)
 
     send_info(cfg, func='flops')
     # Just for compatiable with older setting
