@@ -246,7 +246,8 @@ class TrainEvalLogger(Hook):
         self.t_after_data = time.time()
 
     def after_eval_forward(self, cur_iter, output):
-        self.eval_timers.update(data_time=self.t_after_data - self.t_before_data,
+        self.eval_timers.update(cur_iter,
+                                data_time=self.t_after_data - self.t_before_data,
                                 batch_time=time.time() - self.t_before_data)
         cur_iter += 1
         if cur_iter % self.freq != 0:

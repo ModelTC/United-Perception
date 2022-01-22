@@ -34,6 +34,11 @@ class Inference(Subcommand):
                                 dest='vis_dir',
                                 default='vis_dir',
                                 help='directory saving visualization results')
+        sub_parser.add_argument('--cfg_type',
+                                dest='cfg_type',
+                                type=str,
+                                default='up',
+                                help='config type (up or pod)')
         sub_parser.add_argument('--opts',
                                 help='options to replace yaml config',
                                 default=None,
@@ -43,7 +48,7 @@ class Inference(Subcommand):
 
 
 def main(args):
-    cfg = load_yaml(args.config)
+    cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
         'image_path': args.image_path,
         'vis_dir': args.vis_dir,

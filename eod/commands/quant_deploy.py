@@ -33,6 +33,11 @@ class QuantDeploy(Subcommand):
                                 type=str,
                                 required=True,
                                 help='input shape NCHW')
+        sub_parser.add_argument('--cfg_type',
+                                dest='cfg_type',
+                                type=str,
+                                default='up',
+                                help='config type (up or pod)')
         sub_parser.add_argument('--opts',
                                 help='options to replace yaml config',
                                 default=None,
@@ -42,7 +47,7 @@ class QuantDeploy(Subcommand):
 
 
 def main(args):
-    cfg = load_yaml(args.config)
+    cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
         'ckpt': args.ckpt,
         'input_shape': args.input_shape,

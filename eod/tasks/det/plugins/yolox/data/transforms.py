@@ -77,9 +77,9 @@ class YoloXRandomPespective(RandomPespective):
 @AUGMENTATION_REGISTRY.register('yolox_mixup_cv2')
 class YoloxMixUp_cv2(Augmentation):
     def __init__(self,
-                 extra_input,
                  input_size,
                  mixup_scale,
+                 extra_input=True,
                  dataset=None,
                  flip_prob=1,
                  fill_color=0,

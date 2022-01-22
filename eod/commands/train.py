@@ -94,6 +94,11 @@ class Train(Subcommand):
                                 action='store_true',
                                 help='disable display running config')
         sub_parser.add_argument('--phase', default='train', help="train phase")
+        sub_parser.add_argument('--cfg_type',
+                                dest='cfg_type',
+                                type=str,
+                                default='up',
+                                help='config type (up or pod)')
         sub_parser.add_argument('--opts',
                                 help='options to replace yaml config',
                                 default=None,
@@ -104,7 +109,7 @@ class Train(Subcommand):
 
 
 def main(args):
-    cfg = load_yaml(args.config)
+    cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
         'ddp': args.backend == 'dist',
         'config_path': args.config,
