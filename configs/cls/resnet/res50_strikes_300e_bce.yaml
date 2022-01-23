@@ -103,14 +103,14 @@ ema:
         decay: 0.9999
 
 trainer: # Required.
-  max_epoch: 100
+  max_epoch: 300
   test_freq: 5
   save_freq: 5
   only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: LAMB
     kwargs:
-      lr: 0.008
+      lr: 0.005
       weight_decay: 0.02
   lr_scheduler:
     warmup_iter: 3130
@@ -119,12 +119,12 @@ trainer: # Required.
     warmup_ratio: 0.02
     type: CosineAnnealingLR
     kwargs:
-        T_max: 100
+        T_max: 300
         eta_min: 0.0
         warmup_iter: 3130
 saver: # Required.
-  save_dir: res50_100e_strikes_bce/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: res50_100e_strikes_bce/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: res50_300e_strikes_bce/checkpoints/cls_std     # dir to save checkpoints
+  results_dir: res50_300e_strikes_bce/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 

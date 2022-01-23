@@ -94,7 +94,7 @@ dataset: # Required.
     dataloader:
       type: cls_base
       kwargs:
-        num_workers: 8
+        num_workers: 12
         pin_memory: False
 
 ema:
@@ -123,8 +123,8 @@ trainer: # Required.
         eta_min: 0.0
         warmup_iter: 3130
 saver: # Required.
-  save_dir: res50_100e_strikes_bce/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: res50_100e_strikes_bce/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: res18_100e_strikes_bce/checkpoints/cls_std     # dir to save checkpoints
+  results_dir: res18_100e_strikes_bce/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
@@ -133,7 +133,7 @@ hooks:
 
 net: &subnet
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet50
+    type: resnet18
     kwargs:
       frozen_layers: []
       out_layers: [4]     # layer1...4, commonly named Conv2...5
@@ -146,7 +146,7 @@ net: &subnet
     type: base_cls_head
     kwargs:
        num_classes: *num_classes
-       in_plane: &head_out_channel 2048
+       in_plane: &head_out_channel 512
        input_feature_idx: -1
   - name: post_process
     type: base_cls_postprocess
