@@ -48,7 +48,7 @@ class RandomHorizontalFlip(TorchAugmentation):
 
 @AUGMENTATION_REGISTRY.register('torch_color_jitter')
 class PILColorJitter(TorchAugmentation):
-    def __init__(self, brightness, contrast, saturation, hue):
+    def __init__(self, brightness, contrast, saturation, hue=0.):
         self.op = transforms.ColorJitter(brightness, contrast, saturation, hue)
 
 
