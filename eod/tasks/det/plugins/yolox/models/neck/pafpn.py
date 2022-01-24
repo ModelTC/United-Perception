@@ -7,7 +7,7 @@ from eod.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 from eod.tasks.det.plugins.yolov5.models.components import ConvBnAct
 from eod.tasks.det.plugins.yolox.models.backbone.cspdarknet import CSPLayer, DWConv
-
+import copy
 
 __all__ = ['YoloxPAFPN']
 
@@ -28,8 +28,8 @@ class YoloxPAFPN(nn.Module):
                  downsample_plane=256):
         super(YoloxPAFPN, self).__init__()
         self.inplanes = inplanes
-        in_channels = inplanes
-        self.outplanes = inplanes
+        in_channels = copy.deepcopy(inplanes)
+        self.outplanes = copy.deepcopy(inplanes)
         self.out_strides = out_strides
         self.num_level = len(out_strides)
         Conv = DWConv if depthwise else ConvBnAct
