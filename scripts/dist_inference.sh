@@ -5,7 +5,7 @@ T=`date +%m%d%H%M`
 export ROOT=$ROOT
 cfg=$2
 
-python -m eod inference \
+python -m up inference \
   --ng=$1
   --launch=pytorch \
   --config=$cfg \

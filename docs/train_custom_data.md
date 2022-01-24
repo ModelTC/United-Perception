@@ -41,7 +41,7 @@ Annotation file is stored in JSON format, and each piece of data should be organ
 ```
 
 ## Custom Evaluator
-EOD evaluates custom dataset with **MR** mode which contains two metrics:
+UP evaluates custom dataset with **MR** mode which contains two metrics:
 
 * MR@FPPI=xxx: Miss rate while FPPI reaches some value.
 * Score@FPPI=xxx: Confidence score while FPPI reaches some value. 

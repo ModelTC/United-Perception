@@ -10,7 +10,7 @@ import torch
 from setuptools import setup, find_packages
 from torch.utils.cpp_extension import CppExtension, CUDAExtension
 
-with io.open("eod/__init__.py", "rt", encoding="utf8") as f:
+with io.open("up/__init__.py", "rt", encoding="utf8") as f:
     __version__ = re.search(r'__version__ = "(\D*)(.*?)"', f.read(), re.M).group(2)
 
 
@@ -27,7 +27,7 @@ def _find_cuda_home():
 torch.utils.cpp_extension.CUDA_HOME = _find_cuda_home()
 CUDA_HOME = torch.utils.cpp_extension.CUDA_HOME
 
-CORE_DIR = 'eod'
+CORE_DIR = 'up'
 EXT_DIR = 'extensions'
 
 
@@ -90,10 +90,10 @@ def get_extensions():
 
 
 setup(
-    name="EOD",
+    name="UP",
     version=__version__,
-    author="The Great Cold",
-    description="Easy and Efficient Object Detector",
+    author="Model ToolChain",
+    description="United Perception",
     author_email="",
     python_requires='>=3.6',
     packages=find_packages(),

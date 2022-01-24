@@ -1,10 +1,10 @@
-# EOD
+# UP
 
-![image](eod-logo.png)
+![image](up-logo.png)
 
-Easy and Efficient Object Detector
+United Perception
 
-**EOD** (**E**asy and **E**fficient **O**bject **D**etection) is a general object detection model production framework.
+**UP** (**U**nited **P**erception) is a general united-perception model production framework.
 It aim on provide two key feature about Object Detection:
 
 + Efficient: we will focus on training **VERY HIGH ACCURARY** single-shot detection model, and model compression (quantization/sparsity) will be well addressed. 
@@ -26,7 +26,7 @@ pip install -r requirments
 Some example scripts are supported in scripts/.
 
 ### Export Module
-Export eod into ROOT and PYTHONPATH
+Export up into ROOT and PYTHONPATH
 
 ```shell
 ROOT=../../
@@ -53,7 +53,7 @@ dataset:
 Step2: train
 
 ```shell
-python -m eod train --config configs/det/yolox/yolox_tiny.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
+python -m up train --config configs/det/yolox/yolox_tiny.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
 ```
 * --config: yamls in configs/
 * --nm: machine number
@@ -73,7 +73,7 @@ Step1: edit config of evaluating dataset
 Step2: test
 
 ```shell
-python -m eod train -e --config configs/det/yolox/yolox_tiny.yaml --nm 1 --ng 1 --launch pytorch 2>&1 | tee log.test
+python -m up train -e --config configs/det/yolox/yolox_tiny.yaml --nm 1 --ng 1 --launch pytorch 2>&1 | tee log.test
 ```
 
 ### Demo
@@ -91,14 +91,14 @@ inference:
 Step2: inference
 
 ```shell
-python -m eod inference --config configs/det/yolox/yolox_tiny.yaml --ckpt ckpt_tiny.pth -i imgs -v vis_dir
+python -m up inference --config configs/det/yolox/yolox_tiny.yaml --ckpt ckpt_tiny.pth -i imgs -v vis_dir
 ```
 * --ckpt: model for inferencing
 * -i: images directory or single image
 * -v: directory saving visualization results
 
 ### Mpirun mode
-EOD supports **mpirun** mode to launch task, MPI needs to be installed firstly
+UP supports **mpirun** mode to launch task, MPI needs to be installed firstly
 
 ```shell
 # download mpich
@@ -113,7 +113,7 @@ make && make install
 Launch task
 
 ```shell
-mpirun -np 8 python -m eod train --config configs/det/yolox/yolox_tiny.yaml --launch mpi 2>&1 | tee log.train
+mpirun -np 8 python -m up train --config configs/det/yolox/yolox_tiny.yaml --launch mpi 2>&1 | tee log.train
 ```
 
 * Add mpirun -np x; x indicates number of processes
@@ -138,7 +138,7 @@ mpirun -np 8 python -m eod train --config configs/det/yolox/yolox_tiny.yaml --la
 
 * [Training on custom data](docs/train_custom_data.md)
 * [Register modules](docs/register_modules.md)
-* [EOD developing mode](docs/eod_developing_mode.md)
+* [UP developing mode](docs/up_developing_mode.md)
 
 ## Tutorials
 

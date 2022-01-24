@@ -5,7 +5,7 @@ T=`date +%m%d%H%M`
 export ROOT=$ROOT
 cfg=$2
 export PYTHONPATH=$ROOT:$PYTHONPATH
-python -m eod train \
+python -m up train \
   --ng=$1 \
   --launch=pytorch \
   --config=$cfg \

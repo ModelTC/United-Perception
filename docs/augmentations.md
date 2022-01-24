@@ -1,7 +1,7 @@
 # Augmentations and Preprocesses 
-EOD supports several data augmentations and preprocesses, including various augmentations such as Flip, Resize, StitchExpand, ImageCrop, etc. and preprocesses such as normalization, to_tenser, pad, etc. Details are as follows.
+UP supports several data augmentations and preprocesses, including various augmentations such as Flip, Resize, StitchExpand, ImageCrop, etc. and preprocesses such as normalization, to_tenser, pad, etc. Details are as follows.
 
-EOD imports augmentations directly from config settings:
+UP imports augmentations directly from config settings:
 
 Flip:
 ```yaml

@@ -1,15 +1,15 @@
 #!/bin/bash
 
-EOD=/path to eod
+UP=/path to up
 MQB=/path to mqbench
 
-cfg=$EOD/configs/det/retinanet/retinanet-r18-improve_quant_trt.yaml
+cfg=$UP/configs/det/retinanet/retinanet-r18-improve_quant_trt.yaml
 
 
 jobname=quant
 
 
-export PYTHONPATH=$EOD:$PYTHONPATH
+export PYTHONPATH=$UP:$PYTHONPATH
 export PYTHONPATH=$MQB:$PYTHONPATH
 
 
@@ -20,7 +20,7 @@ spring.submit run -n$1 --ntasks-per-node=$g \
                       --gpu \
                       --cpus-per-task=2 \
                       --quotatype=auto \
-"nohup python -u -m eod train \
+"nohup python -u -m up train \
   --config=$cfg \
   --display=10 \
   > train_log_quant.txt 2>&1 &"

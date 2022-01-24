@@ -25,7 +25,7 @@ We provide quantization aware training(QAT) interface based on MQBench.
 Quantization-aware train a model based on a float pretrained model.
 
 ```shell
-git clone https://github.com/ModelTC/EOD.git
+git clone https://github.com/ModelTC/UP.git
 git clone https://github.com/ModelTC/MQBench.git
 cd scripts
 # Follow the prompts to set config in train_quant.sh.

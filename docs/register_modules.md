@@ -1,5 +1,5 @@
 # Register Modules
-EOD supports register for each module to flexibly compose pipelines.
+UP supports register for each module to flexibly compose pipelines.
 
 ## How to register
 All callable object(inclue function, classes, .etc) can be registered, but the result should be corresponding instance. For example. CocoDataset return a dataset, and  resnet50 return a module(ResNet instance).
@@ -35,7 +35,7 @@ def resnet50(pretrained=False, **kwargs):
 ```
 
 ## How to use Registry
-EOD calls registered modules according to config. Alias should be provided for locating the module.
+UP calls registered modules according to config. Alias should be provided for locating the module.
 For example, CocoDataset could be called by type "coco"(alias) and parameters "kwargs".
 
 ```yaml

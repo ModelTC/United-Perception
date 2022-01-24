@@ -112,7 +112,7 @@ saver:
 ```
 Then run the following commond to evaluate.
 ```
-python -m eod train -e --config configs/det/efl/eqfl_yolox_medium.yaml --nm 1 --ng 1 --launch pytorch 2>&1 | tee log.test
+python -m up train -e --config configs/det/efl/eqfl_yolox_medium.yaml --nm 1 --ng 1 --launch pytorch 2>&1 | tee log.test
 ```
 
 ## Training
@@ -122,7 +122,7 @@ It should be notice that our benchmark results are all come from 16 GPUs setting
 # please change the batch_size to 2 of the train batch_sampler in the 
 # configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml, firstly.
 
-python -m eod train --config configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
+python -m up train --config configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
 ```
 Meanwhile, the gradient_collector hook in the configs of EFL and EQFL is of vital importance on the gradient collection mechanism. Please make sure it is open when train networks with these loss.
 ```
@@ -150,7 +150,7 @@ Here are the steps to get a result of OIDs (the bold steps are the operations th
     # then change the batch_size to 2 for 8 GPUs settings.
     # we train the model with a 120k/160k/180k scheduler with random sampler.
 
-    python -m eod train --config configs/det/efl/efl_oids_r50_2x_random.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
+    python -m up train --config configs/det/efl/efl_oids_r50_2x_random.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
     ```
 - **Obtain the inference results `results.txt.all` under the `results_dir`**
 - Convert coco-like `results.txt.all` result file to openimage like `.csv` file

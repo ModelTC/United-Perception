@@ -1,5 +1,5 @@
 # Visualization
-EOD supports two visualization modes:
+UP supports two visualization modes:
 * Inference
 * Hook
 
@@ -16,7 +16,7 @@ inference:
 ```
 
 ## Hook
-EOD supports **Visualize** hook, you could add visualizer settings into hook config so that drawing gt bboxes and dt results during training and evaluating.
+UP supports **Visualize** hook, you could add visualizer settings into hook config so that drawing gt bboxes and dt results during training and evaluating.
 
 ```yaml
 - type: visualize

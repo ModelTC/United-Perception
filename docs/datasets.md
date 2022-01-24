@@ -1,5 +1,5 @@
 # Dataset
-EOD supports two types: public datasets and custom dataset.
+UP supports two types: public datasets and custom dataset.
 
 ## Public Datasets
 Currently, the following dataset types are supported:
@@ -51,8 +51,8 @@ dataset: # Required.
 ```
 
 * You need to set meta_file and image_dir into **dataset** and augmentations into **transformer**.
-* EOD separates dataset and evaluator to adapt various datasets and evaluators
-* EOD supports two evaluators for various datasets: coco(CocoEvaluator) - CocoDataset, MREvaluator(CustomDataset) - CustomDataset.
+* UP separates dataset and evaluator to adapt various datasets and evaluators
+* UP supports two evaluators for various datasets: coco(CocoEvaluator) - CocoDataset, MREvaluator(CustomDataset) - CustomDataset.
 
 ## Custom Dataset
-EOD support custom dataset. Details could refer to [Training on custom data](train_custom_data.md). 
+UP support custom dataset. Details could refer to [Training on custom data](train_custom_data.md). 

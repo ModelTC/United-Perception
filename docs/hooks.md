@@ -1,9 +1,9 @@
 # Hooks
 Hooks are used to monitor the training process, including timing, log, visualization and so on.
-The details can be found in [hooks.py](eod/utils/general/hook_helper.py).
+The details can be found in [hooks.py](up/utils/general/hook_helper.py).
 
 ## Typical hooks
-All types of hooks inherit from **Hook** classes. EOD supports:
+All types of hooks inherit from **Hook** classes. UP supports:
 * train_val_logger
 * auto_checkpoint
 * grad_clipper
@@ -12,7 +12,7 @@ All types of hooks inherit from **Hook** classes. EOD supports:
 
 ### TrainValLogger
 It is used to output training logs, including printing loss, time consumption, remaining time, etc. 
-During the training, EOD will maintain the training log with tensorboard, including loss, accuracy, etc.
+During the training, UP will maintain the training log with tensorboard, including loss, accuracy, etc.
 
 ```yaml
 hooks:

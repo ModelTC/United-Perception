@@ -1,7 +1,7 @@
 # Learn About Configs
 
-EOD sets pipeline parameters by incorporating them into configs. 
-Considering convenience and expansibility, EOD offers common interfaces for all components such as dataset, saver, backbone, etc. which are implemented by REGISTRY [Register](register_modules.md).
+UP sets pipeline parameters by incorporating them into configs. 
+Considering convenience and expansibility, UP offers common interfaces for all components such as dataset, saver, backbone, etc. which are implemented by REGISTRY [Register](register_modules.md).
 
 ## Configuration File
 Standard information includes num_classes, runtime, dataset, trainer, saver, hooks and net. The standard format is as follows:
