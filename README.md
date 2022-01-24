@@ -133,6 +133,7 @@ mpirun -np 8 python -m up train --config configs/det/yolox/yolox_tiny.yaml --lau
 * [YOLOV5](docs/benchmark.md)
 * [RetinaNet](docs/benchmark.md)
 * [QAT](docs/quant.md)
+* [Faster-RCNN](docs/two_stages.md)
 
 ## Quick Run
 
