@@ -7,7 +7,6 @@ import torch
 import yaml
 from easydict import EasyDict
 
-
 from up.utils.general.tocaffe_helper import to_caffe
 from up.utils.general.cfg_helper import merge_opts_into_cfg
 from up.utils.general.log_helper import default_logger as logger
