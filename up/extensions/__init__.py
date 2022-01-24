@@ -10,6 +10,7 @@ from .python.focal_loss import (
     SoftmaxFocalLossFunction
 )
 from .python.cross_focal_loss import CrossSigmoidFocalLossFunction
+from .python.iou_overlap import gpu_iou_overlap
 import torch
 
 
