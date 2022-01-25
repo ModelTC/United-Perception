@@ -10,6 +10,7 @@ from collections import OrderedDict
 # Import from local
 from .log_helper import default_logger as logger
 from .registry_factory import SAVER_REGISTRY
+from up.utils.general.petrel_helper import PetrelHelper
 
 
 __all__ = ['Saver']
@@ -129,7 +130,8 @@ class Saver(object):
 
         # assert os.path.exists(ckpt_path), f'No such file: {ckpt_path}'
         device = torch.cuda.current_device()
-        ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
+        # ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
+        ckpt_dict = PetrelHelper.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
 
         if 'model' in ckpt_dict:
             state_dict = ckpt_dict['model']
