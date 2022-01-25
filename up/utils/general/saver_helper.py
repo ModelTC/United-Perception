@@ -18,6 +18,8 @@ __all__ = ['Saver']
 
 @SAVER_REGISTRY.register('base')
 class Saver(object):
+    task_type = 'det'
+
     def __init__(self, save_cfg, yml_path=None, work_dir='./'):
         # checkpoint dir
         self.save_cfg = self.prepend_work_dir(save_cfg, work_dir)
@@ -29,6 +31,7 @@ class Saver(object):
             dst_path = os.path.join(self.save_dir, yml_name)
             shutil.copy(yml_path, dst_path)
 
+        Saver.task_type = self.save_cfg.get('task_type', 'det')
         self.auto_resume = self.save_cfg.get('auto_resume', False)
         self.running_config_file = os.path.join(self.save_dir, 'running_config.json')
 
@@ -80,6 +83,23 @@ class Saver(object):
     @staticmethod
     def load_checkpoint(ckpt_path):
         """Load state_dict from checkpoint"""
+
+        def prototype_convert(state_dict):
+            is_convert = True
+            for k in state_dict.keys():
+                if 'classifier' in k:
+                    is_convert = False
+            if is_convert:
+                new_state_dict = OrderedDict()
+                for k, v in state_dict.items():
+                    if 'fc' in k:
+                        k = k.replace('fc', 'head.classifier')
+                    else:
+                        k = 'backbone.' + k
+                    new_state_dict[k] = v
+                return new_state_dict
+            else:
+                return state_dict
 
         def pod_resnet_convert(state_dict):
             convert_dict1 = {
@@ -141,6 +161,8 @@ class Saver(object):
             state_dict = ckpt_dict
 
         state_dict = remove_prefix(state_dict, 'module.')
+        if Saver.task_type == 'cls':
+            state_dict = prototype_convert(state_dict)
         state_dict = pod_resnet_convert(state_dict)
         ckpt_dict['model'] = state_dict
 
