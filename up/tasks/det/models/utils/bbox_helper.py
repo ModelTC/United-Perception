@@ -6,7 +6,8 @@ import time
 import numpy as np
 import torch
 
-from up.utils.general.global_flag import ALIGNED_FLAG
+from eod.utils.general.global_flag import ALIGNED_FLAG
+from eod.extensions import gpu_iou_overlap
 
 GPU_MEMORY = None
 
@@ -38,7 +39,33 @@ def filter_by_size(boxes, min_size, start_index=0):
 
 @allow_empty_tensor(2)
 @to_float32
-def bbox_iou_overlaps(b1, b2, aligned=False, return_union=False):
+def bbox_iou_overlaps(b1, b2, aligned=False):
+    if not b1.is_cuda or aligned:
+        return vanilla_bbox_iou_overlaps(b1, b2, aligned)
+
+    global GPU_MEMORY
+    gbytes = 1024.0**3
+    if GPU_MEMORY is None:
+        GPU_MEMORY = torch.cuda.get_device_properties(b1.device.index).total_memory
+    alloated_memory = torch.cuda.memory_allocated()
+    spare_memory = 0.5 * gbytes
+    available_memory = GPU_MEMORY - alloated_memory - spare_memory
+    size = b1.shape[0] * b2.shape[0]
+    needed_memory = 2 * size * 4
+
+    if needed_memory < available_memory:
+        ious = gpu_iou_overlap(b1, b2, mode='IoU')
+    else:
+        ious = vanilla_bbox_iou_overlaps(b1.cpu(), b2.cpu())
+        res_memory = size * 4
+        if res_memory < available_memory:
+            ious = ious.to(b1.device)
+    return ious
+
+
+@allow_empty_tensor(2)
+@to_float32
+def vanilla_bbox_iou_overlaps(b1, b2, aligned=False, return_union=False):
     """
     Arguments:
         b1: dts, [n, >=4] (x1, y1, x2, y2, ...)
@@ -98,6 +125,30 @@ def generalized_box_iou(boxes1, boxes2, return_iou=False):
 
 @allow_empty_tensor(2)
 def bbox_iof_overlaps(b1, b2):
+    if not b1.is_cuda:
+        return vanilla_bbox_iof_overlaps(b1, b2)
+    global GPU_MEMORY
+    gbytes = 1024.0**3
+    if GPU_MEMORY is None:
+        GPU_MEMORY = torch.cuda.get_device_properties(b1.device.index).total_memory
+    alloated_memory = torch.cuda.memory_allocated()
+    spare_memory = 0.5 * gbytes
+    available_memory = GPU_MEMORY - alloated_memory - spare_memory
+    size = b1.shape[0] * b2.shape[0]
+    needed_memory = 2 * size * 4
+
+    if needed_memory < available_memory:
+        ious = gpu_iou_overlap(b1, b2, mode='IoF')
+    else:
+        ious = vanilla_bbox_iof_overlaps(b1.cpu(), b2.cpu())
+        res_memory = size * 4
+        if res_memory < available_memory:
+            ious = ious.to(b1.device)
+    return ious
+
+
+@allow_empty_tensor(2)
+def vanilla_bbox_iof_overlaps(b1, b2):
     """
     Arguments:
         b1: dts, [n, >=4] (x1, y1, x2, y2, ...)

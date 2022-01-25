@@ -10,13 +10,15 @@ import warnings
 
 # Import from third library
 import torch
+import torch.nn as nn
 
 # Import from pod
-from up.utils.general.cfg_helper import merge_opts_into_cfg
-from up.utils.general.log_helper import default_logger as logger
-from up.utils.general.saver_helper import Saver
-from up.utils.general.tocaffe_utils import ToCaffe
-from up.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY, TOCAFFE_REGISTRY, MODEL_HELPER_REGISTRY
+from eod.utils.general.cfg_helper import merge_opts_into_cfg
+from eod.utils.general.log_helper import default_logger as logger
+from eod.utils.general.saver_helper import Saver
+from eod.utils.general.tocaffe_utils import ToCaffe
+from eod.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY, TOCAFFE_REGISTRY, MODEL_HELPER_REGISTRY
+from .user_analysis_helper import get_task_from_cfg
 
 
 @MODEL_WRAPPER_REGISTRY.register('pod')
@@ -50,6 +52,30 @@ class Wrapper(torch.nn.Module):
             return blob_datas
 
 
+@MODEL_WRAPPER_REGISTRY.register('cls')
+class CLSWrapper(torch.nn.Module):
+    def __init__(self, detector, add_softmax=False):
+        super(CLSWrapper, self).__init__()
+        self.detector = detector
+        self.add_softmax = add_softmax
+        if self.add_softmax:
+            self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, image):
+        b, c, height, width = map(int, image.size())
+        input = {
+            'image_info': [[height, width, 1.0, height, width, 0]] * b,
+            'image': image
+        }
+        print(f'before detector forward')
+        out = self.detector(input)
+        if self.add_softmax:
+            out = self.softmax(out['logits'])
+        else:
+            out = out['logits']
+        return out
+
+
 def build_model(cfg):
     for module in cfg['net']:
         if 'heads' in module['type']:
@@ -66,16 +92,20 @@ def build_model(cfg):
     return model
 
 
-def parse_resize_scale(dataset_cfg):
+def parse_resize_scale(dataset_cfg, task_type='det'):
     dataset_cfg = copy.deepcopy(dataset_cfg)
     dataset_cfg.update(dataset_cfg.get('test', {}))
     alignment = dataset_cfg['dataloader']['kwargs'].get('alignment', 1)
     transforms = dataset_cfg['dataset']['kwargs']['transformer']
     for tf in transforms:
         if 'resize' in tf['type']:
-            scale = int(math.ceil(max(tf['kwargs']['scales']) / alignment) * alignment)
-            max_size = int(math.ceil(tf['kwargs']['max_size'] / alignment) * alignment)
-            return scale, max_size
+            if task_type == 'det':
+                scale = int(math.ceil(max(tf['kwargs']['scales']) / alignment) * alignment)
+                max_size = int(math.ceil(tf['kwargs']['max_size'] / alignment) * alignment)
+                return scale, max_size
+            else:
+                scale = int(math.ceil(tf['kwargs']['size'] / alignment) * alignment)
+                return scale, scale
     else:
         raise ValueError('No resize found')
 
@@ -88,10 +118,11 @@ class PodToCaffe(object):
         self.input_size = input_size
         self.model = model
         self.input_channel = input_channel
+        self.task_type = get_task_from_cfg(self.cfg)
 
     def prepare_input_size(self):
         if self.input_size is None:
-            resize_scale = parse_resize_scale(self.cfg['dataset'])
+            resize_scale = parse_resize_scale(self.cfg['dataset'], self.task_type)
             self.input_size = (self.input_channel, *resize_scale)
 
     def prepare_save_prefix(self):
@@ -111,17 +142,24 @@ class PodToCaffe(object):
         ToCaffe.prepare()
         time.sleep(10)
         self.model = self.model.eval().cpu().float()
-        self.model = MODEL_WRAPPER_REGISTRY['pod'](self.model)
         image = torch.randn(1, *self.input_size)
-        output_names, base_anchors = self.model(image, return_meta=True)
-        self.output_names = output_names
-        self.anchor_json = os.path.join(self.save_dir, 'anchors.json')
-        with open(self.anchor_json, 'w') as f:
-            json.dump(base_anchors, f, indent=2)
+        if self.task_type == 'det':
+            self.model = MODEL_WRAPPER_REGISTRY['pod'](self.model)
+            output_names, base_anchors = self.model(image, return_meta=True)
+            self.output_names = output_names
+            self.anchor_json = os.path.join(self.save_dir, 'anchors.json')
+            with open(self.anchor_json, 'w') as f:
+                json.dump(base_anchors, f, indent=2)
+        elif self.task_type == 'cls':
+            add_softmax = self.cfg.get('to_kestrel', {}).get('add_softmax', False)
+            self.model = MODEL_WRAPPER_REGISTRY['cls'](self.model, add_softmax)
+            self.model(image)
 
     def _convert(self):
         import spring.nart.tools.pytorch as pytorch
         input_names = ['data']
+        if self.task_type == 'cls':
+            self.output_names = ['out']
         with pytorch.convert_mode():
             pytorch.convert(
                 self.model, [self.input_size],

@@ -124,7 +124,9 @@ class IncludeLoader(yaml.Loader):
 
 def check_cfg(cfg):
     cfg = copy.deepcopy(cfg)
-    if get_task_from_cfg(cfg) == 'det':
+    task_type = get_task_from_cfg(cfg)
+    cfg['saver']['task_type'] = task_type
+    if task_type == 'det':
         net = cfg.get('net', [])
         assert len(net) > 0, "net doesn't exist."
         net_parse, idx2name = {}, {}

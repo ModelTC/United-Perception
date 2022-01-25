@@ -5,6 +5,7 @@
 #include "nms/nms.h"
 #include "focal_loss/focal_loss.h"
 #include "cross_focal_loss/cross_focal_loss.h"
+#include "iou_overlap/iou_overlap.h"
 #include <torch/torch.h>
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
@@ -77,4 +78,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     cross_fl.def("cross_sigmoid_backward_cuda",
                  &cross_focal_loss_sigmoid_backward_cuda,
                  "sigmoid_backward_cuda backward (CUDA)");
+
+    // pybind IOUOverlap
+    pybind11::module iou = m.def_submodule("overlaps",
+                                           "calculate iou between bboxes & gts");
+    iou.def("iou", &gpu_iou_overlaps, "bbox iou overlaps with gt (CUDA)");
 }
