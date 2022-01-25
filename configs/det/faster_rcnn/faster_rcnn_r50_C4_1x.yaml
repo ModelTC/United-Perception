@@ -8,7 +8,7 @@ flip: &flip
 resize: &train_resize
  type: keep_ar_resize
  kwargs:
-   scales: [640, 672, 704, 736, 768, 800]
+   scales: [800]
    max_size: 1333
    separate_wh: True
 
@@ -116,10 +116,10 @@ net:
     prev: backbone 
     type: NaiveRPN
     kwargs:
-      feat_planes: 256    # channels of intermediate conv
+      feat_planes: 512    # channels of intermediate conv
       num_classes: 2      # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
-      num_anchors: 3
-      class_activation: sigmoid
+      num_anchors: 5
+      class_activation: softmax
       num_levels: 1
       initializer:
         method: normal
@@ -131,18 +131,22 @@ net:
       num_classes: 2  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       cfg:
         cls_loss:
-          type: sigmoid_cross_entropy
+          type: softmax_cross_entropy
+          kwargs:
+            class_dim: -1
         loc_loss:
-          type: l1_loss
+          type: smooth_l1_loss
+          kwargs:
+            sigma: 3.0
         anchor_generator:
           type: hand_craft
           kwargs:
             anchor_ratios: [0.5,1,2]  # anchor strides are provided as feature strides by feature extractor
-            anchor_scales: [8]        # scale of anchors relative to feature map
+            anchor_scales: [2,4,8,16,32]        # scale of anchors relative to feature map
         roi_supervisor:
           type: rpn
           kwargs:
-            allowed_border: -1
+            allowed_border: 0
             matcher:
               type: max_iou
               kwargs:
@@ -161,31 +165,23 @@ net:
             type: base
             kwargs:
               pre_nms_score_thresh: 0.0
-              pre_nms_top_n: 2000
-              post_nms_top_n: 1000
+              pre_nms_top_n: 12000
+              post_nms_top_n: 2000
               roi_min_size: 0
               nms:
                 type: naive
                 nms_iou_thresh: 0.7
-              merger:
-                type: rpn
-                kwargs:
-                  top_n: 1000
         test:
           roi_predictor:
             type: base
             kwargs:
               pre_nms_score_thresh: 0.0
-              pre_nms_top_n: 1000
-              post_nms_top_n: 1000
+              pre_nms_top_n: 6000
+              post_nms_top_n: 300
               roi_min_size: 0
               nms:
                 type: naive
                 nms_iou_thresh: 0.7
-              merger:
-                type: rpn
-                kwargs:
-                  top_n: 1000
   - name: bbox_head
     prev: backbone
     type: BboxRes5
