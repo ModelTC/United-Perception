@@ -4,6 +4,7 @@
 | retinanet-FPN           | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 37.0                    |
 | retinanet-improve       | resnet18            |        | no  | 32 | 100   | [800, 1333]       | 40.7                    |
 | faster-rcnn-FPN         | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 38.2                    |
+| faster-rcnn-FPN-improve | resnet50            |        | no  | 32 | 100   | [800, 1333]       | 43.5                    |
 | faster-rcnn-C4          | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 34.3                    |
 | faster-rcnn-C4          | resnet50            |        | no  | 16 | 14    | [800, 1333]       | 35.1                    |
 | rfcn                    | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 27.1                    |    
