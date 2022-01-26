@@ -13,11 +13,11 @@ import torch
 import torch.nn as nn
 
 # Import from pod
-from eod.utils.general.cfg_helper import merge_opts_into_cfg
-from eod.utils.general.log_helper import default_logger as logger
-from eod.utils.general.saver_helper import Saver
-from eod.utils.general.tocaffe_utils import ToCaffe
-from eod.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY, TOCAFFE_REGISTRY, MODEL_HELPER_REGISTRY
+from up.utils.general.cfg_helper import merge_opts_into_cfg
+from up.utils.general.log_helper import default_logger as logger
+from up.utils.general.saver_helper import Saver
+from up.utils.general.tocaffe_utils import ToCaffe
+from up.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY, TOCAFFE_REGISTRY, MODEL_HELPER_REGISTRY
 from .user_analysis_helper import get_task_from_cfg
 
 

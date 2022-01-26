@@ -6,8 +6,8 @@ import time
 import numpy as np
 import torch
 
-from eod.utils.general.global_flag import ALIGNED_FLAG
-from eod.extensions import gpu_iou_overlap
+from up.utils.general.global_flag import ALIGNED_FLAG
+from up.extensions import gpu_iou_overlap
 
 GPU_MEMORY = None
 
