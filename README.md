@@ -1,4 +1,4 @@
-# UP
+# UP22222
 
 ![image](up-logo.png)
 
@@ -19,8 +19,10 @@ The master branch works with **PyTorch 1.8.1**.
 Due to the pytorch version, it can not well support the 30 series graphics card hardware.
 
 ## Install
-
-pip install -r requirments
+```shell
+source s0.3.4
+./easy_setup.sh <partition>
+```
 
 ## Get Started
 Some example scripts are supported in scripts/.
@@ -51,14 +53,39 @@ dataset:
 ```
 
 Step2: train
-
+1. with srun
 ```shell
-python -m up train --config configs/det/yolox/yolox_tiny.yaml --nm 1 --ng 8 --launch pytorch 2>&1 | tee log.train
+g=$(($2<8?$2:8))
+srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
+    --job-name=$cfg \
+python -m up train \
+  --config=$cfg \
+  --display=1 \
+  2>&1 | tee log.train
+
+# ./train.sh <PARTITION> <num_gpu> <config>
+./train.sh ToolChain 8 configs/det/yolox/yolox_tiny.yaml
 ```
-* --config: yamls in configs/
-* --nm: machine number
-* --ng: gpu number for each machine
-* --launch: slurm or pytorch
+
+
+
+2. with spring.submit
+```shell
+export ROOT=$ROOT
+cfg=$2
+export PYTHONPATH=$ROOT:$PYTHONPATH
+CPUS_PER_TASK=${CPUS_PER_TASK:-4}
+
+spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=${CPUS_PER_TASK} \
+"python -m up train \
+  --config=$cfg \
+  --display=10 \
+  2>&1 | tee log.train "
+
+
+#./train.sh <num_gpu> <PARTITION> <config> <job-name>
+./train.sh 8 ToolChain configs/det/yolox/yolox_tiny.yaml yolox_tiny
+```
 
 Step3: fp16, add fp16 setting into runtime config
 
@@ -73,8 +100,18 @@ Step1: edit config of evaluating dataset
 Step2: test
 
 ```shell
-python -m up train -e --config configs/det/yolox/yolox_tiny.yaml --nm 1 --ng 1 --launch pytorch 2>&1 | tee log.test
+g=$(($2<8?$2:8))
+srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
+    --job-name=$cfg \
+python -m up train -e\
+  --config=$3 \
+  --display=1 \
+  2>&1 | tee log.eval
+
+# ./eval.sh <PARTITION> <num_gpu> <config>
+./eval.sh ToolChain 1 configs/det/yolox/yolox_tiny.yaml
 ```
+
 
 ### Demo
 Step1: add visualizer config in yaml
@@ -91,11 +128,18 @@ inference:
 Step2: inference
 
 ```shell
-python -m up inference --config configs/det/yolox/yolox_tiny.yaml --ckpt ckpt_tiny.pth -i imgs -v vis_dir
+g=$(($2<8?$2:8))
+srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
+    --job-name=$3 \
+python -m up inference \
+  --config=$3 \\
+  -i imgs \
+  -v vis_dir \
+  2>&1 | tee log.inference
+
+# ./inference.sh <PARTITION> <num_gpu> <config>
+./inference.sh ToolChain 1 configs/det/yolox/yolox_tiny.yaml
 ```
-* --ckpt: model for inferencing
-* -i: images directory or single image
-* -v: directory saving visualization results
 
 ### Mpirun mode
 UP supports **mpirun** mode to launch task, MPI needs to be installed firstly
