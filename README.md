@@ -167,7 +167,7 @@ python -m up inference \
 ## Benckmark
 
 * [Det](docs/detection_benchmark.md)
-* [Cls] 
+* [Cls](docs/classification_benchmark.md)
 * [Seg](docs/semantic_benchmark.md)
 
 ## Quick Run
