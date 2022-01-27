@@ -1,43 +1,15 @@
-# UP22222
+# UP
 
 ![image](up-logo.png)
 
-United Perception
-
-**UP** (**U**nited **P**erception) is a general united-perception model production framework.
-It aim on provide two key feature about Object Detection:
-
-+ Efficient: we will focus on training **VERY HIGH ACCURARY** single-shot detection model, and model compression (quantization/sparsity) will be well addressed. 
-+ Easy: easy to use, easy to add new features(backbone/head/neck), easy to deploy.
-+ Large-Scale Dataset Training [Detail](https://github.com/ModelTC/rank_dataset)
-+ Equalized Focal Loss for Dense Long-Tailed Object Detection [EFL](docs/equalized_focal_loss.md)
-+ Improve-YOLOX [YOLOX-RET](docs/benchmark.md)
-+ Quantization Aware Training(QAT) interface based on [MQBench](https://github.com/ModelTC/MQBench).
-
-
-The master branch works with **PyTorch 1.8.1**.
-Due to the pytorch version, it can not well support the 30 series graphics card hardware.
-
-## Install
+## 安装
 ```shell
-source s0.3.4
+source s0.3.4 or s0.3.3
 ./easy_setup.sh <partition>
 ```
 
-## Get Started
-Some example scripts are supported in scripts/.
-
-### Export Module
-Export up into ROOT and PYTHONPATH
-
-```shell
-ROOT=../../
-export ROOT=$ROOT
-export PYTHONPATH=$ROOT:$PYTHONPATH
-```
-
 ### Train
-Step1: edit meta_file and image_dir of image_reader:
+Step1: 修改dataset 路径，基本格式沿袭POD的格式，可以参考POD的文档
 
 ```yaml
 dataset:
@@ -53,7 +25,7 @@ dataset:
 ```
 
 Step2: train
-1. with srun
+1. Srun 直接启动脚本
 ```shell
 g=$(($2<8?$2:8))
 srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
@@ -61,15 +33,14 @@ srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
 python -m up train \
   --config=$cfg \
   --display=1 \
+  --backend=linklink \ # 默认后端，支持dist (ddp) 和 linklink 2种
   2>&1 | tee log.train
 
 # ./train.sh <PARTITION> <num_gpu> <config>
 ./train.sh ToolChain 8 configs/det/yolox/yolox_tiny.yaml
 ```
 
-
-
-2. with spring.submit
+2. Spring.submit 启动脚本
 ```shell
 export ROOT=$ROOT
 cfg=$2
@@ -80,6 +51,7 @@ spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=$
 "python -m up train \
   --config=$cfg \
   --display=10 \
+  --backend=linklink \
   2>&1 | tee log.train "
 
 
@@ -87,23 +59,27 @@ spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=$
 ./train.sh 8 ToolChain configs/det/yolox/yolox_tiny.yaml yolox_tiny
 ```
 
-Step3: fp16, add fp16 setting into runtime config
+Step3: FP16 设置以及其他一些额外的设置
 
 ```yaml
 runtime:
-    fp16: True
+    fp16: # linklink 后端
+        keep_batchnorm_fp32: True
+        scale_factor: dynamic
+    # fp16: True # ddp 后端
+    runner:
+       type: base # 默认是base，也可以根据需求注册所需的runner，比如量化quant
 ```
 
 ### Eval
-Step1: edit config of evaluating dataset
-
-Step2: test
+评测脚本, 沿袭POD的模式，现在将train test 合成了一个指定，在命令行指定 -e 即可启动测试
 
 ```shell
 g=$(($2<8?$2:8))
 srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
     --job-name=$cfg \
-python -m up train -e\
+python -m up train \
+  -e \
   --config=$3 \
   --display=1 \
   2>&1 | tee log.eval
@@ -112,9 +88,51 @@ python -m up train -e\
 ./eval.sh ToolChain 1 configs/det/yolox/yolox_tiny.yaml
 ```
 
+### 部署
+
+* tocaffe
+```shell
+#!/bin/bash
+
+ROOT=../
+T=`date +%m%d%H%M`
+export ROOT=$ROOT
+cfg=$2
+export PYTHONPATH=$ROOT:$PYTHONPATH
+CPUS_PER_TASK=${CPUS_PER_TASK:-4}
+
+spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=${CPUS_PER_TASK} \
+"python -m up to_caffe \
+  --config=$cfg \
+  --save_prefix=tocaffe \
+  --input_size=3x512x512 \
+  --backend=linklink \
+  2>&1 | tee log.tocaffe.$T.$(basename $cfg) "
+
+```
+
+* to_kestrel
+
+TODO cfg example
+
+```shell
+ROOT=../
+T=`date +%m%d%H%M`
+export ROOT=$ROOT
+cfg=$2
+export PYTHONPATH=$ROOT:$PYTHONPATH
+CPUS_PER_TASK=${CPUS_PER_TASK:-4}
+
+spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=${CPUS_PER_TASK} \
+"python -m up to_kestrel \
+  --config=$cfg \
+  --save_to=kestrel_model \
+  2>&1 | tee log.tokestrel.$T.$(basename $cfg) "
+```
+
 
 ### Demo
-Step1: add visualizer config in yaml
+Step1: 修改cfg，沿袭POD的格式
 
 ```yaml
 inference:
@@ -141,29 +159,6 @@ python -m up inference \
 ./inference.sh ToolChain 1 configs/det/yolox/yolox_tiny.yaml
 ```
 
-### Mpirun mode
-UP supports **mpirun** mode to launch task, MPI needs to be installed firstly
-
-```shell
-# download mpich
-wget https://www.mpich.org/static/downloads/3.2.1/mpich-3.2.1.tar.gz # other versions: https://www.mpich.org/static/downloads/
-
-tar -zxvf mpich-3.2.1.tar.gz
-cd mpich-3.2.1
-./configure  --prefix=/usr/local/mpich-3.2.1
-make && make install
-```
-
-Launch task
-
-```shell
-mpirun -np 8 python -m up train --config configs/det/yolox/yolox_tiny.yaml --launch mpi 2>&1 | tee log.train
-```
-
-* Add mpirun -np x; x indicates number of processes
-* Mpirun is convenient to debug with pdb
-* --launch: mpi
-
 ## Custom Example
 
 * [custom dataset](configs/det/custom/custom_dataset.yaml)
@@ -171,13 +166,9 @@ mpirun -np 8 python -m up train --config configs/det/yolox/yolox_tiny.yaml --lau
 
 ## Benckmark
 
-* [YOLOX](docs/benchmark.md) 
-* [YOLOX-Ret](docs/benchmark.md)
-* [EFL](docs/equalized_focal_loss.md)
-* [YOLOV5](docs/benchmark.md)
-* [RetinaNet](docs/benchmark.md)
-* [QAT](docs/quant.md)
-* [Faster-RCNN](docs/two_stages.md)
+* [Det](docs/detection_benchmark.md)
+* [Cls] 
+* [Seg](docs/semantic_benchmark.md)
 
 ## Quick Run
 
@@ -198,11 +189,15 @@ mpirun -np 8 python -m up train --config configs/det/yolox/yolox_tiny.yaml --lau
 * [Visualization](docs/visualization.md)
 
 
-## References
+## 说明
 
-* [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX)
-* [YOLOv5](https://github.com/ultralytics/yolov5)
+分割部分主体代码来自light-seg, 分类代码来自prototype, 检测部分来自于POD
+大部分文档可参考 [POD 官方文档](http://spring.sensetime.com/docs/pod/index.html)
 
-## Acknowledgments
+## TODO
+- [ ] Transformer 基础backbone 支持
+- [ ] MultiTask 支持
+- [ ] Cls 相关自监督算法支持
+- [ ] Det POD 未迁移部分
+- [ ] 详细的功能文档
 
-Thanks to all past contributors, especially [opcoder](https://github.com/opcoder),
