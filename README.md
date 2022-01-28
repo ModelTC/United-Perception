@@ -130,6 +130,9 @@ spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=$
   2>&1 | tee log.tokestrel.$T.$(basename $cfg) "
 ```
 
+* [Detection deploy configs](configs/det/deploy)
+* [Classification deploy configs](configs/cls/deploy)
+
 
 ### Demo
 Step1: 修改cfg，沿袭POD的格式
