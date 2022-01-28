@@ -113,8 +113,6 @@ spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=$
 
 * to_kestrel
 
-TODO cfg example
-
 ```shell
 ROOT=../
 T=`date +%m%d%H%M`
