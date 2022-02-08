@@ -10,6 +10,7 @@ from up.utils.general.yaml_loader import load_yaml
 from up.utils.general.cfg_helper import format_cfg
 from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, MODEL_HELPER_REGISTRY
 from up.utils.general.log_helper import default_logger as logger
+from up.utils.general.log_helper import addFilter
 from up.utils.general.computation_calculator import flops_cal, clever_format
 from up.utils.general.user_analysis_helper import send_info
 
@@ -85,5 +86,5 @@ def main(args):
 
 
 def _main(args):
-    logger.init_log()
+    addFilter(logger)
     main(args)

@@ -3,6 +3,8 @@ from .subcommand import Subcommand
 import functools
 from up.utils.general.registry_factory import EVALUATOR_REGISTRY, SUBCOMMAND_REGISTRY
 from up.utils.general.user_analysis_helper import send_info
+from up.utils.general.log_helper import addFilter
+from up.utils.general.log_helper import default_logger as logger
 
 __all__ = ['Eval']
 
@@ -20,6 +22,7 @@ class Eval(Subcommand):
 
 
 def _main(evaluator_cls, args):
+    addFilter(logger)
     send_info(func='evaluate')
     print('building evaluator')
     evaluator = evaluator_cls.from_args(args)

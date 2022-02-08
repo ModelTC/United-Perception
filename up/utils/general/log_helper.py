@@ -52,52 +52,6 @@ class ColoredFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
-class Logger(object):
-    def __init__(self):
-        self.logger = logging
-
-    def init_log(self, name='global', level=logging.INFO):
-        if (name, level) in logs:
-            return
-        logs.add((name, level))
-        logger = logging.getLogger(name)
-        logger.setLevel(level)
-        ch = logging.StreamHandler(stream=sys.stdout)
-        ch.setLevel(level)
-
-        logger.addFilter(lambda record: env.is_master())
-
-        format_str = f'%(asctime)s-rk{env.rank}-%(filename)s#%(lineno)d:%(message)s'
-        formatter = ColoredFormatter(format_str)
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-
-        logger.propagate = False
-
-        self.logger = logger
-
-    def info(self, *args, **kwargs):
-        return self.logger.info(*args, **kwargs)
-
-    def debug(self, *args, **kwargs):
-        return self.logger.debug(*args, **kwargs)
-
-    def warning(self, *args, **kwargs):
-        return self.logger.warning(*args, **kwargs)
-
-    def error(self, *args, **kwargs):
-        return self.logger.error(*args, **kwargs)
-
-    def critical(self, *args, **kwargs):
-        return self.logger.critical(*args, **kwargs)
-
-    def log(self, *args, **kwargs):
-        return self.logger.log(*args, **kwargs)
-
-    def basicConfig(self, *args, **kwargs):
-        return self.logger.basicConfig(*args, **kwargs)
-
-
 class SmoothedValue(object):
     """
     Track a series of values and provide access to smoothed values over a
@@ -209,5 +163,26 @@ class MetricLogger(object):
 meters = MetricLogger(delimiter=" ")
 timer = MetricLogger(delimiter=" ")
 
-default_logger = Logger()
-# default_logger = init_log('global', logging.DEBUG)
+
+def init_log(name='global', level=logging.INFO):
+    if (name, level) in logs:
+        return
+    logs.add((name, level))
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    ch = logging.StreamHandler(stream=sys.stdout)
+    ch.setLevel(level)
+
+    format_str = f'%(asctime)s-rk{env.rank}-%(filename)s#%(lineno)d:%(message)s'
+    formatter = ColoredFormatter(format_str)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.propagate = False
+    return logger
+
+
+default_logger = init_log('global', logging.INFO)
+
+
+def addFilter(logger):
+    logger.addFilter(lambda record: env.is_master())
