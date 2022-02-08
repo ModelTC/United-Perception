@@ -9,8 +9,6 @@ from .subcommand import Subcommand
 from up.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, INFERENCER_REGISTRY
 from up.utils.general.user_analysis_helper import send_info
-from up.utils.general.log_helper import addFilter
-from up.utils.general.log_helper import default_logger as logger
 
 
 __all__ = ['Inference']
@@ -69,5 +67,4 @@ def main(args):
 
 
 def _main(args):
-    addFilter(logger)
     main(args)

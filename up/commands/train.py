@@ -16,8 +16,6 @@ from up.utils.general.user_analysis_helper import send_info
 from .subcommand import Subcommand
 from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGISTRY
 from up.utils.general.global_flag import DIST_BACKEND
-from up.utils.general.log_helper import default_logger as logger
-from up.utils.general.log_helper import addFilter
 
 
 __all__ = ['Train']
@@ -143,7 +141,6 @@ def main(args):
 def _main(args):
     DIST_BACKEND.backend = args.backend
     if args.launch == 'pytorch':
-        addFilter(logger)
         launch(main, args.num_gpus_per_machine, args.num_machines, args=args, start_method=args.fork_method)
     else:
         mp.set_start_method(args.fork_method, force=True)
@@ -151,5 +148,4 @@ def _main(args):
         assert fork_method == args.fork_method
         sys.stdout.flush()
         setup_distributed(args.port, args.launch, args.backend)
-        addFilter(logger)
         main(args)

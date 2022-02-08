@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 # Import from local
-from ..env.dist_helper import env
+from ..env.dist_helper import env, MASTER_RANK
 
 logs = set()
 
@@ -172,8 +172,8 @@ def init_log(name='global', level=logging.INFO):
     logger.setLevel(level)
     ch = logging.StreamHandler(stream=sys.stdout)
     ch.setLevel(level)
-
-    format_str = f'%(asctime)s-rk{env.rank}-%(filename)s#%(lineno)d:%(message)s'
+    format_str = f'%(asctime)s-rk{MASTER_RANK}-%(filename)s#%(lineno)d:%(message)s'
+    logger.addFilter(lambda record: env.is_master())
     formatter = ColoredFormatter(format_str)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
@@ -182,7 +182,3 @@ def init_log(name='global', level=logging.INFO):
 
 
 default_logger = init_log('global', logging.INFO)
-
-
-def addFilter(logger):
-    logger.addFilter(lambda record: env.is_master())

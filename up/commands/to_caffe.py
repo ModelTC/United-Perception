@@ -5,8 +5,6 @@ import argparse
 from up.utils.general.yaml_loader import load_yaml
 from .subcommand import Subcommand
 from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY
-from up.utils.general.log_helper import default_logger as logger
-from up.utils.general.log_helper import addFilter
 from up.utils.general.tocaffe_helper import to_caffe
 from up.utils.general.user_analysis_helper import send_info
 
@@ -57,5 +55,4 @@ def main(args):
 
 
 def _main(args):
-    addFilter(logger)
     main(args)
