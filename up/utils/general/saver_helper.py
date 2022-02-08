@@ -108,7 +108,19 @@ class Saver(object):
                 "bn1.bias": "layer0.1.bias",
                 "bn1.running_mean": "layer0.1.running_mean",
                 "bn1.running_var": "layer0.1.running_var",
-                "bn1.num_batches_tracked": "layer0.1.num_batches_tracked"
+                "bn1.num_batches_tracked": "layer0.1.num_batches_tracked",
+                # stem
+                "conv1.0.weight": "layer0.0.0.weight",
+                "conv1.1.bias": "layer0.0.1.bias",
+                "conv1.1.running_mean": "layer0.0.1.running_mean",
+                "conv1.1.running_var": "layer0.0.1.running_var",
+                "conv1.1.weight": "layer0.0.1.weight",
+                "conv1.3.weight": "layer0.0.3.weight",
+                "conv1.4.bias": "layer0.0.4.bias",
+                "conv1.4.running_mean": "layer0.0.4.running_mean",
+                "conv1.4.running_var": "layer0.0.4.running_var",
+                "conv1.4.weight": "layer0.0.4.weight",
+                "conv1.6.weight": "layer0.0.6.weight",
             }
             convert_dict2 = {
                 "backbone.conv1.weight": "backbone.layer0.0.weight",
@@ -116,7 +128,19 @@ class Saver(object):
                 "backbone.bn1.bias": "backbone.layer0.1.bias",
                 "backbone.bn1.running_mean": "backbone.layer0.1.running_mean",
                 "backbone.bn1.running_var": "backbone.layer0.1.running_var",
-                "backbone.bn1.num_batches_tracked": "backbone.layer0.1.num_batches_tracked"
+                "backbone.bn1.num_batches_tracked": "backbone.layer0.1.num_batches_tracked",
+                # stem
+                "backbone.conv1.0.weight": "backbone.layer0.0.0.weight",
+                "backbone.conv1.1.bias": "backbone.layer0.0.1.bias",
+                "backbone.conv1.1.running_mean": "backbone.layer0.0.1.running_mean",
+                "backbone.conv1.1.running_var": "backbone.layer0.0.1.running_var",
+                "backbone.conv1.1.weight": "backbone.layer0.0.1.weight",
+                "backbone.conv1.3.weight": "backbone.layer0.0.3.weight",
+                "backbone.conv1.4.bias": "backbone.layer0.0.4.bias",
+                "backbone.conv1.4.running_mean": "backbone.layer0.0.4.running_mean",
+                "backbone.conv1.4.running_var": "backbone.layer0.0.4.running_var",
+                "backbone.conv1.4.weight": "backbone.layer0.0.4.weight",
+                "backbone.conv1.6.weight": "backbone.layer0.0.6.weight",
             }
             is_convert = False
             count1 = 0
