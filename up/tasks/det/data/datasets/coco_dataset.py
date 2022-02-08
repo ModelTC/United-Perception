@@ -11,13 +11,14 @@ import torch
 from easydict import EasyDict
 from PIL import Image
 from pycocotools import mask as maskUtils
-from pycocotools.coco import COCO
+# from pycocotools.coco import COCO
 from torch.nn.modules.utils import _pair
 import pickle as pk
 from up.utils.env.dist_helper import env
 import cv2
 
 
+from up.utils.general.petrel_helper import PetrelCOCO as COCO
 from up.utils.general.context import no_print
 from up.utils.general.registry_factory import DATASET_REGISTRY
 from up.utils.general.global_flag import ALIGNED_FLAG
@@ -285,7 +286,7 @@ class CocoDataset(BaseDataset):
                     img = cv2.cvtColor(img, cvt_color)
             else:
                 img = self.image_reader(filename)
-        except:  # noqa 
+        except:  # noqa
             img = self.image_reader(filename)
 
         input = EasyDict({
