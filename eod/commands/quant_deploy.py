@@ -52,7 +52,6 @@ def main(args):
 
     if runner_cfg['type'] == "quant":
         quant_deploy = DEPLOY_REGISTRY.get("quant")(cfg)
-        quant_deploy.load_checkpoint()
         quant_deploy.deploy()
     else:
         print("Need quant in cfg yaml.")

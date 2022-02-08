@@ -118,7 +118,9 @@ class Saver(object):
         # Assume we warmup for a epochs and training a+b epochs in total,
         # then our checkpoints are named of ckpt_e{-a+1}.pth ~ ckpt_e{b}.pth
         # if best in kwargs, we save the best ckpt as ckpt_best.path.auto
-        if 'suffix' in kwargs:
+        if 'spacial_name' in kwargs:
+            ckpt_path = os.path.join(self.save_dir, kwargs['spacial_name'] + '.pth')
+        elif 'suffix' in kwargs:
             suffix = kwargs['suffix']
             ckpt_path = os.path.join(self.save_dir, 'ckpt_e{}-{}.pth'.format(epoch, suffix))
         elif 'auto_save' in kwargs:

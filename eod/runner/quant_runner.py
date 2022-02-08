@@ -1,8 +1,10 @@
 from .base_runner import BaseRunner
 from eod.utils.general.registry_factory import MODEL_HELPER_REGISTRY, RUNNER_REGISTRY
 from eod.utils.env.gene_env import get_env_info
+from eod.utils.env.dist_helper import env
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.cfg_helper import format_cfg
+import torch
 
 
 __all__ = ['QuantRunner']
@@ -23,15 +25,20 @@ class QuantRunner(BaseRunner):
         self.get_git_version()
         self.build_dataloaders()
         self.build_model()
-        # self.build_trainer()
         self.build_ema()
         self.build_saver()
         self.build_hooks()
-        self.resume_model()
         if self.training:
+            self.resume_model()
             self.quantize_model()
             self.calibrate()
             self.build_trainer()
+            self.eval_ptq()
+        else:
+            self.quantize_model()
+            self.load_checkpoint()
+            from mqbench.utils.state import enable_quantization
+            enable_quantization(self.model)
         self.prepare_dist_model()
         get_env_info()
         self.save_running_cfg()
@@ -53,6 +60,20 @@ class QuantRunner(BaseRunner):
         if self.fp16:
             self.model = self.model.half()
 
+    def load_checkpoint(self):
+        def remove_prefix(state_dict, prefix):
+            """Old style model is stored with all names of parameters share common prefix 'module.'"""
+            f = lambda x: x.split(prefix, 1)[-1] if x.startswith(prefix) else x
+            return {f(key): value for key, value in state_dict.items()}
+
+        ckpt = torch.load(self.config['saver']['pretrain_model'])
+        if 'ema' in ckpt and self.ema is not None:
+            state_trained = ckpt['ema']['ema_state_dict']
+        else:
+            state_trained = ckpt['model']
+        state_trained = remove_prefix(state_trained, 'module.')
+        self.model.load_state_dict(state_trained)
+
     def forward_model(self, batch):
         output = self.model(batch)
         if self.model.training:
@@ -69,18 +90,43 @@ class QuantRunner(BaseRunner):
                 'snpe': BackendType.SNPE,
                 'academic': BackendType.Academic}
 
+    def get_leaf_module(self, leaf_module):
+        from mqbench.nn.modules import FrozenBatchNorm2d
+        from eod.tasks.det.plugins.yolov5.models.components import Space2Depth
+        leaf_module_map = {'FrozenBatchNorm2d': FrozenBatchNorm2d,
+                           'Space2Depth': Space2Depth}
+        leaf_module_ret = [leaf_module_map[k] for k in leaf_module]
+        return tuple(leaf_module_ret)
+
+    def get_extra_quantizer_dict(self, extra_quantizer_dict):
+        from mqbench.nn.intrinsic.qat.modules import ConvFreezebn2d, ConvFreezebnReLU2d
+        additional_module_type = extra_quantizer_dict.get('additional_module_type')
+        additional_module_type_map = {'ConvFreezebn2d': ConvFreezebn2d,
+                                      'ConvFreezebnReLU2d': ConvFreezebnReLU2d}
+        extra_quantizer_dict_ret = {}
+        if additional_module_type is not None:
+            additional_module_type = [additional_module_type_map[k] for k in additional_module_type]
+            extra_quantizer_dict_ret['additional_module_type'] = tuple(additional_module_type)
+        return extra_quantizer_dict_ret
+
     def quantize_model(self):
         from mqbench.prepare_by_platform import prepare_by_platform
-        from eod.utils.model.bn_helper import FrozenBatchNorm2d
-        from eod.tasks.det.plugins.yolov5.models.components import Space2Depth
         logger.info("prepare quantize model")
         deploy_backend = self.config['quant']['deploy_backend']
         prepare_args = self.config['quant'].get('prepare_args', {})
+        prepare_custom_config_dict = {}
+        extra_qconfig_dict = prepare_args.get('extra_qconfig_dict', {})
+        prepare_custom_config_dict['extra_qconfig_dict'] = extra_qconfig_dict
+        leaf_module = prepare_args.get('leaf_module')
+        if leaf_module is not None:
+            prepare_custom_config_dict['leaf_module'] = self.get_leaf_module(leaf_module)
+        extra_quantizer_dict = prepare_args.get('extra_quantizer_dict')
+        if extra_quantizer_dict is not None:
+            prepare_custom_config_dict['extra_quantizer_dict'] = self.get_extra_quantizer_dict(extra_quantizer_dict)
         self.model.train().cuda()
         self.model = prepare_by_platform(self.model,
-                                         self.backend_type[deploy_backend], prepare_args,
-                                         leaf_modules=[FrozenBatchNorm2d, Space2Depth],
-                                         custombn=[FrozenBatchNorm2d])
+                                         self.backend_type[deploy_backend], prepare_custom_config_dict)
+        self.model.cuda()
         print(self.model)
 
     def calibrate(self):
@@ -92,12 +138,22 @@ class QuantRunner(BaseRunner):
             batch = self.get_batch('train')
             self.model(batch)
         enable_quantization(self.model)
-        self.model.train()
+
+    def eval_ptq(self):
+        self.model.eval()
+        self.evaluate()
+        self.save_ptq()
+
+    def save_ptq(self):
+        save_dict = self.get_dump_dict()
+        save_dict['spacial_name'] = 'ptq_model'
+        if env.is_master():
+            self.saver.save(**save_dict)
 
     def train(self):
-        self.model.cuda().eval()
-        self.evaluate()
-        self.model.cuda().train()
+        if self.config['quant']['ptq_only'] == True:
+            return
+        self.model.train()
         for iter_idx in range(self.start_iter, self.max_iter):
             batch = self.get_batch('train')
             loss = self.forward_train(batch)

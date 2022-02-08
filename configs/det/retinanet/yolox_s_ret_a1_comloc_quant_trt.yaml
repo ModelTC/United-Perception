@@ -6,6 +6,9 @@ runtime:
 
     runner:
       type: quant
+    model_helper:
+      kwargs:
+        deploy: False
 
 quant:
     deploy_backend: tensorrt
@@ -16,6 +19,9 @@ quant:
         a_observer: EMAMinMaxObserver
         w_fakequantize: FixedFakeQuantize
         a_fakequantize: FixedFakeQuantize
+      leaf_module: [Space2Depth, FrozenBatchNorm2d]
+      extra_quantizer_dict:
+        additional_module_type: [ConvFreezebn2d, ConvFreezebnReLU2d]
 
 
 mixup: &mixup
@@ -167,7 +173,7 @@ net:
     kwargs:
       out_layers: [2, 3, 4]
       out_strides: [8, 16, 32]
-      normalize: {'type': 'freeze_bn' }
+      normalize: {'type': 'mqbench_freeze_bn' }
       act_fn: {'type': 'Silu' }
   - name: neck
     prev: backbone
@@ -175,7 +181,7 @@ net:
     kwargs:
       depth: 0.33
       out_strides: [8, 16, 32]
-      normalize: {'type': 'freeze_bn' }
+      normalize: {'type': 'mqbench_freeze_bn' }
       act_fn: {'type': 'Silu'}
   - name: roi_head
     prev: neck
@@ -184,7 +190,7 @@ net:
       num_classes: *num_classes
       width: 0.5
       num_point: &dense_points 1
-      normalize: {'type': 'freeze_bn' }
+      normalize: {'type': 'mqbench_freeze_bn' }
       act_fn: {'type': 'Silu'}
   - name: post_process
     prev: roi_head
