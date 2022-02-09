@@ -9,7 +9,7 @@ from collections import OrderedDict
 
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.env.gene_env import to_device, patterns_match
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY, MODEL_HELPER_REGISTRY
+from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY, MODEL_HELPER_REGISTRY, MODULE_WRAPPER_REGISTRY
 
 
 __all__ = ['ModelHelper']
@@ -38,6 +38,11 @@ class ModelHelper(nn.Module):
                     if hasattr(prev_module, "get_outplanes"):
                         kwargs['inplanes'] = prev_module.get_outplanes()
             module = self.build(mtype, kwargs)
+            if 'wrappers' in cfg_subnet:
+                for wrapper_cfg in cfg_subnet['wrappers']:
+                    wrapper_func = MODULE_WRAPPER_REGISTRY[wrapper_cfg['type']]
+                    wrapper_kwargs = wrapper_cfg.get('kwargs', {})
+                    module = wrapper_func(module, **wrapper_kwargs)
             self.add_module(mname, module)
         self.dtype = torch.float32
         self.device = torch.device('cpu')
@@ -173,8 +178,14 @@ class ModelHelper(nn.Module):
         info = "Loading {}:{} shared keys, {} unexpected keys, {} missing keys.".format(
             mname, len(shared_keys), len(unexpected_keys), len(missing_keys))
 
+        missing_keys = [k for k in sorted(missing_keys) if '.num_batches_tracked' not in k]
+        unexpected_keys = [k for k in sorted(unexpected_keys) if '.num_batches_tracked' not in k]
+
         if len(missing_keys) > 0:
             info += "\nmissing keys are as follows:\n    {}".format("\n    ".join(missing_keys))
+
+        if len(unexpected_keys) > 0:
+            info += "\nunexpected keys are as follows:\n    {}".format("\n    ".join(unexpected_keys))
         logger.info(info)
 
     def state_dict(self, destination=None, prefix='', keep_vars=False, model_cfg=False):

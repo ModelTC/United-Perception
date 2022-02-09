@@ -2,6 +2,7 @@ from .registry import Registry
 
 # model
 MODULE_ZOO_REGISTRY = Registry()
+MODULE_WRAPPER_REGISTRY = Registry()
 MODEL_WRAPPER_REGISTRY = Registry()
 EMA_REGISTRY = Registry()
 
