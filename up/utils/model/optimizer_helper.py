@@ -17,7 +17,6 @@ from collections import defaultdict
 
 def build_cls_instance(module, cfg):
     """Build instance for given cls"""
-    print(module)
     cls = getattr(module, cfg['type'])
     return cls(**cfg['kwargs'])
 
