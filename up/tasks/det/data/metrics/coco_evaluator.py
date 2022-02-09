@@ -6,9 +6,11 @@ import json
 import os
 
 # Import from third library
-from pycocotools.coco import COCO
+# from pycocotools.coco import COCO
+
 from pycocotools.cocoeval import COCOeval
 
+from up.utils.general.petrel_helper import PetrelCOCO as COCO
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import EVALUATOR_REGISTRY
 from up.data.metrics.base_evaluator import Evaluator, Metric
