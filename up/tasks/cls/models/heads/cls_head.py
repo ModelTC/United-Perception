@@ -38,3 +38,58 @@ class BaseClsHead(nn.Module):
 
     def forward(self, input):
         return self.forward_net(input)
+
+
+@MODULE_ZOO_REGISTRY.register('fpn_cls_head')
+class FPNClsHead(BaseClsHead):
+    def __init__(self, inplanes, feat_planes, num_classes, sum_feature=True, input_feature_idx=-1, dropout=None):
+
+        super().__init__(num_classes, feat_planes, dropout)  # fake
+
+        self.sum_feature = sum_feature
+
+        if isinstance(inplanes, list):
+            if self.sum_feature:
+                self.classification_inplanes = inplanes[0]
+            else:
+                self.classification_inplanes = inplanes[self.input_feature_idx]
+        else:
+            self.classification_inplanes = inplanes
+
+        self.classification_pool = self.pool
+
+        self.relu = nn.ReLU(inplace=True)
+
+        self.classification_fc_embeding = nn.Linear(self.classification_inplanes, feat_planes)
+
+    def forward_classification_feature(self, features):
+        if isinstance(features, list):
+            features = features[self.input_feature_idx]
+        features = self.classification_pool(features)
+        features = features.view(features.size(0), -1)
+        features = self.relu(self.classification_fc_embeding(features))
+        return features
+
+    def forward_classification_sum_feature(self, features):
+        out_feature = None
+        for feature in features:
+            feature = self.classification_pool(feature)
+            feature = feature.view(feature.size(0), -1)
+            feature = self.relu(self.classification_fc_embeding(feature))
+            if out_feature is None:
+                out_feature = feature
+            else:
+                out_feature = out_feature + feature
+        return out_feature
+
+    def forward_net(self, x):
+        if isinstance(x, dict):
+            x = x['features']
+        if self.sum_feature:
+            feature = self.forward_classification_sum_feature(x)
+        else:
+            feature = self.forward_classification_feature(x)
+
+        logits = self.classifier(feature)
+
+        return {'logits': logits}
