@@ -183,8 +183,9 @@ def load_yaml(path, cfg_type='up'):
     else:
         pass
     # cfg check
-    return check_cfg(yaml_data)
-
+    # return check_cfg(yaml_data)\
+    # TODO check_cfg
+    return yaml_data
 
 class POD2UP:
     # convert the configs of POD to UP.
