@@ -8,7 +8,9 @@ from up.utils.model.bn_helper import (
     FrozenBatchNorm2d,
     GroupNorm,
     PyTorchSyncBN,
-    GroupSyncBatchNorm
+    GroupSyncBatchNorm,
+    TaskBatchNorm2d,
+    SyncTaskBatchNorm2d
 )
 
 _norm_cfg = {
@@ -18,7 +20,9 @@ _norm_cfg = {
     'gn': ('gn', GroupNorm),
     'pt_sync_bn': ('bn', PyTorchSyncBN),
     'link_sync_bn': ('bn', GroupSyncBatchNorm),
-    'sync_bn': ('bn', GroupSyncBatchNorm)
+    'sync_bn': ('bn', GroupSyncBatchNorm),
+    'taskbn': ('bn', TaskBatchNorm2d),
+    'task_sync_bn': ('bn', SyncTaskBatchNorm2d)
 }
 
 
@@ -33,6 +37,10 @@ def is_bn(m):
         return True
     if isinstance(m, GroupSyncBatchNorm):
         return True
+    if isinstance(m, TaskBatchNorm2d):
+        return True
+    if isinstance(m, SyncTaskBatchNorm2d):
+        return True
     return False
 
 
@@ -45,7 +53,9 @@ def build_norm_layer(num_features, cfg, postfix=''):
     if layer_type not in _norm_cfg:
         raise KeyError('Unrecognized norm type {}'.format(layer_type))
     else:
-        if 'sync_bn' in layer_type:
+        if 'task_sync_bn' in layer_type:
+            assert DIST_BACKEND.backend == 'linklink'
+        elif 'sync_bn' in layer_type:
             if DIST_BACKEND.backend == 'dist':
                 layer_type = 'pt_sync_bn'
             elif DIST_BACKEND.backend == 'linklink':

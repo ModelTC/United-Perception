@@ -5,7 +5,9 @@ from up.utils.model.bn_helper import (
     CaffeFrozenBatchNorm2d,
     PyTorchSyncBN,
     GroupNorm,
-    GroupSyncBatchNorm
+    GroupSyncBatchNorm,
+    TaskBatchNorm2d,
+    SyncTaskBatchNorm2d
 )
 
 import numpy as np
@@ -55,6 +57,6 @@ def register_float_module(keep_fp32):
         linklink.fp16.register_float_module(PyTorchSyncBN, cast_args=True)
         linklink.fp16.register_float_module(CaffeFrozenBatchNorm2d, cast_args=True)
         linklink.fp16.register_float_module(GroupNorm, cast_args=True)
-        # linklink.fp16.register_float_module(TaskBatchNorm2d, cast_args=True)
-        # linklink.fp16.register_float_module(SyncTaskBatchNorm2d, cast_args=True)
+        linklink.fp16.register_float_module(TaskBatchNorm2d, cast_args=True)
+        linklink.fp16.register_float_module(SyncTaskBatchNorm2d, cast_args=True)
         linklink.fp16.init()
