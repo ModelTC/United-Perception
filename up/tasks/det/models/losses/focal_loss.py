@@ -276,10 +276,15 @@ class TorchSigmoidFocalLoss(GeneralizedCrossEntropyLoss):
         p_t = p * target + (1 - p) * (1 - target)
         loss = ce_loss * ((1 - p_t) ** self.gamma)
 
-        if self.alpha >= 0:
+        if isinstance(self.alpha, list):
+            alpha_t = torch.from_numpy(np.array(self.alpha)).to(target.device)
+            alpha_t = alpha_t.view(-1, len(self.alpha)).expand_as(target)
+            loss = alpha_t * loss
+        elif self.alpha >= 0:
             alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)
             loss = alpha_t * loss
-
+        else:
+            pass
         return _reduce(loss, reduction=reduction, normalizer=normalizer)
 
 
