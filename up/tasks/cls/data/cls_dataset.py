@@ -4,6 +4,7 @@ from up.data.datasets.base_dataset import BaseDataset
 from up.utils.general.registry_factory import DATASET_REGISTRY
 from easydict import EasyDict
 from PIL import Image
+from up.utils.general.petrel_helper import PetrelHelper
 from up.data.data_utils import is_numpy_image
 from up.utils.general.registry import Registry
 
@@ -23,8 +24,8 @@ class BaseParser(object):
 @CLS_PARSER_REGISTRY.register('imagenet')
 class ImageNetParser(BaseParser):
     def parse(self, meta_file, idx, metas):
-        with open(meta_file, "r") as f:
-            for line in f.readlines():
+        with PetrelHelper.open(meta_file) as f:
+            for line in f:
                 cls_res = {}
                 filename, label = line.strip().split()
                 cls_res['filename'] = filename
@@ -37,8 +38,8 @@ class ImageNetParser(BaseParser):
 @CLS_PARSER_REGISTRY.register('custom_cls')
 class CustomClsParser(BaseParser):
     def parse(self, meta_file, idx, metas):
-        with open(meta_file, "r") as f:
-            for line in f.readlines():
+        with PetrelHelper.open(meta_file) as f:
+            for line in f:
                 cls_res = {}
                 res = json.loads(line.strip())
                 filename = res['filename']
@@ -54,8 +55,8 @@ class CustomClsParser(BaseParser):
 class CustomDetParser(BaseParser):
     def parse(self, meta_file, idx, metas):
         min_size = self.extra_info.get("min_size", 40)
-        with open(meta_file, "r") as f:
-            for line in f.readlines():
+        with PetrelHelper.open(meta_file) as f:
+            for line in f:
                 data = json.loads(line)
                 for instance in data.get("instances", []):
                     if instance.get('is_ignored', False):
