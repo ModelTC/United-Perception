@@ -1,4 +1,5 @@
 # Standard Library
+import json
 import copy
 import datetime
 import os
@@ -479,6 +480,50 @@ class AutoSaveBest(Hook):
             self.best_metric_val = metrics.v
             self.best_epoch = self.runner_ref().cur_epoch()
         logger.info(f'best epoch: {self.best_epoch}; best val: {self.best_metric_val}')
+
+
+@HOOK_REGISTRY.register('auto_save_metric')
+class AutoSaveMetric(Hook):
+    def __init__(self, runner, metric_json='checkpoints/metric.json', detail_metric=''):
+        super().__init__(runner)
+        self.metric_json = metric_json
+        self.detail_metric = detail_metric
+        self.inference_only = not runner.training
+        self._get_saved()
+
+    def _get_saved(self):
+        if os.path.exists(self.metric_json):
+            try:
+                self.metrics = json.load(open(self.metric_json))
+            except:  # noqa
+                self.metrics = []
+        else:
+            self.metrics = []
+        return self.metrics
+
+    def save_metric(self, js):
+        self.metrics.append(js)
+        d = os.path.dirname(self.metric_json)
+        if not os.path.exists(d):
+            os.makedirs(d, exist_ok=True)
+        with open(self.metric_json, 'w') as fw:
+            json.dump(self.metrics, fw, indent=2)
+
+    def after_eval(self, metrics):
+        metrics = dict(metrics)
+
+        if env.is_master() and not self.inference_only:
+            cur_epoch = self.runner_ref().cur_epoch()
+            cur_iter = self.runner_ref().cur_iter
+            js = {
+                'metrics': metrics,
+                'iter': cur_iter,
+                'epoch': cur_epoch,
+            }
+            if os.path.exists(self.detail_metric):
+                detail_metric = json.load(open(self.detail_metric))
+                js['metrics'] = detail_metric
+            self.save_metric(js)
 
 
 @HOOK_REGISTRY.register('reload')
