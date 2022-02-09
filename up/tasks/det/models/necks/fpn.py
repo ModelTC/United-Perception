@@ -70,6 +70,13 @@ class FPN(nn.Module):
         self.skip = skip
         assert num_level == len(out_strides)
 
+        if upsample == 'deconv':
+            self.deconv = nn.ConvTranspose2d(self.outplanes,
+                                             self.outplanes,
+                                             kernel_size=4,
+                                             stride=2,
+                                             padding=1)
+
         for lvl_idx in range(num_level):
             if lvl_idx < len(inplanes):
                 planes = inplanes[lvl_idx]
@@ -143,7 +150,9 @@ class FPN(nn.Module):
         # top down pathway
         for lvl_idx in range(len(self.inplanes))[::-1]:
             if lvl_idx < len(self.inplanes) - 1:
-                if self.tocaffe_friendly:
+                if self.upsample == 'deconv':
+                    laterals[lvl_idx] += self.deconv(laterals[lvl_idx + 1])
+                elif self.tocaffe_friendly:
                     laterals[lvl_idx] += F.interpolate(laterals[lvl_idx + 1],
                                                        scale_factor=2,
                                                        mode=self.upsample,
