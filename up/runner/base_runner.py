@@ -174,7 +174,7 @@ class BaseRunner(object):
             self.set_train_batch_size()
 
     def _remove_hooks(self, cfg_hooks):
-        need_remove_hooks = ['auto_save_best', 'reload', 'auto_checkpoint']
+        need_remove_hooks = ['auto_save_best', 'reload', 'auto_checkpoint', 'auto_save_best_multitask']
         remove_set = set()
         new_cfg_hooks = []
         for idx, hook in enumerate(cfg_hooks):

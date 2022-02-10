@@ -482,6 +482,48 @@ class AutoSaveBest(Hook):
         logger.info(f'best epoch: {self.best_epoch}; best val: {self.best_metric_val}')
 
 
+@HOOK_REGISTRY.register('auto_save_best_multitask')
+class AutoSaveBestMultiTask(AutoSaveBest):
+    """
+    """
+    def __init__(self, runner, tasks=[]):
+        super().__init__(runner)
+        if len(tasks) == 0:
+            tasks = runner._task_names  # save all
+        self.tasks = tasks
+
+        self.best_metrics = {}
+        for task in self.tasks:
+            self.best_metrics[task] = self.load_single_info(task)
+
+    def load_single_info(self, task):
+        ckpt_path = os.path.join(self.runner_ref().saver.save_dir, f'ckpt_best.{task}.pth')
+        if os.path.exists(ckpt_path):
+            ckpt = self.runner_ref().saver.load_checkpoint(ckpt_path)
+        else:
+            ckpt = {}
+        best_metric_val = ckpt.get('metric_val', -1)
+        best_epoch = ckpt.get('epoch', 0)
+        return best_metric_val, best_epoch
+
+    def after_eval(self, metrics):
+        key_metrics = {}
+        for m in metrics:
+            if m.startswith('key.'):
+                for task in self.tasks:
+                    if m.startswith(f'key.{task}'):
+                        key_metrics[task] = metrics[m]
+
+        epoch = self.runner_ref().cur_epoch()
+        for task, metric_val in key_metrics.items():
+            if metric_val > self.best_metrics[task][0]:
+                self._save_best(f'best.{task}', metric_val)
+
+                self.best_metrics[task] = metric_val, epoch
+            best_metric_val, best_epoch = self.best_metrics[task]
+            logger.info(f'Task {task}: best epoch: {best_epoch}; best val: {best_metric_val}')
+
+
 @HOOK_REGISTRY.register('auto_save_metric')
 class AutoSaveMetric(Hook):
     def __init__(self, runner, metric_json='checkpoints/metric.json', detail_metric=''):
