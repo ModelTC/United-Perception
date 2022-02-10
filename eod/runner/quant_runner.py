@@ -4,8 +4,7 @@ from eod.utils.env.gene_env import get_env_info
 from eod.utils.env.dist_helper import env
 from eod.utils.general.log_helper import default_logger as logger
 from eod.utils.general.cfg_helper import format_cfg
-import torch
-
+from mqbench.utils.state import enable_calibration, enable_quantization
 
 __all__ = ['QuantRunner']
 
@@ -13,6 +12,7 @@ __all__ = ['QuantRunner']
 @RUNNER_REGISTRY.register("quant")
 class QuantRunner(BaseRunner):
     def __init__(self, config, work_dir='./', training=True):
+        self.do_ptq = True
         super(QuantRunner, self).__init__(config, work_dir, training)
 
     def split_cfg(self):
@@ -28,16 +28,17 @@ class QuantRunner(BaseRunner):
         self.build_ema()
         self.build_saver()
         self.build_hooks()
+        self.load_ckpt()
         if self.training:
-            self.resume_model()
+            self.resume_model_from_fp()
             self.quantize_model()
-            self.calibrate()
             self.build_trainer()
-            self.eval_ptq()
+            self.resume_model_from_quant()
+            if self.do_ptq:
+                self.calibrate()
         else:
             self.quantize_model()
-            self.load_checkpoint()
-            from mqbench.utils.state import enable_quantization
+            self.resume_model_from_quant()
             enable_quantization(self.model)
         self.prepare_dist_model()
         get_env_info()
@@ -60,19 +61,25 @@ class QuantRunner(BaseRunner):
         if self.fp16:
             self.model = self.model.half()
 
-    def load_checkpoint(self):
-        def remove_prefix(state_dict, prefix):
-            """Old style model is stored with all names of parameters share common prefix 'module.'"""
-            f = lambda x: x.split(prefix, 1)[-1] if x.startswith(prefix) else x
-            return {f(key): value for key, value in state_dict.items()}
+    def load_ckpt(self):
+        self.ckpt = self.saver.load_pretrain_or_resume()
+        if 'ema' in self.ckpt:
+            if "ema_state_dict" in self.ckpt['ema']:
+                self.ckpt['model'] = self.ckpt['ema']['ema_state_dict']
 
-        ckpt = torch.load(self.config['saver']['pretrain_model'])
-        if 'ema' in ckpt and self.ema is not None:
-            state_trained = ckpt['ema']['ema_state_dict']
-        else:
-            state_trained = ckpt['model']
-        state_trained = remove_prefix(state_trained, 'module.')
-        self.model.load_state_dict(state_trained)
+    def resume_model_from_fp(self):
+        if 'qat' not in self.ckpt:
+            self.model.load_state_dict(self.ckpt['model'])
+
+    def resume_model_from_quant(self):
+        if 'qat' in self.ckpt:
+            self.do_ptq = False
+            self.model.load_state_dict(self.ckpt['model'])
+            if self.ckpt['qat'] and self.training and 'optimizer' in self.ckpt:
+                start_epoch = self.ckpt['epoch']
+                self.optimizer.load_state_dict(self.ckpt['optimizer'])
+                self.lr_scheduler.load_state_dict(self.ckpt['lr_scheduler'])
+                logger.info(f'resume from epoch:{start_epoch} iteration:{self.cur_iter}')
 
     def forward_model(self, batch):
         output = self.model(batch)
@@ -131,28 +138,40 @@ class QuantRunner(BaseRunner):
 
     def calibrate(self):
         logger.info("calibrate model")
-        from mqbench.utils.state import enable_calibration, enable_quantization
         self.model.eval().cuda()
         enable_calibration(self.model)
         for _ in range(self.config['quant']['cali_batch_size']):
             batch = self.get_batch('train')
             self.model(batch)
         enable_quantization(self.model)
+        self.eval_ptq()
+        self.save_ptq()
 
     def eval_ptq(self):
         self.model.eval()
         self.evaluate()
-        self.save_ptq()
 
     def save_ptq(self):
         save_dict = self.get_dump_dict()
         save_dict['spacial_name'] = 'ptq_model'
+        save_dict['qat'] = False
+        if env.is_master():
+            self.saver.save(**save_dict)
+
+    def save(self, auto_save=None, lns=None):
+        save_dict = self.get_dump_dict()
+        if auto_save is not None:
+            save_dict['auto_save'] = auto_save
+        if lns is not None:
+            save_dict['lns'] = lns
+        save_dict['qat'] = True
         if env.is_master():
             self.saver.save(**save_dict)
 
     def train(self):
-        if self.config['quant']['ptq_only'] == True:
+        if self.config['quant']['ptq_only']:
             return
+        enable_quantization(self.model)
         self.model.train()
         for iter_idx in range(self.start_iter, self.max_iter):
             batch = self.get_batch('train')

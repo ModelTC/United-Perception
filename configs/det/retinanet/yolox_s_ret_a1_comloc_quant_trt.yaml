@@ -11,6 +11,7 @@ runtime:
         deploy: False
 
 quant:
+    ptq_only: False
     deploy_backend: tensorrt
     cali_batch_size: 900
     prepare_args:
@@ -156,7 +157,7 @@ trainer: # Required.
 saver:
   save_dir: checkpoints/yolox_s_ret_a1_comloc_quant_trt
   results_dir: results_dir/yolox_s_ret_a1_comloc_quant_trt
-  pretrain_model: pretrained_fp32/ckpt_best.pth
+  resume_model: pretrained_fp32/ckpt_best.pth
   auto_resume: False
 
 
