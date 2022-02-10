@@ -3,6 +3,7 @@ from .base_runner import BaseRunner
 from up.utils.general.registry_factory import MODEL_HELPER_REGISTRY, RUNNER_REGISTRY
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.env.gene_env import print_network
+from up.utils.general.saver_helper import Saver
 from up.tasks.distill import Mimicker, MimicJob
 
 __all__ = ['KDRunner']
@@ -26,9 +27,18 @@ class KDRunner(BaseRunner):
             self.model = self.model.half()
             self.teacher_model = self.teacher_model.half()
         if self.config['mimic']['teacher'].get('teacher_weight', None):
-            ckpt = torch.load(self.config['mimic']['teacher']['teacher_weight'])
-            print(ckpt.keys())
-            self.teacher_model.load(ckpt['ema'])
+            teacher_weight_path = self.config['mimic']['teacher']['teacher_weight']
+            logger.info(f'loading teacher weight: {teacher_weight_path}')
+            state = Saver.load(teacher_weight_path)
+            if 'ema' in state:
+                if "ema_state_dict" in state['ema']:
+                    logger.info("Load ema pretrain model")
+                    st = state['ema']['ema_state_dict']
+                else:
+                    st = state['model']
+            else:
+                st = state['model']
+            self.teacher_model.load(st)
 
         if self.config['mimic']['teacher'].get('teacher_bn_mode', None) == 'train':
             self.teacher_model.train()
