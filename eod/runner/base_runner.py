@@ -292,7 +292,8 @@ class BaseRunner(object):
         if env.distributed:
             if self.backend == 'dist':
                 logger.info('using ddp')
-                self.model = DDP(self.model, device_ids=[env.local_rank], broadcast_buffers=False)
+                self.model = DDP(self.model, device_ids=[env.local_rank], broadcast_buffers=False,
+                                 find_unused_parameters=True)
             else:
                 self.model = DistModule(self.model, not self.args.get('asynchronize', False))
 

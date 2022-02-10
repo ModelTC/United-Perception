@@ -75,6 +75,7 @@ class QuantDeploy(object):
         from mqbench.prepare_by_platform import BackendType
         return {'tensorrt': BackendType.Tensorrt,
                 'snpe': BackendType.SNPE,
+                'vitis': BackendType.Vitis,
                 'academic': BackendType.Academic}
 
     def get_leaf_module(self, leaf_module):
@@ -111,6 +112,7 @@ class QuantDeploy(object):
         if extra_quantizer_dict is not None:
             prepare_custom_config_dict['extra_quantizer_dict'] = self.get_extra_quantizer_dict(extra_quantizer_dict)
         self.model.train().cuda()
+        self.model.deploy = True
         self.model = prepare_by_platform(self.model,
                                          self.backend_type[deploy_backend], prepare_custom_config_dict)
         self.model.cuda()

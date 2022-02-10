@@ -135,7 +135,6 @@ class CSPDarknet(nn.Module):
         base_depth = max(round(dep_mul * 3), 1)  # 3
 
         self.out_planes = []
-
         # stem
         if focus_type == 'v5_focus':
             self.stem = Focus(input_channels, base_channels,

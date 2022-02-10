@@ -25,13 +25,15 @@ class YoloxPAFPN(nn.Module):
                  upsample='nearest',
                  align_corners=True,
                  normalize={'type': 'solo_bn'},
-                 downsample_plane=256):
+                 downsample_plane=256,
+                 tocaffe_friendly=False):
         super(YoloxPAFPN, self).__init__()
         self.inplanes = inplanes
         in_channels = inplanes
         self.outplanes = inplanes
         self.out_strides = out_strides
         self.num_level = len(out_strides)
+        self.tocaffe_friendly = tocaffe_friendly
         Conv = DWConv if depthwise else ConvBnAct
 
         self.upsample = upsample
@@ -95,7 +97,14 @@ class YoloxPAFPN(nn.Module):
         features = []
 
         fpn_out0 = self.lateral_conv0(x0)  # 1024->512/32
-        f_out0 = F.interpolate(fpn_out0,
+        if self.tocaffe_friendly:
+            f_out0 = F.interpolate(fpn_out0,
+                               #size=x1.shape[-2:],
+                               scale_factor = 2,
+                               mode=self.upsample,
+                               align_corners=self.align_corners)
+        else:
+            f_out0 = F.interpolate(fpn_out0,
                                size=x1.shape[-2:],
                                mode=self.upsample,
                                align_corners=self.align_corners)
@@ -104,7 +113,13 @@ class YoloxPAFPN(nn.Module):
         # features.append(f_out0)
 
         fpn_out1 = self.reduce_conv1(f_out0)  # 512->256/16
-        f_out1 = F.interpolate(fpn_out1,
+        if self.tocaffe_friendly:
+            f_out1 = F.interpolate(fpn_out1,
+                               scale_factor = 2,
+                               mode=self.upsample,
+                               align_corners=self.align_corners)
+        else:
+            f_out1 = F.interpolate(fpn_out1,
                                size=x2.shape[-2:],
                                mode=self.upsample,
                                align_corners=self.align_corners)

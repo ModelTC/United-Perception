@@ -4,9 +4,6 @@ num_classes: &num_classes 81
 runtime:
     runner:
       type: quant
-    model_helper:
-      kwargs:
-        deploy: False
 
 quant:
     ptq_only: False
