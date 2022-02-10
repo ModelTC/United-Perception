@@ -29,7 +29,7 @@ class KDRunner(BaseRunner):
         if self.config['mimic']['teacher'].get('teacher_weight', None):
             teacher_weight_path = self.config['mimic']['teacher']['teacher_weight']
             logger.info(f'loading teacher weight: {teacher_weight_path}')
-            state = Saver.load(teacher_weight_path)
+            state = Saver.load_checkpoint(teacher_weight_path)
             if 'ema' in state:
                 if "ema_state_dict" in state['ema']:
                     logger.info("Load ema pretrain model")
