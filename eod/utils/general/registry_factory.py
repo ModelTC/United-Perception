@@ -13,9 +13,13 @@ BATCHING_REGISTRY = Registry()
 
 # predictor
 ROI_PREDICTOR_REGISTRY = Registry()
+MASK_PREDICTOR_REGISTRY = Registry()
+FCOS_PREDICTOR_REGISTRY = Registry()
 
 # supervisior
 ROI_SUPERVISOR_REGISTRY = Registry()
+MASK_SUPERVISOR_REGISTRY = Registry()
+FCOS_SUPERVISOR_REGISTRY = Registry()
 
 # matcher
 MATCHER_REGISTRY = Registry()

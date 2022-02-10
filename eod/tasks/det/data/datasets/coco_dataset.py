@@ -23,6 +23,7 @@ from eod.utils.general.registry_factory import DATASET_REGISTRY
 from eod.utils.general.global_flag import ALIGNED_FLAG
 from eod.data.datasets.base_dataset import BaseDataset
 from eod.data.data_utils import get_image_size
+from eod.tasks.det.data.datasets.det_transforms import boxes2polygons
 
 
 __all__ = ['CocoDataset']
@@ -265,6 +266,14 @@ class CocoDataset(BaseDataset):
             bbox[2] += bbox[0] - ALIGNED_FLAG.offset
             bbox[3] += bbox[1] - ALIGNED_FLAG.offset
             gt_bboxes.append(bbox)
+
+            if self.has_mask:
+                if self.box2mask:
+                    polygons = [boxes2polygons([bbox], sample=4 * 4).reshape(-1)]
+                    gt_masks.append(polygons)
+                else:
+                    polygons = [np.array(poly, dtype=np.float32) for poly in ann['segmentation']]
+                    gt_masks.append(polygons)
 
         if len(ig_bboxes) == 0:
             ig_bboxes = self._fake_zero_data(1, 4)

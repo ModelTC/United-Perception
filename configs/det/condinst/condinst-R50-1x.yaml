@@ -1,0 +1,238 @@
+num_classes: &num_classes 81
+
+flip: &flip
+ type: flip
+ kwargs:
+   flip_p: 0.5
+
+resize: &resize
+ type: keep_ar_resize
+ kwargs:
+   scales: [640, 672, 704, 736, 768, 800]
+   max_size: 1333
+   separate_wh: True
+
+test_resize: &test_resize
+ type: keep_ar_resize
+ kwargs:
+   scales: [800]
+   max_size: 1333
+   separate_wh: True
+
+to_tensor: &to_tensor
+  type: to_tensor
+
+normalize: &normalize
+ type: normalize
+ kwargs:
+   mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
+   std: [0.229, 0.224, 0.225]
+
+dataset: # Required.
+  train:
+    dataset:
+      type: coco
+      kwargs:
+        source: train  # dataset id
+        meta_file: coco/annotations/instances_train2017.json
+        has_mask: True
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: coco/train2017
+            color_mode: RGB
+        transformer: [*flip, *resize, *to_tensor, *normalize]
+  test:
+    dataset:
+      type: coco
+      kwargs:
+        source: val
+        meta_file: &gt_file coco/annotations/instances_val2017.json
+        has_mask: True
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: coco/val2017
+            color_mode: RGB
+        transformer: [*resize, *to_tensor, *normalize]
+        evaluator:
+          type: COCO               # choices = {'COCO', 'VOC', 'MR'}
+          kwargs:
+            gt_file: *gt_file
+            iou_types: [bbox, segm]
+  batch_sampler:
+    type: aspect_ratio_group
+    kwargs:
+      sampler:
+        type: dist
+        kwargs: {}
+      batch_size: 2
+      aspect_grouping: [1,]
+  dataloader:
+    type: base
+    kwargs:
+      num_workers: 4
+      alignment: 64
+
+trainer: # Required.
+  max_epoch: 12.278                 # total epochs for the training
+  test_freq: 13
+  optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
+    type: SGD
+    kwargs:
+      lr: 0.000625
+      momentum: 0.9
+      weight_decay: 0.0001
+  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
+    warmup_epochs: 0.13643         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_type: linear
+    warmup_ratio: 0.001
+    type: MultiStepLR
+    kwargs:
+      milestones: [8.1855, 10.91]     # epochs to decay lr
+      gamma: 0.1            # decay rate          
+
+saver: # Required.
+  save_dir: checkpoints     # dir to save checkpoints
+  pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth
+  results_dir: results_dir  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+                     # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+
+
+hooks:
+  - type: auto_checkpoint
+
+net:
+  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+    type: resnet50
+    kwargs:
+      frozen_layers: [0,1]     # layer0...1 is fixed
+      out_layers: [2,3,4]       # layer1...4, commonly named Conv2...5
+      out_strides: [8,16,32]    # tell the strides of output features
+      normalize:
+        type: freeze_bn
+      initializer:
+        method: msra
+  - name: neck
+    prev: backbone
+    type: FPN
+    kwargs:
+      outplanes: 256
+      start_level: 3
+      num_level: 5                # if num_level>len(backbone.out_layers), additional conv with be stacked.
+      out_strides: [8,16,32,64,128] # strides of output features. aka., anchor strides for roi_head
+      downsample: conv            # method to downsample, for FPN, it's pool, for RetienaNet, it's conv
+      upsample: nearest           # method to interp, nearest or bilinear
+      initializer:
+        method: xavier
+  - name: roi_head
+    prev: neck
+    type: FcosHead
+    kwargs:
+      num_conv: 4
+      feat_planes: 256        # channels of intermediate conv
+      num_classes: *num_classes  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      dense_points: &dense_points 1
+      loc_ranges: &loc_ranges [[-1, 64], [64, 128], [128, 256], [256, 512], [512, 100000]]
+      class_activation: sigmoid
+      init_prior: 0.01
+      initializer:
+        method: normal
+        std: 0.01
+      normalize:
+        type: gn
+        kwargs:
+          num_groups: 32
+      has_mask: &has_mask True
+  - name: fcos_post
+    prev: roi_head
+    type: fcos_post 
+    kwargs:   
+      num_classes: *num_classes  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      dense_points: *dense_points
+      loc_ranges: *loc_ranges
+      has_mask: *has_mask
+      cfg:
+        loc_loss:
+          type: iou_loss
+          kwargs:
+            loss_type: giou
+        cls_loss:
+          type: sigmoid_focal_loss
+          kwargs:
+            alpha: 0.25
+            gamma: 2.0
+            init_prior: 0.01
+        center_loss:
+          type: sigmoid_cross_entropy
+        center_generator:
+          type: fcos
+          kwargs:
+            dense_points: *dense_points
+        fcos_supervisor:
+          type: fcos
+          kwargs:
+            norm_on_bbox: True
+            mask_out_stride: 4
+            matcher:
+              type: fcos
+              kwargs:
+                center_sample: True
+                pos_radius: 1.5
+        fcos_predictor:
+          type: fcos
+          kwargs:
+            norm_on_bbox: True
+            pre_nms_score_thresh: 0.05  # to reduce computation
+            pre_nms_top_n: 6000
+            post_nms_top_n: 1000
+            roi_min_size: 0               # minimum scale of a valid roi
+            merger:
+              type: retina
+              kwargs:
+                top_n: 100
+                nms:
+                  type: naive
+                  nms_iou_thresh: 0.6     # Required in RetinaNet. DO not nms in FPN across levels
+  - name: mask_head
+    prev: neck
+    type: CondinstHead
+    kwargs:
+      feat_planes: &feat_planes 256
+      dense_points: *dense_points
+      mask_gen_params: &mask_gen_params 169
+      feat_layers: 3
+      branch_channels: 128
+      branch_num_convs: 4
+      branch_num_outputs: &branch_num_outputs 8 
+      normalize:
+        type: gn
+        kwargs:
+          num_groups: 32
+  - name: mask_post
+    prev: mask_head
+    type: condinst_post
+    kwargs:  
+      dense_points: *dense_points
+      mask_gen_params: *mask_gen_params
+      branch_num_outputs: *branch_num_outputs
+      head_channels: 8
+      head_num_convs: 3
+      mask_out_stride: 4  
+      mask_feat_stride: 8
+      disable_rel_coords: False
+      sizes_of_interest:  [64, 128, 256, 512]
+      cfg:        
+        center_generator:
+          type: fcos
+          kwargs:
+            dense_points: 1
+        condinst_supervisor:
+          type: condinst
+          kwargs:
+            max_proposals: 500
+            topk_proposals_per_im: -1
+        condinst_predictor:
+          type: condinst
+

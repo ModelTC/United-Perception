@@ -32,7 +32,6 @@ class RoiPredictor(object):
                  nms=None,
                  clip_box=True):
         self.pre_nms_score_thresh = pre_nms_score_thresh
-        # self.apply_score_thresh_above = apply_score_thresh_above
         self.pre_nms_top_n = pre_nms_top_n
         self.post_nms_top_n = post_nms_top_n
         self.nms_cfg = nms
@@ -45,17 +44,23 @@ class RoiPredictor(object):
 
     @torch.no_grad()
     @to_float32
-    def predict(self, mlvl_anchors, mlvl_preds, image_info):
+    def predict(self, mlvl_anchors, mlvl_preds, image_info, return_pos_inds=None):
         mlvl_resutls = []
-        for anchors, preds in zip(mlvl_anchors, mlvl_preds):
-            results = self.single_level_predict(anchors, preds, image_info)
+        num_points = 0
+        for lvl, (anchors, preds) in enumerate(zip(mlvl_anchors, mlvl_preds)):
+            self.lvl = lvl
+            results = self.single_level_predict(anchors, preds, image_info, num_points, return_pos_inds)
+            num_points += len(anchors)
             mlvl_resutls.append(results)
         if len(mlvl_resutls) > 0:
             results = torch.cat(mlvl_resutls, dim=0)
         else:
-            results = mlvl_anchors[0].new_zeros((1, 7))
+            results = mlvl_anchors[0].new_zeros((1, 8)) if return_pos_inds else mlvl_anchors[0].new_zeros((1, 7))
         if self.merger is not None:
             results = self.merger.merge(results)
+        if return_pos_inds:
+            results, pos_inds = torch.split(results, [7, 1], dim=1)
+            return {'dt_bboxes': results, 'pos_inds': pos_inds}
         return {'dt_bboxes': results}
 
     def regression(self, anchors, preds, image_info):
@@ -65,7 +70,7 @@ class RoiPredictor(object):
         rois = offset2bbox(concat_anchors.view(B * K, 4), loc_pred.view(B * K, 4)).view(B, K, 4)  # noqa
         return rois
 
-    def single_level_predict(self, anchors, preds, image_info):
+    def single_level_predict(self, anchors, preds, image_info, num_points, return_pos_inds=None):
         """
         Arguments:
             - anchors (FloatTensor, fp32): [K, 4]
@@ -95,16 +100,19 @@ class RoiPredictor(object):
         for b_ix in range(B):
             # clip rois and filter rois which are too small
             image_rois = rois[b_ix]
+            image_inds = torch.arange(K, dtype=torch.int64, device=image_rois.device)
             if self.clip_box:
                 image_rois = clip_bbox(image_rois, image_info[b_ix])
             image_rois, filter_inds = filter_by_size(image_rois, roi_min_size)
             image_cls_pred = cls_pred[b_ix][filter_inds]
+            image_inds = image_inds[filter_inds]
             if image_rois.numel() == 0:
                 continue  # noqa E701
 
             for cls in range(C):
                 cls_rois = image_rois
                 scores = image_cls_pred[:, cls]
+                cls_inds = image_inds
                 assert not torch.isnan(scores).any()
                 if score_thresh > 0:
                     # to reduce computation
@@ -113,12 +121,13 @@ class RoiPredictor(object):
                         continue  # noqa E701
                     cls_rois = cls_rois[keep_idx]
                     scores = scores[keep_idx]
-
+                    cls_inds = cls_inds[keep_idx]
                 # do nms per image, only one class
                 _pre_nms_top_n = min(pre_nms_top_n, scores.shape[0])
                 scores, order = scores.topk(_pre_nms_top_n, sorted=True)
                 cls_rois = cls_rois[order, :]
-                cls_rois = torch.cat([cls_rois, scores[:, None]], dim=1)
+                cls_inds = cls_inds[order]
+                cls_rois = torch.cat([cls_rois, scores[:, None], cls_inds[:, None]], dim=1)
 
                 if self.nms_cfg is not None:
                     cls_rois, keep_idx = nms(cls_rois, self.nms_cfg)
@@ -127,12 +136,19 @@ class RoiPredictor(object):
 
                 ix = cls_rois.new_full((cls_rois.shape[0], 1), b_ix)
                 c = cls_rois.new_full((cls_rois.shape[0], 1), cls + 1)
-                cls_rois = torch.cat([ix, cls_rois, c], dim=1)
+                cls_rois, cls_inds = torch.split(cls_rois, [5, 1], dim=1)
+                if return_pos_inds:
+                    cls_rois = torch.cat([ix, cls_rois, c, cls_inds], dim=1)
+                else:
+                    cls_rois = torch.cat([ix, cls_rois, c], dim=1)
                 batch_rois.append(cls_rois)
 
         if len(batch_rois) == 0:
-            return anchors.new_zeros((1, 7))
-        return torch.cat(batch_rois, dim=0)
+            return anchors.new_zeros((1, 8)) if return_pos_inds else anchors.new_zeros((1, 7))
+        results = torch.cat(batch_rois, dim=0)
+        if return_pos_inds:
+            results[:, 7].add_(num_points)
+        return results
 
 
 @ROI_PREDICTOR_REGISTRY.register('base_multicls')
