@@ -178,14 +178,8 @@ class ModelHelper(nn.Module):
         info = "Loading {}:{} shared keys, {} unexpected keys, {} missing keys.".format(
             mname, len(shared_keys), len(unexpected_keys), len(missing_keys))
 
-        missing_keys = [k for k in sorted(missing_keys) if '.num_batches_tracked' not in k]
-        unexpected_keys = [k for k in sorted(unexpected_keys) if '.num_batches_tracked' not in k]
-
         if len(missing_keys) > 0:
             info += "\nmissing keys are as follows:\n    {}".format("\n    ".join(missing_keys))
-
-        if len(unexpected_keys) > 0:
-            info += "\nunexpected keys are as follows:\n    {}".format("\n    ".join(unexpected_keys))
         logger.info(info)
 
     def state_dict(self, destination=None, prefix='', keep_vars=False, model_cfg=False):
