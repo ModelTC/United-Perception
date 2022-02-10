@@ -82,16 +82,24 @@ class KDRunner(BaseRunner):
         else:
             return loss
 
+    def forward_train(self, batch):
+        assert self.model.training
+        self._hooks('before_forward', self.cur_iter, batch)
+        loss, output = self.forward(batch, return_output=True)
+        return loss, output
+
     def train(self):
         self.model.cuda().train()
         for iter_idx in range(self.start_iter, self.max_iter):
             self.mimicker.prepare()
             batch = self.get_batch('train')
-            task_loss = self.forward_train(batch)
+            task_loss, output = self.forward_train(batch)
             with torch.no_grad():
                 self.teacher_model(batch)
             loss = self.mimicker.mimic()
             loss = sum(loss)
+            output['KD.loss'] = loss
+            self._hooks('after_forward', self.cur_iter, output)
             if self.task_loss:
                 loss += task_loss
             self.backward(loss)
