@@ -1,8 +1,11 @@
 import os
+import torch
 import json
 
+from up.data.metrics.base_evaluator import Metric
 from up.runner.base_runner import BaseRunner
 from up.utils.general.log_helper import default_logger as logger
+from up.utils.env.dist_helper import env, barrier
 from up.utils.general.registry_factory import RUNNER_REGISTRY
 
 
@@ -105,9 +108,26 @@ class MultiTaskRunner(BaseRunner):
                         self._test_model_idxs)):
                 yield model_idx, task_name, data_name, task_idx
 
+    @torch.no_grad()
+    def sub_evaluate(self):
+        res_file, all_device_results_list = self.inference()
+        if env.is_master():
+            logger.info("begin evaluate")
+            metrics = self.data_loaders['test'].dataset.evaluate(
+                res_file, all_device_results_list)
+            logger.info(json.dumps(metrics, indent=2))
+        else:
+            metrics = Metric({})
+        barrier()
+
+        # self._hooks('after_eval', metrics)
+        self.set_cur_eval_iter()
+        return metrics
+
     def evaluate(self):
         total_results_dir = self.results_dir
         metrics = None
+        self._multitask_metrics = {}
 
         for model_idx, task_name, data_name, task_idx in self._get_eval_params(
         ):
@@ -134,8 +154,9 @@ class MultiTaskRunner(BaseRunner):
                 if 'test' in self.data_iterators:
                     del self.data_iterators['test']
 
-            # eval
-            m = super().evaluate()
+            # eval: only use hook once
+            # m = super().evaluate()
+            m = self.sub_evaluate()
 
             # rename
             m.update({f'all.{task_name}.{k}': v for k, v in m.items()})
@@ -145,6 +166,10 @@ class MultiTaskRunner(BaseRunner):
                 metrics = m
             else:
                 metrics.update(m)
+
+            # save key metric
+            self._multitask_metrics[task_name] = {m.cmp_key: m.v}
+            metrics[f'key.{task_name}.{m.cmp_key}'] = m.v
 
             # restore loader
             if backup_loader is not None:
