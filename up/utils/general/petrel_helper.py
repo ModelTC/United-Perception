@@ -3,6 +3,7 @@ import io
 import torch
 import json
 import time
+import configparser
 
 from collections import defaultdict
 
@@ -81,6 +82,8 @@ class PetrelHelper(object):
         if 's3://' not in path:
             assert os.path.exists(path), f'No such file: {path}'
             return torch.load(path, map_location=map_location)
+        elif 'http://' in path:
+            return torch.hub.load_state_dict_from_url(path, map_location=map_location)
         else:
             self.check_init()
 
@@ -91,7 +94,45 @@ class PetrelHelper(object):
 
     @staticmethod
     def load(path, **kwargs):
+        if '.ini' in path:
+            path = path[4:]
+        if not os.path.exists(path) and os.path.exists(path + '.ini'):
+            # get realpath
+            conf = configparser.ConfigParser()
+            conf.read(path + '.ini')
+            path = conf['Link']['ceph']
         return PetrelHelper._petrel_helper.load_pretrain(path, **kwargs)
+
+    def save_checkpoint(self, model, path):
+        if 's3://' not in path:
+            torch.save(model, path)
+        else:
+            with io.BytesIO() as f:
+                torch.save(model, f)
+                f.seek(0)
+                self.client.put(path, f)
+
+    @staticmethod
+    def save(model, path, ceph_path=None):
+        if ceph_path:
+            # save link
+            lustre_path = os.path.abspath(path)
+
+            link_path = path + '.ini'
+            config = configparser.ConfigParser()
+            config.add_section("Link")
+            config.set("Link", "path", path)
+            config.set("Link", "lustre", lustre_path)
+            config.set("Link", "ceph", ceph_path)
+
+            # save model to ceph_path
+            ret = PetrelHelper._petrel_helper.save_checkpoint(model, ceph_path)
+
+            # save model before saving ini
+            config.write(open(link_path, "w"))
+            return ret
+        else:
+            return PetrelHelper._petrel_helper.save_checkpoint(model, path)
 
 
 __petrel_helper = PetrelHelper()

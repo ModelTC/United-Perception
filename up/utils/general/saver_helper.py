@@ -1,6 +1,7 @@
 # Standard Library
 import json
 import os
+# from re import I
 import shutil
 
 # Import from third library
@@ -82,6 +83,14 @@ class Saver(object):
 
     @staticmethod
     def load_checkpoint(ckpt_path):
+        # assert os.path.exists(ckpt_path), f'No such file: {ckpt_path}'
+        device = torch.cuda.current_device()
+        # ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
+        ckpt_dict = PetrelHelper.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
+        return Saver.process_checkpoint(ckpt_dict)
+
+    @staticmethod
+    def process_checkpoint(ckpt_dict):
         """Load state_dict from checkpoint"""
 
         def prototype_convert(state_dict):
@@ -172,11 +181,6 @@ class Saver(object):
             f = lambda x: x.split(prefix, 1)[-1] if x.startswith(prefix) else x
             return {f(key): value for key, value in state_dict.items()}
 
-        # assert os.path.exists(ckpt_path), f'No such file: {ckpt_path}'
-        device = torch.cuda.current_device()
-        # ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
-        ckpt_dict = PetrelHelper.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
-
         if 'model' in ckpt_dict:
             state_dict = ckpt_dict['model']
         elif 'state_dict' in ckpt_dict:
@@ -242,6 +246,65 @@ class Saver(object):
     def find_last_checkpoint(self):
         last_ckpt_path = os.path.join(self.save_dir, "ckpt_latest.pth")
         if os.path.exists(last_ckpt_path):
+            return last_ckpt_path
+        else:
+            return None
+
+
+@SAVER_REGISTRY.register('ceph')
+class CephSaver(Saver):
+    def __init__(self, save_cfg, yml_path=None, work_dir='./'):
+        super().__init__(save_cfg, yml_path, work_dir)
+
+        self.ceph_dir = save_cfg['ceph_dir']
+
+    def get_ceph_ckpt_dir(self, ckpt_path):
+        return os.path.join(self.ceph_dir, os.path.abspath(ckpt_path)[1:])
+
+    def save(self, epoch, iter, **kwargs):
+        """Save model checkpoint for one epoch"""
+        os.makedirs(self.save_dir, exist_ok=True)
+        # Assume we warmup for a epochs and training a+b epochs in total,
+        # then our checkpoints are named of ckpt_e{-a+1}.pth ~ ckpt_e{b}.pth
+        # if best in kwargs, we save the best ckpt as ckpt_best.path.auto
+        if 'suffix' in kwargs:
+            suffix = kwargs['suffix']
+            ckpt_path = os.path.join(self.save_dir, 'ckpt_e{}-{}.pth'.format(epoch, suffix))
+        elif 'auto_save' in kwargs:
+            ckpt_path = os.path.join(self.save_dir, 'ckpt_{}.pth'.format(kwargs['auto_save']))
+        else:
+            ckpt_path = os.path.join(self.save_dir, 'ckpt_e{}.pth'.format(epoch))
+        # since epoch not in kwargs
+        kwargs['epoch'] = epoch
+        kwargs['iter'] = iter
+        kwargs['metric_val'] = kwargs.get('metric_val', -1)
+        lns_latest_ckpt = kwargs.pop('lns', True)
+
+        # save
+        # torch.save(kwargs, ckpt_path)
+        ceph_ckpt_path = self.get_ceph_ckpt_dir(ckpt_path)
+        try:
+            PetrelHelper.save(kwargs, ckpt_path, ceph_ckpt_path)
+        except Exception as e:  # noqa
+            logger.warn(
+                'Exception found during save checkpoint.\n'
+                f'Exception info: {e}\n'
+                'checkpoint will be save to local disk.'
+            )
+            ceph_ckpt_path = os.path.abspath(ckpt_path)
+            PetrelHelper.save(kwargs, ckpt_path, ceph_ckpt_path)
+
+        if lns_latest_ckpt:
+            latest_path = os.path.join(self.save_dir, 'ckpt_latest.pth')
+            self.lns_latest_ckpt(ckpt_path, latest_path)
+        return ckpt_path
+
+    def lns_latest_ckpt(self, ckpt_path, new_path):
+        return super().lns_latest_ckpt(ckpt_path + '.ini', new_path + '.ini')
+
+    def find_last_checkpoint(self):
+        last_ckpt_path = os.path.join(self.save_dir, "ckpt_latest.pth")
+        if os.path.exists(last_ckpt_path) or os.path.exists(last_ckpt_path + '.ini'):
             return last_ckpt_path
         else:
             return None
