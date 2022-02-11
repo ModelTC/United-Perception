@@ -6,9 +6,6 @@ runtime:
 
     runner:
       type: quant
-    model_helper:
-      kwargs:
-        deploy: False
 
 quant:
     ptq_only: False

@@ -95,6 +95,7 @@ class QuantRunner(BaseRunner):
         from mqbench.prepare_by_platform import BackendType
         return {'tensorrt': BackendType.Tensorrt,
                 'snpe': BackendType.SNPE,
+                'vitis': BackendType.Vitis,
                 'academic': BackendType.Academic}
 
     def get_leaf_module(self, leaf_module):
