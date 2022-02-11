@@ -99,16 +99,28 @@ def get_trainerinfo_from_cfg(cfg):
 
 
 def get_task_from_cfg(cfg):
-    task_dict = {
-        'coco': 'det',
-        'custom': 'det',
-        'lvis': 'det',
-        'cls': 'cls',
-        'seg': 'seg',
-        'none': 'none'
-    }
-    dataset_type = cfg['dataset'].get('train', {}).get('dataset', {}).get('type', 'none')
-    return task_dict[dataset_type]
+    cfg['runtime'] = cfg.setdefault('runtime', {})
+    task_info = ''
+    if 'task_names' in cfg['runtime']:
+        task_names = cfg['runtime']['task_names']
+        if isinstance(task_names, list):
+            for task_name in task_names:
+                task_info = task_info + str(task_name) + '_'
+            task_info = task_info[:-1]
+        else:
+            task_info = str(task_names)
+    else:
+        task_dict = {
+            'coco': 'det',
+            'custom': 'det',
+            'lvis': 'det',
+            'cls': 'cls',
+            'seg': 'seg',
+            'unknown': 'unknown'
+        }
+        dataset_type = cfg['dataset'].get('train', {}).get('dataset', {}).get('type', 'unknown')
+        task_info = task_dict.get(dataset_type, 'unknown')
+    return task_info
 
 
 def get_predictor_from_cfg(cfg):
