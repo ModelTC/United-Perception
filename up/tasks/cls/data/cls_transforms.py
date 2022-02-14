@@ -18,7 +18,9 @@ __all__ = [
     'TorchResize',
     'TorchCenterCrop',
     'TorchMixUp',
-    'RandomErasing']
+    'RandomErasing',
+    'RandAugment',
+    'RandAugIncre']
 
 
 class TorchAugmentation(Augmentation):
@@ -65,6 +67,50 @@ class TorchResize(TorchAugmentation):
 class TorchCenterCrop(TorchAugmentation):
     def __init__(self, size, **kwargs):
         self.op = transforms.CenterCrop(size, **kwargs)
+
+
+@AUGMENTATION_REGISTRY.register('torch_random_augmentation')
+class RandAugment(TorchAugmentation):
+    def __init__(self, n, m, magnitude_std=0.0):
+        self.n = n
+        self.m = m
+        self.augment_list = augment_list()
+        self.mstd = magnitude_std
+
+    def augment(self, data):
+        output = copy.copy(data)
+        ops = random.choices(self.augment_list, k=self.n)
+        for op, minval, maxval in ops:
+            if random.random() > 0.5:
+                continue
+            magnitude = random.gauss(self.m, self.mstd)
+            magnitude = max(0, min(magnitude, 10))
+            val = (float(magnitude) / 10) * float(maxval - minval) + minval
+            output.image = op(output.image, val)
+
+        return output
+
+
+@AUGMENTATION_REGISTRY.register('torch_random_augmentationIncre')
+class RandAugIncre(TorchAugmentation):
+    def __init__(self, n, m, magnitude_std=0.0):
+        self.n = n
+        self.m = m
+        self.augment_list = augment_increasing()
+        self.mstd = magnitude_std
+
+    def augment(self, data):
+        output = copy.copy(data)
+        ops = random.choices(self.augment_list, k=self.n)
+        for op, minval, maxval in ops:
+            if random.random() > 0.5:
+                continue
+            magnitude = random.gauss(self.m, self.mstd)
+            magnitude = max(0, min(magnitude, 10))
+            val = (float(magnitude) / 10) * float(maxval - minval) + minval
+            output.image = op(output.image, val)
+
+        return output
 
 
 @AUGMENTATION_REGISTRY.register('torch_mixup')
