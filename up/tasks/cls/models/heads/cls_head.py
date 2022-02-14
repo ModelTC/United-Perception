@@ -1,8 +1,9 @@
 import torch.nn as nn
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from eod.utils.model.initializer import trunc_normal_
 # from up.utils.model.initializer import init_weights_msra
 
-__all__ = ['BaseClsHead']
+__all__ = ['BaseClsHead', 'ConvNeXtHead']
 
 
 @MODULE_ZOO_REGISTRY.register('base_cls_head')
@@ -93,3 +94,31 @@ class FPNClsHead(BaseClsHead):
         logits = self.classifier(feature)
 
         return {'logits': logits}
+
+
+@MODULE_ZOO_REGISTRY.register('convnext_head')
+class ConvNeXtHead(nn.Module):
+    def __init__(self, num_classes, in_plane, input_feature_idx=-1, head_init_scale=1.):
+        super(ConvNeXtHead, self).__init__()
+        self.num_classes = num_classes
+        self.in_plane = in_plane
+        self.input_feature_idx = input_feature_idx
+        self.classifier = nn.Linear(in_plane, num_classes)
+        self.prefix = self.__class__.__name__
+        self.apply(self._init_weights)
+        self.classifier.weight.data.mul_(head_init_scale)
+        self.classifier.bias.data.mul_(head_init_scale)
+
+    def _init_weights(self, m):
+        if isinstance(m, (nn.Linear)):
+            trunc_normal_(m.weight, std=.02)
+            nn.init.constant_(m.bias, 0)
+
+    def forward_net(self, x):
+        if isinstance(x, dict):
+            x = x['features'][self.input_feature_idx]
+        logits = self.classifier(x)
+        return {'logits': logits}
+
+    def forward(self, input):
+        return self.forward_net(input)
