@@ -61,5 +61,5 @@ CocoDataset
 Custom Datasets
 ---------------
 
-UP support custom dataset. Details could refer to Training on custom data.
+UP support custom dataset. Details could refer to `Training on custom data <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/train_custom_data.md>`_.
 

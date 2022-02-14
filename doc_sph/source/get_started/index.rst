@@ -101,8 +101,6 @@ Step3: FP16 设置以及其他一些额外的设置
     # ./eval.sh <PARTITION> <num_gpu> <config>
     ./eval.sh ToolChain 1 configs/det/yolox/yolox_tiny.yaml
 
-.._ToDemoAnchor:
-
 .. _DemoAnchor:
 
 Demo
@@ -179,3 +177,8 @@ UP 支持将检测模型转化为kestrel格式
       --save_to=kestrel_model \
       2>&1 | tee log.tokestrel.$T.$(basename $cfg) "
 
+部署例子:
+
+`Detection deploy configs <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/configs/det/deploy>`_
+
+`Classification deploy configs <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/configs/cls/deploy>`_
