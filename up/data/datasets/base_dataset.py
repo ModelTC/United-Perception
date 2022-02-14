@@ -38,10 +38,13 @@ class BaseDataset(Dataset):
         self.classes = class_names
         if transformer is not None:
             # add datset handler in transform kwargs in need of mosaic/mixup etc.
-            for trans in transformer:
+            for trans_id, trans in enumerate(transformer):
                 if 'kwargs' in trans and trans['kwargs'].get('extra_input', False):
                     trans['kwargs']['dataset'] = self
                     trans['kwargs'].pop('extra_input')
+                    trans['kwargs'].pop('extra_input')
+                    if trans['kwargs'].get('transform', False):
+                        trans['kwargs']['transform'] = build_transformer(transformer[:trans_id])
             self.transformer = build_transformer(transformer)
             self.visable_transformer = build_partially_inverse_transformer(self.transformer)
         else:
