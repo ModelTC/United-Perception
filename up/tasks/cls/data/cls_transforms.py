@@ -7,6 +7,7 @@ import torchvision.transforms.functional as TF
 from PIL import Image
 from up.data.datasets.transforms import Augmentation
 from up.utils.general.registry_factory import AUGMENTATION_REGISTRY
+from up.tasks.cls.data.rand_augmentation import *
 import copy
 
 
