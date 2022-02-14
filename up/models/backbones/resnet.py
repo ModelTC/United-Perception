@@ -449,18 +449,18 @@ class ResNet(nn.Module):
         if nnie:
             self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0, ceil_mode=True)
         self.layer0 = nn.Sequential(self.conv1, self.norm1, self.relu, self.maxpool)
-        self.layer1 = self._make_layer(block, layer_in_planes[1], layers[0], 
-                                       normalize=normalize, 
-                                       block_id = 0)
+        self.layer1 = self._make_layer(block, layer_in_planes[1], layers[0],
+                                       normalize=normalize,
+                                       block_id=0)
         self.layer2 = self._make_layer(block, layer_in_planes[2], layers[1], stride=2,
                                        normalize=normalize,
                                        stride_in_1x1=stride_in_1x1,
-                                       block_id = layers[0])
+                                       block_id=layers[0])
 
         self.layer3 = self._make_layer(block, layer_in_planes[3], layers[2], stride=2,
                                        normalize=normalize,
                                        stride_in_1x1=stride_in_1x1,
-                                       block_id = sum(layers[0:2]))
+                                       block_id=sum(layers[0:2]))
         if 4 in self.out_layers:
             layer4_stride = out_strides[-1] // 16
             self.layer4 = self._make_layer(block, layer_in_planes[4], layers[3],
@@ -528,7 +528,7 @@ class ResNet(nn.Module):
                 )
         block_drop_path_rate = self.drop_path_rate * block_id / (self.block_nums - 1.)
         block_id += 1
-        block_drop_path = DropPath(block_drop_path_rate) if block_drop_path_rate > 0 else None 
+        block_drop_path = DropPath(block_drop_path_rate) if block_drop_path_rate > 0 else None
         layers = []
         layers.append(block_types[0](self.inplanes,
                                      planes,
@@ -542,7 +542,7 @@ class ResNet(nn.Module):
         for i in range(1, blocks):
             block_drop_path_rate = self.drop_path_rate * block_id / (self.block_nums - 1.)
             block_id += 1
-            block_drop_path = DropPath(block_drop_path_rate) if block_drop_path_rate > 0 else None 
+            block_drop_path = DropPath(block_drop_path_rate) if block_drop_path_rate > 0 else None
             layers.append(block_types[i](self.inplanes,
                                          planes,
                                          stride=1,
