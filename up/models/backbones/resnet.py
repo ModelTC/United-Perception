@@ -112,7 +112,7 @@ class BasicBlock(nn.Module):
 
         out = self.conv2(out)
         out = self.norm2(out)
-        
+
         if self.drop_path is not None:
             out = self.drop_path(out)
 
