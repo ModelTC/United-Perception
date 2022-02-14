@@ -33,13 +33,14 @@ class LabelSmoothCELoss(_Loss):
 
 @LOSSES_REGISTRY.register('bce')
 class BCE_LOSS(_Loss):
-    def __init__(self, loss_weight=1.0):
+    def __init__(self, loss_weight=1.0, bias=False):
         super().__init__()
         self.bce_loss = torch.nn.BCEWithLogitsLoss()
         self.loss_weight = loss_weight
+        self.bias = bias
 
     def forward(self, input, label):
-        C = input.size(1)
+        C = input.size(1) if self.bias else 1
         if label.dim() == 1:
             one_hot = torch.zeros_like(input).cuda()
             label = label.reshape(one_hot.shape[0], 1)
