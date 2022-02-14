@@ -596,7 +596,7 @@ class ReloadDataloader(Hook):
             gc.collect()
             if not hasattr(self, 'data_iterators'):
                 runner.data_iterators = {}
-            runner.data_loaders = runner.build_dataloaders(reload_cfg=reload_cfg)
+            runner.build_dataloaders(reload_cfg=reload_cfg)
             runner.data_iterators['train'] = iter(runner.data_loaders["train"])
 
 
