@@ -15,11 +15,11 @@ from .roi_supervisor import build_roi_supervisor
 from .roi_predictor import build_roi_predictor
 
 
-__all__ = ['BasePostProcess', 'IOUPostProcess', 'RPNPostProcess']
+__all__ = ['BaseDetPostProcess', 'IOUPostProcess', 'RPNPostProcess']
 
 
 @MODULE_ZOO_REGISTRY.register('retina_post')
-class BasePostProcess(nn.Module):
+class BaseDetPostProcess(nn.Module):
     """
     Head for the first stage detection task
 
@@ -29,7 +29,7 @@ class BasePostProcess(nn.Module):
     """
 
     def __init__(self, num_classes, cfg):
-        super(BasePostProcess, self).__init__()
+        super(BaseDetPostProcess, self).__init__()
         self.prefix = self.__class__.__name__
         self.tocaffe = False
 
@@ -224,7 +224,7 @@ class BasePostProcess(nn.Module):
 
 
 @MODULE_ZOO_REGISTRY.register('retina_post_iou')
-class IOUPostProcess(BasePostProcess):
+class IOUPostProcess(BaseDetPostProcess):
     """
     Head for the first stage detection task
 
@@ -318,7 +318,7 @@ class IOUPostProcess(BasePostProcess):
 
 
 @MODULE_ZOO_REGISTRY.register('rpn_post')
-class RPNPostProcess(BasePostProcess):
+class RPNPostProcess(BaseDetPostProcess):
     """
     hzh_22_1_5
     Classify Anchors (2 cls): foreground or background. This module is usually
