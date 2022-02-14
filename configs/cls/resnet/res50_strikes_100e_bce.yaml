@@ -1,6 +1,6 @@
 num_classes: &num_classes 1000
 
-mixup: &mixup
+cutmix_mixup: &cutmix_mixup
   type: torch_cutmix_mixup
   kwargs:
     mixup_alpha: 0.1
@@ -55,7 +55,7 @@ dataset: # Required.
             image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
             color_mode: RGB
             memcached: false
-        transformer: [*mixup, *random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize]
+        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize, *cutmix_mixup]
     batch_sampler:
         type: base
         kwargs:
