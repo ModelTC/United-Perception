@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from eod.utils.model.initializer import trunc_normal_
+from up.utils.model.initializer import trunc_normal_
 
 __all__ = ['convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large', 'convnext_xlarge']
 

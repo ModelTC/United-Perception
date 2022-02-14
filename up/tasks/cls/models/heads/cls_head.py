@@ -1,6 +1,6 @@
 import torch.nn as nn
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
-from eod.utils.model.initializer import trunc_normal_
+from up.utils.model.initializer import trunc_normal_
 # from up.utils.model.initializer import init_weights_msra
 
 __all__ = ['BaseClsHead', 'ConvNeXtHead']

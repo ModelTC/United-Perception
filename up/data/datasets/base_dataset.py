@@ -42,7 +42,6 @@ class BaseDataset(Dataset):
                 if 'kwargs' in trans and trans['kwargs'].get('extra_input', False):
                     trans['kwargs']['dataset'] = self
                     trans['kwargs'].pop('extra_input')
-                    trans['kwargs'].pop('extra_input')
                     if trans['kwargs'].get('transform', False):
                         trans['kwargs']['transform'] = build_transformer(transformer[:trans_id])
             self.transformer = build_transformer(transformer)
