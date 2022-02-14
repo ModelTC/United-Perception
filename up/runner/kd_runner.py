@@ -14,7 +14,7 @@ class KDRunner(BaseRunner):
     def __init__(self, config, work_dir='./', training=True):
         super(KDRunner, self).__init__(config, work_dir, training)
 
-def build_model(self):
+    def build_model(self):
         model_helper_type = self.config['runtime']['model_helper']['type']
         model_helper_kwargs = self.config['runtime']['model_helper']['kwargs']
         model_helper_ins = MODEL_HELPER_REGISTRY[model_helper_type]
