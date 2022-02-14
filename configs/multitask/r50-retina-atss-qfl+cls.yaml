@@ -7,6 +7,7 @@ runtime:
     scale_factor: dynamic
   runner:
     type: multitask
+  task_names: &task_names [det, cls]
 
 augs:
   det:
@@ -225,7 +226,7 @@ multitask_cfg:
   # model_idxs:
   #   train: [ *det, *cls ]
   #   test: [ *det, *cls ]
-  task_names: [det, cls]
+  task_names: *task_names  # [det, cls]
   debug: &multitask_debug false
 
 trainer: # Required.
