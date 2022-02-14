@@ -74,10 +74,10 @@ class BaseDataLoader(DataLoader):
             }
         """
         images = [_['image'] for _ in batch]
-        image_info = [_['image_info'] for _ in batch]
-        filenames = [_['filename'] for _ in batch]
-        image_ids = [_['image_id'] for _ in batch]
-        flipped = [_['flipped'] for _ in batch]
+        image_info = [_.get('image_info', {}) for _ in batch]
+        filenames = [_.get('filename', '') for _ in batch]
+        image_ids = [_.get('image_id', '') for _ in batch]
+        flipped = [_.get('flipped', False) for _ in batch]
         neg_targets = [_.get('neg_target', 0) for _ in batch]
         image_sources = [_.get('image_source', 0) for _ in batch]
 
