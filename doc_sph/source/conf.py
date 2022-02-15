@@ -185,5 +185,5 @@ epub_title = project
 epub_exclude_files = ['search.html']
 
 # -- Extension configuration -------------------------------------------------
-scv_whitelist_branches = ('master$', 'develop$')
+scv_whitelist_branches = ('master$', 'dev$')
 # scv_recent_tag = True
