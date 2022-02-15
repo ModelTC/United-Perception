@@ -21,3 +21,18 @@ style:
     - schedules
 
 
+# docs:
+#   tags:
+#     - gpu
+#     - diamond
+#   stage: deploy
+#   script:
+#     - export MAX_JOBS=8
+#     - pip install sphinx==1.5.6
+#     - pip install docutils==0.17.1
+#     - pip install http://spring.sensetime.com/pypi/packages/sphinx_rtd_theme-0.4.3-py2.py3-none-any.whl
+#     - pip install http://spring.sensetime.com/pypi/packages/sphinxcontrib_versioning-2.2.1-py3-none-any.whl
+#     - git --version
+#     - export PYTHONPATH=.:$PYTHONPATH
+#     - sphinx-versioning build doc_sph/source doc_sph/_build/html
+#     - echo "update pod docs done"
