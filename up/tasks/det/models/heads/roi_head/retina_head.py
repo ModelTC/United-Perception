@@ -108,15 +108,18 @@ class RetinaSubNet(BaseNet):
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
-                 num_levels=5):
+                 num_levels=5,
+                 share_subnet=False):
         super(RetinaSubNet, self).__init__(inplanes, num_classes, num_levels)
 
         inplanes = self.inplanes
         self.class_activation = class_activation
         self.num_anchors = num_anchors
+        self.share_subnet = share_subnet
 
         self.cls_subnet = self.build(num_conv, inplanes, feat_planes, normalize)
-        self.box_subnet = self.build(num_conv, inplanes, feat_planes, normalize)
+        if not self.share_subnet:
+            self.box_subnet = self.build(num_conv, inplanes, feat_planes, normalize)
         class_channel = {'sigmoid': -1, 'softmax': 0}[self.class_activation] + self.num_classes
         self.class_channel = class_channel
         self.cls_subnet_pred = nn.Conv2d(
@@ -149,7 +152,10 @@ class RetinaSubNet(BaseNet):
 
     def forward_net(self, x, lvl=None):
         cls_feature = self.cls_subnet(x)
-        box_feature = self.box_subnet(x)
+        if self.share_subnet:
+            box_feature = cls_feature
+        else:
+            box_feature = self.box_subnet(x)
         cls_pred = self.cls_subnet_pred(cls_feature)
         loc_pred = self.box_subnet_pred(box_feature)
         if FP16_FLAG.fp16:
@@ -218,7 +224,8 @@ class RetinaHeadWithBN(RetinaSubNet):
                  num_levels=5,
                  class_activation='sigmoid',
                  init_prior=0.01,
-                 num_anchors=9):
+                 num_anchors=9,
+                 share_subnet=False):
         self.num_levels = num_levels
         super(RetinaHeadWithBN, self).__init__(inplanes,
                                                feat_planes,
@@ -229,7 +236,8 @@ class RetinaHeadWithBN(RetinaSubNet):
                                                class_activation,
                                                init_prior,
                                                num_anchors,
-                                               num_levels)
+                                               num_levels,
+                                               share_subnet)
 
         assert num_levels is not None, "num_levels must be provided !!!"
 
@@ -256,7 +264,10 @@ class RetinaHeadWithBN(RetinaSubNet):
 
     def forward_net(self, x, lvl=None):
         cls_feature = self.cls_subnet[lvl](x)
-        box_feature = self.box_subnet[lvl](x)
+        if self.share_subnet:
+            box_feature = cls_feature
+        else:
+            box_feature = self.box_subnet[lvl](x)
         cls_pred = self.cls_subnet_pred(cls_feature)
         loc_pred = self.box_subnet_pred(box_feature)
         if FP16_FLAG.fp16:
@@ -277,7 +288,8 @@ class RetinaHeadWithBNSep(RetinaSubNet):
                  num_levels=5,
                  class_activation='sigmoid',
                  init_prior=0.01,
-                 num_anchors=9):
+                 num_anchors=9,
+                 share_subnet=False):
         self.num_levels = num_levels
         super(RetinaHeadWithBNSep, self).__init__(inplanes,
                                                   feat_planes,
@@ -288,7 +300,8 @@ class RetinaHeadWithBNSep(RetinaSubNet):
                                                   class_activation,
                                                   init_prior,
                                                   num_anchors,
-                                                  num_levels)
+                                                  num_levels,
+                                                  share_subnet)
 
         assert num_levels is not None, "num_levels must be provided !!!"
 
@@ -308,7 +321,10 @@ class RetinaHeadWithBNSep(RetinaSubNet):
 
     def forward_net(self, x, lvl=None):
         cls_feature = self.cls_subnet[lvl](x)
-        box_feature = self.box_subnet[lvl](x)
+        if self.share_subnet:
+            box_feature = cls_feature
+        else:
+            box_feature = self.box_subnet[lvl](x)
         cls_pred = self.cls_subnet_pred(cls_feature)
         loc_pred = self.box_subnet_pred(box_feature)
         return cls_pred, loc_pred
@@ -330,7 +346,8 @@ class RetinaHeadWithBNIOU(RetinaHeadWithBN):
                  num_levels=5,
                  class_activation='sigmoid',
                  init_prior=0.01,
-                 num_anchors=9):
+                 num_anchors=9,
+                 share_subnet=False):
         self.num_levels = num_levels
         super(RetinaHeadWithBNIOU, self).__init__(inplanes,
                                                   feat_planes,
@@ -341,7 +358,8 @@ class RetinaHeadWithBNIOU(RetinaHeadWithBN):
                                                   num_levels,
                                                   class_activation,
                                                   init_prior,
-                                                  num_anchors)
+                                                  num_anchors,
+                                                  share_subnet)
         assert num_levels is not None, "num_levels must be provided !!!"
         self.iou_pred = nn.Conv2d(feat_planes, self.num_anchors, kernel_size=3, stride=1, padding=1)
         initialize_from_cfg(self, initializer)
@@ -349,7 +367,10 @@ class RetinaHeadWithBNIOU(RetinaHeadWithBN):
 
     def forward_net(self, x, lvl=None):
         cls_feature = self.cls_subnet[lvl](x)
-        box_feature = self.box_subnet[lvl](x)
+        if self.share_subnet:
+            cls_feature = cls_feature
+        else:
+            box_feature = self.box_subnet[lvl](x)
         cls_pred = self.cls_subnet_pred(cls_feature)
         loc_pred = self.box_subnet_pred(box_feature)
         iou_pred = self.iou_pred(box_feature)
