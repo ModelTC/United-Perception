@@ -1,7 +1,6 @@
 from __future__ import division
 
 # Standard Library
-import os
 import json
 
 # Import from third library
@@ -333,8 +332,7 @@ class KeypointTrainDataset(BaseDataset):
             self.path.append(id_path_hash[anno['image_id']])
             _bbox = anno['bbox']
             # xywh -> cxcywh
-            bbox = _bbox[0] + _bbox[2] / 2, _bbox[1] + \
-                   _bbox[3] / 2, _bbox[2], _bbox[3]
+            bbox = _bbox[0] + _bbox[2] / 2, _bbox[1] + _bbox[3] / 2, _bbox[2], _bbox[3]
             self.bbox.append(bbox)
             flags = anno['keypoints'][2::3]
             assert (len(flags) == self.num_kpts)

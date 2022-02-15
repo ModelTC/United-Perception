@@ -8,7 +8,7 @@ from up.utils.general.registry_factory import DATALOADER_REGISTRY, BATCHING_REGI
 from .samplers.batch_sampler import InfiniteBatchSampler
 
 
-__all__ = ['BaseDataLoader','PyTorchDataLoader']
+__all__ = ['BaseDataLoader', 'PyTorchDataLoader']
 
 
 @DATALOADER_REGISTRY.register('base')
@@ -108,6 +108,7 @@ class BaseDataLoader(DataLoader):
         if isinstance(self.batch_sampler, InfiniteBatchSampler):
             return len(self.batch_sampler.batch_sampler)   # training
         return len(self.batch_sampler)
+
 
 @DATALOADER_REGISTRY.register('pytorch')
 class PyTorchDataLoader(DataLoader):

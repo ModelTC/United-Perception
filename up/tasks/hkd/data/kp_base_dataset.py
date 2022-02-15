@@ -2,11 +2,9 @@ from __future__ import division
 
 # Standard Library
 import json
-import os
 import os.path as op
 
 # Import from third library
-import cv2
 import numpy as np
 import torch
 from easydict import EasyDict
@@ -20,6 +18,7 @@ from up.utils.general.log_helper import default_logger as logger
 from up.data.image_reader import build_image_reader
 from up.data.datasets.transforms import build_partially_inverse_transformer, build_transformer
 from up.data.metrics.base_evaluator import build_evaluator
+
 
 class BaseDataset(Dataset):
     """
@@ -158,8 +157,8 @@ class BaseDataset(Dataset):
         """
         metrics = self.evaluator.eval(res_file, res) if self.evaluator else {}
         return metrics
-    
-    def dump(self, writer,output):
+
+    def dump(self, writer, output):
         """
         Dump bboxes with format of (img_id, x1, y1, x2, y2, score class)
 
@@ -182,7 +181,7 @@ class BaseDataset(Dataset):
         image_ids = output['image_id']
         image_info = self.tensor2numpy(output['image_info'])
         bboxes = self.tensor2numpy(output['dt_bboxes'])
-        out_res=[]
+        out_res = []
         for b_ix in range(len(image_info)):
             scale_h, scale_w = _pair(image_info[b_ix][2])
             height, width = image_info[b_ix][3:5]
@@ -210,6 +209,7 @@ class BaseDataset(Dataset):
                 out_res.append(res)
             writer.flush()
         return out_res
+
     def merge(self, res_file):
         """
         Merge results into one file
@@ -251,4 +251,3 @@ class BaseDataset(Dataset):
         if isinstance(x, list):
             x = [_.cpu().numpy() if torch.is_tensor(_) else _ for _ in x]
         return x
-

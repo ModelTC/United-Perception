@@ -16,7 +16,14 @@ class KeypointSBHead(nn.Module):
     """
     keypoint head for solo top-down keypoint detection method.(HKD)
     """
-    def __init__(self, inplanes, mid_channels, num_classes, loss, has_bg, test_with_gaussian_filter,normalize={'type': 'solo_bn'}):
+    def __init__(self,
+                 inplanes,
+                 mid_channels,
+                 num_classes,
+                 loss,
+                 has_bg,
+                 test_with_gaussian_filter,
+                 normalize={'type': 'solo_bn'}):
         super(KeypointSBHead, self).__init__()
         self.has_bg = has_bg
         self.test_with_gaussian_filter = test_with_gaussian_filter
@@ -32,9 +39,9 @@ class KeypointSBHead(nn.Module):
         self.upsample3 = nn.ConvTranspose2d(
             mid_channels, mid_channels, kernel_size=4, stride=2, padding=1)
 
-        self.bn_s5 = build_norm_layer(mid_channels,normalize)[1]
-        self.bn_s4 = build_norm_layer(mid_channels,normalize)[1]
-        self.bn_s3 = build_norm_layer(mid_channels,normalize)[1]
+        self.bn_s5 = build_norm_layer(mid_channels, normalize)[1]
+        self.bn_s4 = build_norm_layer(mid_channels, normalize)[1]
+        self.bn_s3 = build_norm_layer(mid_channels, normalize)[1]
         if has_bg:
             self.predict3 = nn.Conv2d(mid_channels, num_classes + 1, kernel_size=1, stride=1, padding=0)
         else:
@@ -50,10 +57,9 @@ class KeypointSBHead(nn.Module):
             score_map = self.forward_net(input).cpu()
             if self.do_sig:
                 score_map = nn.functional.sigmoid(score_map)
-            kpts = self.final_preds(
-                    score_map.numpy(),
-                    self.has_bg,
-                    self.test_with_gaussian_filter)  # x,y,score
+            kpts = self.final_preds(score_map.numpy(),
+                                    self.has_bg,
+                                    self.test_with_gaussian_filter)  # x,y,score
             output_w = score_map.size()[3]
             output_h = score_map.size()[2]
             all_res = []
