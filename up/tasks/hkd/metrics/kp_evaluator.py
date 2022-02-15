@@ -83,21 +83,21 @@ class KPCocoEvaluator(Evaluator):
         metric.set_cmp_key(metric_name)
         return metric
 
-    def load_dts(self, res_file, res):
-        print(f'loading res from {res_file}')
-        return [json.loads(line) for line in open(res_file, 'r')]
-
     # def load_dts(self, res_file, res):
-    #     out = []
-    #     if res is not None:
-    #         for device_res in res:
-    #             for lines in device_res:
-    #                 for line in lines:
-    #                     out.append(line)
-    #     else:
-    #         logger.info(f'loading res from {res_file}')
-    #         out = [json.loads(line) for line in open(res_file, 'r')]
-    #     return out
+    #     print(f'loading res from {res_file}')
+    #     return [json.loads(line) for line in open(res_file, 'r')]
+
+    def load_dts(self, res_file, res):
+        out = []
+        if res is not None:
+            for device_res in res:
+                for lines in device_res:
+                    for line in lines:
+                        out.append(line)
+        else:
+            logger.info(f'loading res from {res_file}')
+            out = [json.loads(line) for line in open(res_file, 'r')]
+        return out
 
     def eval(self, res_file, res):
         """This should return a dict with keys of metric names, values of metric values"""
