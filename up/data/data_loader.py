@@ -8,7 +8,7 @@ from up.utils.general.registry_factory import DATALOADER_REGISTRY, BATCHING_REGI
 from .samplers.batch_sampler import InfiniteBatchSampler
 
 
-__all__ = ['BaseDataLoader']
+__all__ = ['BaseDataLoader','PyTorchDataLoader']
 
 
 @DATALOADER_REGISTRY.register('base')
@@ -100,6 +100,31 @@ class BaseDataLoader(DataLoader):
         output['gt_ignores'] = gt_ignores if gt_ignores[0] is not None else None
         output = self.pad(output)
         return output
+
+    def get_data_size(self):
+        return self.get_epoch_size()
+
+    def get_epoch_size(self):
+        if isinstance(self.batch_sampler, InfiniteBatchSampler):
+            return len(self.batch_sampler.batch_sampler)   # training
+        return len(self.batch_sampler)
+
+@DATALOADER_REGISTRY.register('pytorch')
+class PyTorchDataLoader(DataLoader):
+    def __init__(self,
+                 dataset,
+                 alignment=1,
+                 batch_size=1,
+                 shuffle=False,
+                 sampler=None,
+                 batch_sampler=None,
+                 num_workers=0,
+                 pin_memory=False,
+                 drop_last=False,
+                 pad_value=0):
+        super(PyTorchDataLoader, self).__init__(
+            dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
+            None, pin_memory, drop_last)
 
     def get_data_size(self):
         return self.get_epoch_size()
