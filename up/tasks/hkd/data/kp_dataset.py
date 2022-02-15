@@ -317,8 +317,7 @@ class KeypointTrainDataset(BaseDataset):
         self.out_w = list(map(int, np.float(in_w) / self.strides))
 
         # Read from json
-        with PetrelHelper.open(meta_file) as fin:
-            annos = json.load(fin)
+        annos = PetrelHelper.load_json(meta_file)
 
         id_path_hash = {}
         for img_info in annos['images']:
@@ -477,8 +476,7 @@ class KeypointTestDataset(BaseDataset):
         self.in_h = in_h
         self.in_w = in_w
 
-        with PetrelHelper.open(meta_file) as fin:
-            annos = json.load(fin)
+        annos = PetrelHelper.load_json(meta_file)
         assert 'annotations' in annos
         annos = annos['annotations']
 
