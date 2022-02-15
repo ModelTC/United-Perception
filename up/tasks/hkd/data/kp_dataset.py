@@ -13,6 +13,7 @@ from easydict import EasyDict
 # from spring.data import SPRING_DATASET
 from .kp_base_dataset import BaseDataset
 # from eod.data.datasets.base_dataset import BaseDataset
+from up.utils.general.petrel_helper import PetrelHelper
 from up.utils.general.registry_factory import DATASET_REGISTRY
 
 __all__ = ['KeypointTrainDataset', 'KeypointTestDataset']
@@ -316,7 +317,7 @@ class KeypointTrainDataset(BaseDataset):
         self.out_w = list(map(int, np.float(in_w) / self.strides))
 
         # Read from json
-        with open(meta_file) as fin:
+        with PetrelHelper.open(meta_file) as fin:
             annos = json.load(fin)
 
         id_path_hash = {}
@@ -476,7 +477,7 @@ class KeypointTestDataset(BaseDataset):
         self.in_h = in_h
         self.in_w = in_w
 
-        with open(meta_file) as fin:
+        with PetrelHelper.open(meta_file) as fin:
             annos = json.load(fin)
         assert 'annotations' in annos
         annos = annos['annotations']

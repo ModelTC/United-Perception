@@ -13,7 +13,7 @@ import json
 import os
 
 # Import from third library
-from pycocotools.coco import COCO
+from up.utils.general.petrel_helper import PetrelCOCO as COCO
 from pycocotools.cocoeval import COCOeval
 
 from up.utils.general.log_helper import default_logger as logger
