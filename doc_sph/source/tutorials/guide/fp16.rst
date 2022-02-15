@@ -1,0 +1,23 @@
+FP16模式配置
+===========
+
+* 精度：使用fp16在mask-rcnn，keypoint-rcnn，retinanet，faster-rcnn等可以取得fp32同等精度。
+* 速度：仅在V100上有加速效果, R50-C4-Faster-RCNN 加速比 1.87 ( vs fp32)。
+* 显存：R50-C4-Faster-RCNN 显存节省 46.5%。
+
+.. note::
+
+    速度和显存优化和模型有关, 模型越大, 速度和显存提升越大.
+
+原理 & 实现
+
+* fp16是指使用16位浮点数于参数的训练和保存，fp32是指的使用32位浮点数于参数的训练和保存，V100对fp16运算有特别的优化，所以使用fp16可以达到训练加速的效果。直接使用fp16会导致部分梯度置0，导致精度损失。实际过程中，使用fp32拷贝来保存模型，使用scale_factor来改变fp16的数值范围。
+
+* forward的过程，bn层、loss计算是使用fp32进行的，其余使用fp16进行计算；backward的过程，将fp16参数的grad拷贝到fp32参数的拷贝上，optimizer.step更新fp32参数，最后把fp32参数拷贝回fp16参数上。
+
+* 具体细节参考 `Mixed Precision Traning <https://arxiv.org/abs/1710.03740>`_
+
+.. code-block:: yaml
+
+  runtime:
+      fp16: True

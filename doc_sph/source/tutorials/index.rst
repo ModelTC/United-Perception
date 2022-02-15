@@ -9,6 +9,11 @@
    :caption: Table of Contents
 
    guide/configs
+   guide/model_flow
    guide/datasets
    guide/augmentations_and_preprocesses
+   guide/trainer
+   guide/saver
+   guide/normalization
    guide/loss
+   guide/fp16
