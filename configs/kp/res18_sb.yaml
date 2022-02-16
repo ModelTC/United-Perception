@@ -3,7 +3,7 @@ runtime:
 num_kpts: &num_kpts 17
 
 evaluator: &evaluator                  # evaluation metric
-  type: hkd_COCO_Evaluator
+  type: COCO
   kwargs:
     gt_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/person_keypoints_val2017.json
     iou_types: ['keypoints']

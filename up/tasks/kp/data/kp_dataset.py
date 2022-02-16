@@ -10,7 +10,7 @@ from easydict import EasyDict
 
 # Import from local
 # from spring.data import SPRING_DATASET
-from .kp_base_dataset import BaseDataset
+from up.data.datasets.base_dataset import BaseDataset
 # from eod.data.datasets.base_dataset import BaseDataset
 from up.utils.general.petrel_helper import PetrelHelper
 from up.utils.general.registry_factory import DATASET_REGISTRY
@@ -259,7 +259,6 @@ class KeypointTrainDataset(BaseDataset):
     def __init__(self,
                  meta_file,
                  image_reader,
-                 source='base',
                  num_kpts=17,
                  radius=[],
                  strides=[],
@@ -282,8 +281,7 @@ class KeypointTrainDataset(BaseDataset):
         super(KeypointTrainDataset, self).__init__(meta_file=meta_file,
                                                    image_reader=image_reader,
                                                    transformer=None,
-                                                   evaluator=evaluator,
-                                                   # source=source
+                                                   evaluator=evaluator
                                                    )
         self.num_kpts = num_kpts  # predict keypoints num
         self.bg = bg
@@ -438,7 +436,6 @@ class KeypointTestDataset(BaseDataset):
     def __init__(self,
                  meta_file,
                  image_reader,
-                 source='base',
                  num_kpts=17,
                  keep_aspect_ratio=True,
                  means=[128.0, 128.0, 128.0],
@@ -455,8 +452,7 @@ class KeypointTestDataset(BaseDataset):
         super(KeypointTestDataset, self).__init__(meta_file=meta_file,
                                                   image_reader=image_reader,
                                                   transformer=None,
-                                                  evaluator=evaluator,
-                                                  # source=source
+                                                  evaluator=evaluator
                                                   )
         self.num_kpts = num_kpts  # predict keypoints num
 
