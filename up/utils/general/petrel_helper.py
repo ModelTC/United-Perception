@@ -95,7 +95,7 @@ class PetrelHelper(object):
     @staticmethod
     def load(path, **kwargs):
         if '.ini' in path:
-            path = path[4:]
+            path = path[:-4]
         if not os.path.exists(path) and os.path.exists(path + '.ini'):
             # get realpath
             conf = configparser.ConfigParser()
