@@ -1,7 +1,6 @@
 from __future__ import division
 
 # Standard Library
-import json
 
 # Import from third library
 import torch

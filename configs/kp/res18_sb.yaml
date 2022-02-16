@@ -1,4 +1,5 @@
-version: v4.0.0
+runtime:
+  rank_init: False
 num_kpts: &num_kpts 17
 
 evaluator: &evaluator                  # evaluation metric
