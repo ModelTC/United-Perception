@@ -116,7 +116,6 @@ net:
         type: solo_bn
       initializer:
         method: msra
-#      task: detection
   - name: kpt_sb_head
     prev: backbone
     type: keypoint_sb
@@ -125,6 +124,9 @@ net:
       mid_channels: 256
       num_classes: *num_kpts
       has_bg: true
-      test_with_gaussian_filter: false
+  - name: kp_post_process
+    type: kp_post_process
+    kwargs:
       loss:
-        type: kp_mse
+        type: kp_mse      
+      test_with_gaussian_filter: false
