@@ -39,8 +39,3 @@ UP支持分割任务训练、部署、推理的全部流程;
         transformer: [*seg_rand_resize, *flip, *seg_crop_train, *to_tensor, *normalize]
         num_classes: *num_classes
         ignore_label: 255
-
-基准
-----
-
-`segmentation v0.0.1 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/semantic_benchmark.md>`_

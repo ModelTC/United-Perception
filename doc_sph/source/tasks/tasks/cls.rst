@@ -50,8 +50,3 @@ UP支持分类任务训练、部署、推理的全部流程;
       is_rgb: True
       save_all_label: True
       type: 'UNKNOWN'
-
-基准
-----
-
-`classification benchmark v0.0.1 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/classification_benchmark.md>`_

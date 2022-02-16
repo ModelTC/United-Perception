@@ -20,5 +20,8 @@ UP (universal-perception)是一套基于Distributed PyTorch实现的通用感知
    get_started/index
    tutorials/index
    tasks/index
+   benchmark/index
    usefultools/index
    explanation/index
+   faq/index
+   changelog/index

@@ -58,8 +58,3 @@ UP支持检测任务训练、部署、推理的全部流程;
           label: face
           filter_h: 0
           filter_w: 0
-
-基准
-----
-
-`detection benchmark v0.0.1 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/detection_benchmark.md>`_

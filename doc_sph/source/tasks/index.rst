@@ -10,4 +10,6 @@
 
    tasks/cls
    tasks/det
+   tasks/distill
    tasks/seg
+   tasks/multitask
