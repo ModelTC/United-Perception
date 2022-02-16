@@ -13,7 +13,6 @@ dataset: # Required.
     dataset:
       type: keypoint_train
       kwargs:
-        source: train  # dataset id
         meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/person_keypoints_train2017.json
         image_reader:
           type: fs_opencv
@@ -41,7 +40,6 @@ dataset: # Required.
     dataset:
       type: keypoint_test
       kwargs:
-        source: val
         meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/person_keypoints_val2017.json
         image_reader:
           type: fs_opencv
@@ -81,7 +79,6 @@ trainer: # Required.
     type: Adam
     kwargs:
       lr: 0.002
-#      lr: 0.00003125
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
     warmup_epochs: 0         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
     warmup_register_type: no_scale_lr
