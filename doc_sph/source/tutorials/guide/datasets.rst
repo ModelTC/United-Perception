@@ -58,7 +58,7 @@ CocoDataset
 * UP separates dataset and evaluator to adapt various datasets and evaluators.
 * UP supports two evaluators for various datasets: coco(CocoEvaluator) - CocoDataset, MREvaluator(CustomDataset) - CustomDataset.
 
-Custom Datasets
+Training on Custom Datasets
 ---------------
 
 UP support custom dataset. Details could refer to `Training on custom data <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/train_custom_data.md>`_.

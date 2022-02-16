@@ -1,5 +1,5 @@
-Augmentations and Preprocesses
-==============================
+数据预处理
+==========
 
 UP supports several data augmentations and preprocesses, including various augmentations such as Flip, Resize, StitchExpand, ImageCrop, etc. and preprocesses such as normalization, to_tenser, pad, etc. Details are as follows.
 

@@ -11,8 +11,8 @@
 
 .. _GSTrainAnchor:
 
-训练
-----
+Train
+-----
 
 Step1: 修改dataset 路径，基本格式沿袭POD的格式，可以参考POD的文档 
 
@@ -82,8 +82,8 @@ Step3: FP16 设置以及其他一些额外的设置
 
 .. _EvalAnchor: 
 
-评测
-----
+Evaluate
+--------
 
 评测脚本, 沿袭POD的模式，现在将train test 合成了一个指定，在命令行指定 -e 即可启动测试
 
@@ -136,7 +136,7 @@ Step2: inference
 
 .. _DeployAnchor:
 
-部署
+Deploy
 -------
 
 UP 支持将检测模型转化为caffemodel格式
