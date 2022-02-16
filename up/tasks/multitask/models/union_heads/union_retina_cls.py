@@ -3,6 +3,8 @@ import torch.nn as nn
 from up.tasks.det.models.heads.roi_head.retina_head import RetinaHeadWithBN
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
+from .utils import get_inplane
+
 
 @MODULE_ZOO_REGISTRY.register('UnionRetinaHeadWithBN')
 class UnionRetinaHeadWithBN(RetinaHeadWithBN):
@@ -43,9 +45,9 @@ class UnionRetinaHeadWithBN(RetinaHeadWithBN):
             classification_inplanes = feat_planes  # subnet channel
         else:
             if sum_feature:
-                classification_inplanes = inplanes[0]
+                classification_inplanes = get_inplane(inplanes, 0)
             else:
-                classification_inplanes = inplanes[input_feature_idx]
+                classification_inplanes = get_inplane(inplanes, input_feature_idx)
         self.classification_inplanes = classification_inplanes
         if classification_feat_planes is None:
             classification_feat_planes = feat_planes
