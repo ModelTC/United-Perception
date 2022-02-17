@@ -58,18 +58,42 @@ class FileSystemCVReader(ImageReader):
         else:
             self.cvt_color = None
         self.to_float32 = to_float32
+        self.memcached = memcached
+        if memcached:
+            self.initialized = False
 
     def fs_read(self, filename):
         assert os.path.exists(filename), filename
-        if self.color_mode == 'GRAY':
-            img = cv2.imread(filename, 0)
+        if self.memcached:
+            import mc
+            self._init_memcached()
+            value = mc.pyvector()
+            assert len(filename) < 250, 'memcached rquires length of path < 250'
+            self.mclient.Get(filename, value)
+            value_buf = mc.ConvertBuffer(value)
+            img_array = np.frombuffer(value_buf, np.uint8)
+            if self.color_mode == 'GRAY':
+                img = cv2.imdecode(img_array, 0)
+            else:
+                img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
         else:
-            img = cv2.imread(filename, cv2.IMREAD_COLOR)
+            if self.color_mode == 'GRAY':
+                img = cv2.imread(filename, 0)
+            else:
+                img = cv2.imread(filename, cv2.IMREAD_COLOR)
         if self.color_mode == 'RGB':
             img = cv2.cvtColor(img, self.cvt_color)
         if self.to_float32:
             img = img.astype(np.float32)
         return img
+
+    def _init_memcached(self):
+        if not self.initialized:
+            import mc
+            server_list_config_file = "/mnt/lustre/share/memcached_client/server_list.conf"
+            client_config_file = "/mnt/lustre/share/memcached_client/client.conf"
+            self.mclient = mc.MemcachedClient.GetInstance(server_list_config_file, client_config_file)
+            self.initialized = True
 
     def fake_image(self, *size):
         if len(size) == 0:
