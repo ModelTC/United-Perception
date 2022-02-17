@@ -85,7 +85,7 @@ class SegDataset(BaseDataset):
         seg_label = self.seg_label_reader(meta['seg_label_filename'], meta.get('image_source', 0))
         input = EasyDict({
             'image': img,
-            'gt_seg': seg_label
+            'gt_semantic_seg': seg_label
         })
         return input
 
@@ -99,13 +99,13 @@ class SegDataset(BaseDataset):
     def dump(self, output):
         pred = output['blob_pred'].max(1)[1]
         pred = self.tensor2numpy(pred)
-        if 'gt_seg' in output and output['gt_seg'] is not None:
-            seg_label = self.tensor2numpy(output['gt_seg'])
+        if 'gt_semantic_seg' in output and output['gt_semantic_seg'] is not None:
+            seg_label = self.tensor2numpy(output['gt_semantic_seg'])
         else:
             seg_label = np.zeros((pred.shape))
         out_res = []
         for _idx in range(pred.shape[0]):
-            if 'gt_seg' in output and output['gt_seg'] is not None:
+            if 'gt_semantic_seg' in output and output['gt_semantic_seg'] is not None:
                 inter, union, target = intersectionAndUnion(pred[_idx],
                                                             seg_label[_idx],
                                                             self.num_classes,

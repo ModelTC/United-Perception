@@ -262,7 +262,7 @@ class BiSegNet(nn.Module):
         feat_out = F.upsample(feat_out, size=size, mode='bilinear', align_corners=True)
 
         if self.training and self.output_aux:
-            gt_seg = x['gt_seg']
+            gt_seg = x['gt_semantic_seg']
             feat_out16_pred = self.conv_out16(feat_cp8)
             feat_out32_pred = self.conv_out32(feat_cp16)
             feat_out16_pred = F.upsample(feat_out16_pred, size=size, mode='bilinear', align_corners=True)

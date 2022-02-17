@@ -21,7 +21,7 @@ class SegDataLoader(DataLoader):
 
     def _collate_fn(self, batch):
         images = torch.stack([_.image for _ in batch])
-        gt_seg = [_.get('gt_seg', None) for _ in batch]
+        gt_seg = [_.get('gt_semantic_seg', None) for _ in batch]
         image_info = [_.get('image_info', None) for _ in batch]
         output = EasyDict({
             'image': images,

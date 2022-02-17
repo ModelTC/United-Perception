@@ -124,7 +124,7 @@ class SFSegDecoder(nn.Module):
     def forward(self, x):
         x3, x4, x5 = x['features']
         size = x['size']
-        gt_seg = x['gt_seg']
+        gt_seg = x['gt_semantic_seg']
         pred = self.head([x3, x4, x5])
 
         pred = F.upsample(pred, size=size, mode='bilinear', align_corners=True)
