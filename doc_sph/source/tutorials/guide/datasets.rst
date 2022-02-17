@@ -19,7 +19,7 @@ CocoDataset
           kwargs:
             meta_file: coco/annotations/instances_train2017.json
             image_reader:
-              type: fs_opencv
+              type: fs_opencv   # ['fs_opencv', 'fs_pillow', 'ceph_opencv', 'osg']
               kwargs:
                 image_dir: coco/train2017
                 color_mode: RGB
@@ -30,7 +30,7 @@ CocoDataset
           kwargs:
             meta_file: &gt_file coco/annotations/instances_val2017.json
             image_reader:
-              type: fs_opencv
+              type: fs_opencv   # ['fs_opencv', 'fs_pillow', 'ceph_opencv', 'osg']
               kwargs:
                 image_dir: coco/val2017
                 color_mode: RGB

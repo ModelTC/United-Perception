@@ -171,5 +171,30 @@ class CephSystemCVReader(ImageReader):
             self.initialized = True
 
 
+@IMAGE_READER_REGISTRY.register('osg')
+class OSGReader(ImageReader):
+    def __init__(self, osg_server_url, color_mode):
+        from spring_sdk import OSG
+        self.client = OSG(osg_server_url, secure=False)
+        self.color_mode = color_mode
+        assert color_mode in ['RGB', 'BGR', 'GRAY'], '{} not supported'.format(color_mode)
+        if color_mode != 'BGR':
+            self.cvt_color = getattr(cv2, 'COLOR_BGR2{}'.format(color_mode))
+        else:
+            self.cvt_color = None
+
+    def __call__(self, bucket, key):
+        """
+        Arguments:
+            index: (bucket, key) pair
+        """
+        img_str = self.client.get_object(bucket, key)
+        img = cv2.imdecode(np.fromstring(img_str, np.uint8), 1)
+        if self.color_mode != 'BGR':
+            img = cv2.cvtColor(img, self.cvt_color)
+
+        return img
+
+
 def build_image_reader(cfg_reader):
     return IMAGE_READER_REGISTRY.build(cfg_reader)
