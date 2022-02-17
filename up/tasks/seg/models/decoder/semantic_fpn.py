@@ -34,17 +34,9 @@ class SemanticNet(nn.Module):
             return F.softmax(pred, dim=1)
 
     def forward(self, input):
-        preds = self.predict(input)
-
-        if isinstance(preds, (tuple, list)):
-            pred = preds[0]
-        else:
-            pred = preds
-
-        output = {'blob_preds': preds, 'blob_pred': pred}
-
+        output = self.predict(input)
         if not self.training and self.tocaffe:
-            output[self.prefix + '.blobs.seg'] = self.to_caffe_export(preds[0])
+            output[self.prefix + '.blobs.seg'] = self.to_caffe_export(output['blob_pred'])
         return output
 
 
@@ -213,11 +205,14 @@ class SemanticFPN(SemanticNet):
         # Generate prediction.
         semantic_pred = self.conv_logits(semantic_feat)
         semantic_pred = self.interp(semantic_pred, image_size, mode='bilinear')
-        # semantic_pred = F.interpolate(semantic_pred, scale_factor=self.featmap_strides[0], mode='bilinear',
-        #                               align_corners=True)
+
+        output = {
+            'blob_pred': semantic_pred.float(),
+        }
 
         # For HTC, semantic feature is required, thus, keep semantic feature if needed
         if self.require_feat:
             semantic_feat = self.conv_embedding(semantic_feat)
+            output['semantic_feat'] = semantic_feat
 
-        return semantic_pred.float(), semantic_feat  # scale 1/1, 1/4
+        return output
