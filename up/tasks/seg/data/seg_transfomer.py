@@ -18,7 +18,7 @@ class SegResize(Augmentation):
 
     def augment(self, data):
         data['image'] = cv2.resize(data['image'], dsize=self.size, interpolation=cv2.INTER_LINEAR)
-        data['gt_seg'] = cv2.resize(data['gt_seg'], dsize=self.size, interpolation=cv2.INTER_NEAREST)
+        data['gt_semantic_seg'] = cv2.resize(data['gt_semantic_seg'], dsize=self.size, interpolation=cv2.INTER_NEAREST)
         return data
 
 
@@ -46,7 +46,7 @@ class SegRandResize(Augmentation):
 
     def augment(self, data):
         image = data['image']
-        label = data['gt_seg']
+        label = data['gt_semantic_seg']
         if random.random() < 0.5:
             temp_scale = self.scale[0] + (1. - self.scale[0]) * random.random()
         else:
@@ -61,7 +61,7 @@ class SegRandResize(Augmentation):
         new_w = int(w * scale_factor_w)
         new_h = int(h * scale_factor_h)
         data['image'] = cv2.resize(image, dsize=(new_w, new_h), interpolation=cv2.INTER_LINEAR)
-        data['gt_seg'] = cv2.resize(label, dsize=(new_w, new_h), interpolation=cv2.INTER_NEAREST)
+        data['gt_semantic_seg'] = cv2.resize(label, dsize=(new_w, new_h), interpolation=cv2.INTER_NEAREST)
         return data
 
 
@@ -95,7 +95,7 @@ class SegCrop(Augmentation):
 
     def augment(self, data):
         image = data['image']
-        label = data['gt_seg']
+        label = data['gt_semantic_seg']
         h, w, _ = image.shape
         pad_h = max(self.crop_h - h, 0)
         pad_w = max(self.crop_w - w, 0)
@@ -115,7 +115,7 @@ class SegCrop(Augmentation):
             w_off = (w - self.crop_w) // 2
 
         data['image'] = np.asarray(image[h_off: h_off + self.crop_h, w_off: w_off + self.crop_w], np.float32)
-        data['gt_seg'] = np.asarray(label[h_off: h_off + self.crop_h, w_off: w_off + self.crop_w], np.float32)
+        data['gt_semantic_seg'] = np.asarray(label[h_off: h_off + self.crop_h, w_off: w_off + self.crop_w], np.float32)
         return data
 
 
@@ -123,10 +123,10 @@ class SegCrop(Augmentation):
 class SegRandomHorizontalFlip(Augmentation):
     def augment(self, data):
         image = data['image']
-        label = data['gt_seg']
+        label = data['gt_semantic_seg']
         flip = np.random.choice(2) * 2 - 1
         data['image'] = image[:, ::flip, :]
-        data['gt_seg'] = label[:, ::flip]
+        data['gt_semantic_seg'] = label[:, ::flip]
         return data
 
 
@@ -134,12 +134,12 @@ class SegRandomHorizontalFlip(Augmentation):
 class RandRotate(Augmentation):
     def augment(self, data):
         image = data['image']
-        label = data['gt_seg']
+        label = data['gt_semantic_seg']
         angle = random.random() * 20 - 10
         h, w = image.shape[:2]
         rotation_matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1)
         data['image'] = cv2.warpAffine(image, rotation_matrix, (w, h), flags=cv2.INTER_LINEAR)
-        data['gt_seg'] = cv2.warpAffine(label, rotation_matrix, (w, h), flags=cv2.INTER_NEAREST)
+        data['gt_semantic_seg'] = cv2.warpAffine(label, rotation_matrix, (w, h), flags=cv2.INTER_NEAREST)
         return data
 
 

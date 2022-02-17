@@ -96,7 +96,7 @@ class UNet_Decoder(nn.Module):
 
     def forward(self, x):
         x1, x2, x3, x4, x5 = x['features']
-        gt_seg = x['gt_seg']
+        gt_seg = x['gt_semantic_seg']
         x_up3 = self.up1(x5, x4)
         x_up2 = self.up2(x_up3, x3)
         x_up1 = self.up3(x_up2, x2)

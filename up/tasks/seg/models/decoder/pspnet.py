@@ -44,7 +44,7 @@ class dec_pspnet(nn.Module):
         pred = self.head(ppm_out)
         pred = F.upsample(pred, size=size, mode='bilinear', align_corners=True)
         if self.training and self.with_aux:
-            gt_seg = x['gt_seg']
+            gt_seg = x['gt_semantic_seg']
             aux_pred = self.aux_layer(x3)
             aux_pred = F.upsample(aux_pred, size=size, mode='bilinear', align_corners=True)
             pred = pred, aux_pred

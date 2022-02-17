@@ -51,7 +51,7 @@ class ICNetEncoder(nn.Module):
         res = {}
         res['size'] = size
         res['features'] = x_sub1_out, x_sub2_out, x_sub4_out
-        res['gt_seg'] = input['gt_seg']
+        res['gt_semantic_seg'] = input['gt_semantic_seg']
         return res
 
     def get_outplanes(self):

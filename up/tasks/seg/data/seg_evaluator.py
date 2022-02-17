@@ -53,7 +53,7 @@ class SegEvaluator(Evaluator):
         else:
             image_num = len(res_dict['pred'])
             preds = res_dict['pred']
-            targets = res_dict['gt_seg']
+            targets = res_dict['gt_semantic_seg']
         for idx in range(image_num):
             if 'inter' not in res_dict:
                 inter, union, target = intersectionAndUnion(preds[idx],

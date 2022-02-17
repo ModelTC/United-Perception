@@ -31,7 +31,7 @@ class DFSegDecoder(nn.Module):
     def forward(self, x):
         x3, x4, x5 = x['features']
         size = x['size']
-        gt_seg = x['gt_seg']
+        gt_seg = x['gt_semantic_seg']
         x5 = self.ppm(x5)
         x5 = self.cc5(x5)
         x4 = self.cc4(x4)

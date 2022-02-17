@@ -40,7 +40,7 @@ class ICnetDecoder(nn.Module):
         pred.reverse()
 
         if self.training:
-            gt_seg = x['gt_seg']
+            gt_seg = x['gt_semantic_seg']
             loss = self.loss(pred, gt_seg)
             return {f"{self.prefix}.loss": loss, "blob_pred": pred}
         else:

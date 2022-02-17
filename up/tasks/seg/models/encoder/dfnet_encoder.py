@@ -103,7 +103,7 @@ class dfnetv1(nn.Module):
         res = {}
         res['features'] = [x3, x4, x5]
         res['size'] = size
-        res['gt_seg'] = input['gt_seg']
+        res['gt_semantic_seg'] = input['gt_semantic_seg']
         return res
 
     def get_outplanes(self):
@@ -165,7 +165,7 @@ class dfnetv2(nn.Module):
         res = {}
         res['features'] = [x3, x4, x5]
         res['size'] = size
-        res['gt_seg'] = input['gt_seg']
+        res['gt_semantic_seg'] = input['gt_semantic_seg']
         return res
 
     def get_outplanes(self):
