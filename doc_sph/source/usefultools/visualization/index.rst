@@ -1,13 +1,13 @@
-可视化/Visualization
-====================
+可视化
+======
 
 UP 支持两种可视化模式：
 
     * Inference
     * Hook
 
-推理/Inference
---------------
+Inference
+---------
 
 你可以将可视化设置加入推理配置中，如下所示：
 
@@ -20,10 +20,10 @@ UP 支持两种可视化模式：
           class_names: ['__background__', 'person'] # class names
           thresh: 0.5
 
-运行时钩子/Hook
----------------
+Hook
+----
 
-UP 支持可视化钩子，你可以将可视化设置加入钩子配置中，这样可以在训练和评估时画出 gt 框和检测框。
+UP 支持可视化hook，你可以将可视化设置加入Hook配置中，这样可以在训练和评估时画出 gt 框和检测框。
 
   .. code-block:: yaml
     

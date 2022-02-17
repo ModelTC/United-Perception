@@ -1,8 +1,8 @@
-数据预处理/Augmentations
-========================
+数据预处理
+==========
 
-UP 支持多种数据增广和前处理，数据增广包括：翻转（Flip），调整尺寸（Resize）， 扩展（StitchExpand）， 裁剪（ImageCrop）等；
-前处理包括正则化（normalization），变为向量（to_tenser），补充（pad）。
+UP 支持多种数据增广和前处理，数据增广包括：Flip，Resize，StitchExpand，ImageCrop等；
+前处理包括Normalization，To_Tenser，Pad。
 细节如下所示：
 
 UP 在配置文件中直接引入增广：
@@ -91,12 +91,3 @@ BatchPad: 经常被直接加入到 dataloader 的配置文件中。
             image_dir: coco/train2017
             color_mode: RGB
           transformer: [*flip, *train_resize, *to_tensor, *normalize]   # add here in order
-
-
-
-
-
-
-
-
-    

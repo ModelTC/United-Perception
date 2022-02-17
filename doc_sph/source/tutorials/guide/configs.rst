@@ -3,10 +3,10 @@
 
 UP通过设置流程参数来设置配置文件。
 考虑到便利性和可延展性，UP为所有组建提供通常接口，包括：数据库(dataset)，存储器(saver)，和骨干网络(backbone)等。
-可以通过执行注册器`Register <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/register_modules.md>`_来使用这些接口。
+可以通过调用注册器 `Register <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/register_modules.md>`_ 来使用这些接口。
 
-配置文件/Configuration File
----------------------------
+配置文件
+--------
 
 标准的配置信息包括：
 num_classes, runtime, dataset, trainer, saver, hooks and net. 
@@ -37,14 +37,14 @@ num_classes, runtime, dataset, trainer, saver, hooks and net.
     ......
 
 
-注册器模式/Register Mode
-------------------------
+注册器模式
+----------
 
-UP 支持对每个模块注册来灵活的构建传播流程。
+UP 支持对每个模块注册来灵活的构建实验。
 
 
-如何注册/How to register
-------------------------
+如何注册
+--------
 
 所有的有名称的对象（函数和类等）都是可以被注册的，但结果应当是对应的事例。
 比如，CocoDataset 将返回数据集而 resnet50 返回模块（ResNet instance）。
@@ -81,8 +81,8 @@ REGISTRY.register(alias).
             model.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
         return model
 
-怎么使用注册体/How to use Registry
-----------------------------------
+怎么使用注册体
+--------------
 
 UP 通过对应的配置文件使用注册体。定位注册体则需要使用别名。
 例如，CocoDataset 可以通过别名 coco 和参数 "kwargs" 来使用。
@@ -103,8 +103,8 @@ UP 通过对应的配置文件使用注册体。定位注册体则需要使用�
             transformer: [*flip, *resize, *to_tensor, *normalize]
 
 
-UP 开发中模式/UP Developing Mode
-------------------------------
+UP 开发模式
+-----------
 
 我们强烈推荐一种新的开发模式： 发布的 UP + 植入（Plugins），包含以下两部分：
 
@@ -112,10 +112,10 @@ UP 开发中模式/UP Developing Mode
 * 植入： 经过注册的自定义模块。
 
 
-自定义植入/Customized Plugin
-----------------------------
+用户代码仓库
+------------
 
-你可以开发一个由注册过的多模块组建的植入体，比如数据集、模型、损失函数等。
+你可以开发一个由注册过的多模块组成的用户代码仓库，比如数据集、模型、损失函数等。
 以 Face package 为例，结构如下所示。
 
   .. code-block:: bash

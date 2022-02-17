@@ -1,11 +1,11 @@
-运行时钩子/Hooks
-================
+运行时钩子
+==========
 
 运行时钩子被用来监测训练过程，包括时间（timing），日志（log），可视化（visualization）等。
 细节可以在 hooks.py 中找到。
 
-典型钩子/Typical hooks
-----------------------
+常用类别
+--------
 
 所有钩子类都是从 Hook 类中被继承。UP 支持以下类：
 
@@ -15,8 +15,8 @@
 * auto_save_best
 * reload
 
-训练测试记录器/TrainValLogger
----------------------------
+TrainValLogger
+--------------
 
 TrainValLogger 被用来输出训练日志，包括打印损失值，时间消耗，剩余时间等。
 在训练中，UP 会保留含有 tensorboard 的训练日志，包括损失值和准确率。
@@ -31,10 +31,10 @@ TrainValLogger 被用来输出训练日志，包括打印损失值，时间消�
           logdir: log       # tennsorboard log path
           summary_writer: tensorboard # choices = [tensorboard, pavi] # when use pavi, can not check log with tensorboard
 
-自动保存最佳模型/AutoSaveBest
------------------------------
+AutoSaveBest
+------------
 
-保留具有最高评估结果的 checkpoint.
+保留具有最高精度的 checkpoint.
 
   .. code-block:: yaml
     
@@ -50,24 +50,24 @@ TrainValLogger 被用来输出训练日志，包括打印损失值，时间消�
     hooks:
       - type: auto_save_best
 
-自动保存节点/AutoCheckpoint
----------------------------
+AutoCheckpoint
+--------------
 
-当实验被中止时，checkpoint 是被自动保存的。
+当训练被中止时，checkpoint 是被自动保存的。
 
   .. code-block:: yaml
     
     hooks:
       - type: auto_checkpoint
 
-梯度减小/Gradient Clip
-----------------------
+Gradient Clip
+-------------
 
-梯度减小支持以下三种模式：
+梯度剪切支持以下三种模式：
 
-    * 预设模式（Predefined norm）。
-    * 平均模式（Averaged norm）。
-    * 移动平均模式（Moving averaged norm）。
+    * Predefined norm
+    * Averaged norm
+    * Moving averaged norm
 
   .. code-block:: yaml
     
