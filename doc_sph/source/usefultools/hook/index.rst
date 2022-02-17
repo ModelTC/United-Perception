@@ -1,13 +1,13 @@
-Hooks
-=====
+运行时钩子/Hooks
+================
 
-Hooks are used to monitor the training process, including timing, log, visualization and so on.
-The details can be found in hooks.py.
+运行时钩子被用来监测训练过程，包括时间（timing），日志（log），可视化（visualization）等。
+细节可以在 hooks.py 中找到。
 
-Typical hooks
--------------
+典型钩子/Typical hooks
+----------------------
 
-All types of hooks inherit from Hook classes. UP supports:
+所有钩子类都是从 Hook 类中被继承。UP 支持以下类：
 
 * train_val_logger
 * auto_checkpoint
@@ -15,11 +15,11 @@ All types of hooks inherit from Hook classes. UP supports:
 * auto_save_best
 * reload
 
-TrainValLogger
---------------
+训练测试记录器/TrainValLogger
+---------------------------
 
-It is used to output training logs, including printing loss, time consumption, remaining time, etc.
-During the training, UP will maintain the training log with tensorboard, including loss, accuracy, etc.
+TrainValLogger 被用来输出训练日志，包括打印损失值，时间消耗，剩余时间等。
+在训练中，UP 会保留含有 tensorboard 的训练日志，包括损失值和准确率。
 
   .. code-block:: yaml
     
@@ -31,10 +31,10 @@ During the training, UP will maintain the training log with tensorboard, includi
           logdir: log       # tennsorboard log path
           summary_writer: tensorboard # choices = [tensorboard, pavi] # when use pavi, can not check log with tensorboard
 
-AutoSaveBest
-------------
+自动保存最佳模型/AutoSaveBest
+-----------------------------
 
-Save the checkpoint with the best evaluating result.
+保留具有最高评估结果的 checkpoint.
 
   .. code-block:: yaml
     
@@ -50,24 +50,24 @@ Save the checkpoint with the best evaluating result.
     hooks:
       - type: auto_save_best
 
-AutoCheckpoint
---------------
+自动保存节点/AutoCheckpoint
+---------------------------
 
-The checkpoint is automatically saved when the experiment is killed.
+当实验被中止时，checkpoint 是被自动保存的。
 
   .. code-block:: yaml
     
     hooks:
       - type: auto_checkpoint
 
-Gradient Clip
--------------
+梯度减小/Gradient Clip
+----------------------
 
-Gradient clipping supports three modes:
+梯度减小支持以下三种模式：
 
-    * Predefined norm
-    * Averaged norm
-    * Moving averaged norm
+    * 预设模式（Predefined norm）。
+    * 平均模式（Averaged norm）。
+    * 移动平均模式（Moving averaged norm）。
 
   .. code-block:: yaml
     

@@ -1,15 +1,15 @@
-Visualization
-=============
+可视化/Visualization
+====================
 
-UP supports two visualization modes:
+UP 支持两种可视化模式：
 
     * Inference
     * Hook
 
-Inference
----------
+推理/Inference
+--------------
 
-You could add visualizer settings into inference config, refering to Demo:
+你可以将可视化设置加入推理配置中，如下所示：
 
   .. code-block:: yaml
     
@@ -20,10 +20,10 @@ You could add visualizer settings into inference config, refering to Demo:
           class_names: ['__background__', 'person'] # class names
           thresh: 0.5
 
-Hook
-----
+运行时钩子/Hook
+---------------
 
-UP supports Visualize hook, you could add visualizer settings into hook config so that drawing gt bboxes and dt results during training and evaluating.
+UP 支持可视化钩子，你可以将可视化设置加入钩子配置中，这样可以在训练和评估时画出 gt 框和检测框。
 
   .. code-block:: yaml
     

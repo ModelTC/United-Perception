@@ -1,9 +1,11 @@
-数据预处理
-==========
+数据预处理/Augmentations
+========================
 
-UP supports several data augmentations and preprocesses, including various augmentations such as Flip, Resize, StitchExpand, ImageCrop, etc. and preprocesses such as normalization, to_tenser, pad, etc. Details are as follows.
+UP 支持多种数据增广和前处理，数据增广包括：翻转（Flip），调整尺寸（Resize）， 扩展（StitchExpand）， 裁剪（ImageCrop）等；
+前处理包括正则化（normalization），变为向量（to_tenser），补充（pad）。
+细节如下所示：
 
-UP imports augmentations directly from config settings:
+UP 在配置文件中直接引入增广：
 
 Flip:
 
@@ -63,7 +65,7 @@ ToTensor:
     to_tensor: &to_tensor
       type: to_tensor
 
-BatchPad: be usually added into dataloader config
+BatchPad: 经常被直接加入到 dataloader 的配置文件中。
 
   .. code-block:: yaml
     
@@ -75,7 +77,7 @@ BatchPad: be usually added into dataloader config
         pad_value: 0
         pad_type: batch_pad
 
-* All augmentations need to be added into dataset.kwargs.transformer in order as follows:
+* 所有的增广都需要被加入 dataset.kwargs.transformer，如下所示：
 
   .. code-block:: yaml
     
