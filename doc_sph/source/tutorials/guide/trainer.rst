@@ -15,6 +15,8 @@
     trainer: # Required.
         max_epoch: 14 # total epochs for the training
         test_freq: 14 # test every 14 epochs (当大于max_epoch，则只在训练结束时进行测试）
+        save_freq: 1 # 模型保存的epoch间隔
+        # only_save_latest: False # 如果是True，仅保存上一次保存的模型且save_freq失效
         optimizer:
             type: SGD
             kwargs:
