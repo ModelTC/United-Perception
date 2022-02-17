@@ -14,10 +14,26 @@
 
      source s0.3.4 or s0.3.3
 
-通过脚本完成安装
+3. 编译代码，在集群环境内可采用srun或spring.submit run完成，示例如下：
+
+srun模式:
 
 .. code-block:: bash
 
-     ./easy_setup.sh <partition>
+     srun -p $partition --gres=gpu:1 python setup.py build_ext -i
 
-<partition> 为集群可通过 sinfo 命令查看
+spring.submit run模式:
+
+.. code-block:: bash
+
+    spring.submit run -p $partition -n1 --gpu "python setup.py build_ext -i"
+
+4. 使用脚本编译，我们提供了easy_setup.sh脚本方便直接编译代码：
+
+.. code-block:: bash
+
+    ./easy_setup.sh $partition
+
+.. note::
+
+    * <$partition> 为集群分区名，可通过sinfo命令查看

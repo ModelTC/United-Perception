@@ -139,7 +139,7 @@ Step2: inference
 Deploy
 -------
 
-UP 支持将检测模型转化为caffemodel格式
+to_caffe, UP 支持将模型转化为caffemodel格式
 
   .. code-block:: bash
 
@@ -160,7 +160,7 @@ UP 支持将检测模型转化为caffemodel格式
       --backend=linklink \
       2>&1 | tee log.tocaffe.$T.$(basename $cfg) "
 
-UP 支持将检测模型转化为kestrel格式
+to_kestrel, UP 支持将模型转化为kestrel格式
 
   .. code-block:: bash
 
@@ -176,6 +176,11 @@ UP 支持将检测模型转化为kestrel格式
       --config=$cfg \
       --save_to=kestrel_model \
       2>&1 | tee log.tokestrel.$T.$(basename $cfg) "
+
+  .. note::
+
+    * to kestrel时，需要在配置文件中添加模型转换的相应参数;
+    * 具体子任务需要添加的参数可参考 :ref:`tasks`. 
 
 部署例子:
 
