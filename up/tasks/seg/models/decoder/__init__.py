@@ -5,3 +5,4 @@ from .unet_decoder import *  # noqa
 from .pspnet import *  # noqa
 from .biseg import *  # noqa
 from .icnet import *  # noqa
+from .semantic_fpn import *  # noqa
