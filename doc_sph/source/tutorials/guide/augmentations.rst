@@ -1,7 +1,7 @@
 数据预处理
 ==========
 
-UP 支持多种数据增广和前处理，数据增广包括：Flip，Resize，StitchExpand，ImageCrop等；
+UP 支持多种数据增广和前处理，常用数据增广包括Flip，Resize等；
 前处理包括Normalization，To_Tenser，Pad。
 细节如下所示：
 
@@ -26,27 +26,6 @@ Resize:
         scales: [640, 672, 704, 736, 768, 800]
         max_size: 1333
         separate_wh: True
-
-StitchExpand:
-
-  .. code-block:: yaml
-
-    expand: &stitch_expand
-      type: stitch_expand
-      kwargs:
-        expand_ratios: 2.0
-        expand_prob: 0.5
-
-ImageCrop:
-
-  .. code-block:: yaml
-
-    crop: &crop
-      type: crop
-      kwargs:
-        means: [123.675, 116.280, 103.530]
-        scale: 1024
-        crop_prob: 0.5
 
 Normalization:
 

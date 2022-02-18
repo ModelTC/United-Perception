@@ -11,7 +11,7 @@
    guide/configs
    guide/model_flow
    guide/datasets
-   guide/augmentations_and_preprocesses
+   guide/augmentations
    guide/trainer
    guide/saver
    guide/normalization

@@ -34,6 +34,29 @@ UP支持检测任务训练、部署、推理的全部流程;
             color_mode: RGB
         transformer: [*stitch_expand, *crop, *flip, *color_jitter, *fix_output_resize,*to_tensor, *normalize]
 
+3. 数据增广:
+
+  * StitchExpand:
+
+  .. code-block:: yaml
+
+    expand: &stitch_expand
+      type: stitch_expand
+      kwargs:
+        expand_ratios: 2.0
+        expand_prob: 0.5
+
+  * ImageCrop:
+
+  .. code-block:: yaml
+
+    crop: &crop
+      type: crop
+      kwargs:
+        means: [123.675, 116.280, 103.530]
+        scale: 1024
+        crop_prob: 0.5
+
 部署模块
 --------
 
