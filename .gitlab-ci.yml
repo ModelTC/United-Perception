@@ -34,5 +34,5 @@ style:
 #     - pip install http://spring.sensetime.com/pypi/packages/sphinxcontrib_versioning-2.2.1-py3-none-any.whl
 #     - git --version
 #     - export PYTHONPATH=.:$PYTHONPATH
-#     - sphinx-versioning build doc_sph/source doc_sph/_build/html
+#     - sphinx-versioning build docs/source docs/_build/html
 #     - echo "update pod docs done"
