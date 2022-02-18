@@ -2,7 +2,7 @@
 
 ![image](up-logo.png)
 
-详细教程参见 [up 官方文档]()
+详细教程参见 [up 官方文档](http://spring.sensetime.com/docs/up/index.html)
 
 ## Benckmark
 
