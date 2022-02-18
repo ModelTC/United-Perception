@@ -25,7 +25,7 @@ def get_env_info():
         logger.warning(e)
 
 
-def set_random_seed(seed, rank_init=True):
+def set_random_seed(seed, rank_init=False):
     if not rank_init:
         random.seed(seed)
         np.random.seed(seed ** 2)

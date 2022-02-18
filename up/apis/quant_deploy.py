@@ -27,7 +27,7 @@ class QuantDeploy(object):
 
     def set_default_cfg(self):
         self.config['runtime'] = self.config.setdefault('runtime', {})
-        self.config['runtime']['rank_init'] = self.config['runtime'].setdefault('rank_init', True)
+        self.config['runtime']['rank_init'] = self.config['runtime'].setdefault('rank_init', False)
         self.config['runtime']['random_seed'] = self.config['runtime'].setdefault('random_seed', 131)
         self.config['runtime']['aligned'] = self.config['runtime'].setdefault('aligned', False)
         self.config['runtime']['iter_base'] = self.config['runtime'].setdefault('iter_base', False)

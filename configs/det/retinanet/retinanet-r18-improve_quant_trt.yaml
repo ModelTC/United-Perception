@@ -1,5 +1,7 @@
 num_classes: &num_classes 81
 
+runtime:
+  rank_init: True
 
 runtime:
    runner:

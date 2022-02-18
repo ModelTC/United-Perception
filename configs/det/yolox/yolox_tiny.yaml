@@ -3,7 +3,8 @@ runtime:
     aligned: True
     async_norm: True
     special_bn_init: True
-
+    rank_init: True
+    
 mosaic: &mosaic
   type: mosaic
   kwargs:

@@ -1,6 +1,7 @@
 num_classes: &num_classes 81
 runtime:
-   aligned: True
+    aligned: True
+    rank_init: True
 
 mosaic: &mosaic
  type: mosaic
