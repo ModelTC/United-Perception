@@ -22,13 +22,5 @@ class QatWeightsOptimizer(BaseOptimizer):
             elif hasattr(v, 'weight') and isinstance(v.weight, nn.Parameter):
                 trainable_params[1]["params"].append(v.weight)
                 trainable_params[1]["weight_decay"] = weight_decay
-            # elif hasattr(v, 'scale'):
-            #     trainable_params[3]["params"].append(v.scale)
-            #     trainable_params[3]["weight_decay"] = 0.0
-            #     trainable_params[3]["lr"] = scale_lr
-            elif hasattr(v, 'log_threshold'):
-                trainable_params[0]["params"].append(v.log_threshold)  # log_threshold
-                trainable_params[0]["weight_decay"] = 0.0
-                trainable_params[3]["lr"] = scale_lr
         return trainable_params
 

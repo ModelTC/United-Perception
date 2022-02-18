@@ -2,6 +2,7 @@
 |Model  | size |mAP<sup>val<br>0.5:0.95 | weights |
 | ------|:---: | :---:                  | :---:   |
 |[YOLOX-nano](https://github.com/ModelTC/EOD/blob/main/configs/det/yolox/yolox_nano.yaml)|416  |24.8 | [model](https://github.com/ModelTC/EOD/releases/download/0.0.1/yolox_nano.pth) |
+|[YOLOX-fpga](https://github.com/ModelTC/EOD/blob/main/configs/det/yolox/yolox_fpga.yaml)|320  |29.2 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/yolox_fpga.pth) |
 |[YOLOX-tiny](https://github.com/ModelTC/EOD/blob/main/configs/det/yolox/yolox_tiny.yaml)    |416  |33.0 | [model](https://github.com/ModelTC/EOD/releases/download/0.0.1/yolox_tiny.pth) |
 |[YOLOX-small](https://github.com/ModelTC/EOD/blob/main/configs/det/yolox/yolox_small.yaml)   |640  |40.4 | [model](https://github.com/ModelTC/EOD/releases/download/0.0.1/yolox_small.pth) |
 |[YOLOX-medium](https://github.com/ModelTC/EOD/blob/main/configs/det/yolox/yolox_medium.yaml)  |640  |46.9 | [model](https://github.com/ModelTC/EOD/releases/download/0.0.1/yolox_medium.pth) |

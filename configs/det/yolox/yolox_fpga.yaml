@@ -122,7 +122,7 @@ trainer: # Required.
 saver:
   save_dir: checkpoints/pretrained_fp32
   results_dir: results_dir/pretrained_fp32
-  resume_model: pretrained_fp32/ckpt_pretrain.pth
+  resume_model: pretrained_fp32/yolox_fpga.pth
   auto_resume: False
   
 hooks:
