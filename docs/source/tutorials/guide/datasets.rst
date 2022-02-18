@@ -61,5 +61,112 @@ CocoDataset
 在自定义数据集上训练
 --------------------
 
-UP 支持定制数据集。细节可以在`Training on custom data <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/train_custom_data.md>`_中查询。
+数据集结构
+----------
 
+数据集结构组成示例如下:
+
+  .. code-block:: bash
+
+    datasets 
+    ├── image_dir 
+    |   ├── train 
+    |   ├── test 
+    |   └── val 
+    └── annotations     
+        ├── train.json     
+        ├── test.json     
+        └── val.json
+
+标注文件格式
+------------
+
+建议以json格式保存标注文件，单张图像标注格式如下:
+
+  .. code-block:: yaml
+
+    {
+        "filename": "000005.jpg",
+        "image_height": 375,
+        "image_width": 500,
+        "instances": [                // List of labeled entities, optional for test
+          {
+            "is_ignored": false,
+            "bbox": [262,210,323,338], // x1,y1,x2,y2
+            "label": 9                 // Label id start from 1, total C classes corresponding  a range of [1, 2, ..., C]
+          },
+          {
+            "is_ignored": false,
+            "bbox": [164,263,252,371],
+            "label": 9
+          },
+          {
+            "is_ignored": false,
+            "bbox": [4,243,66,373],
+            "label": 9
+          }    
+        ]
+    }
+
+精度评估
+--------
+
+UP支持MR模式评估自定义数据集精度，包括两个指标:
+
+  * MR@FPPI=xxx: Miss rate while FPPI reaches some value.
+  * Score@FPPI=xxx: Confidence score while FPPI reaches some value.
+
+配置文件示例
+------------
+
+  .. code-block:: yaml
+
+    dataset:
+      train:
+        dataset:
+          type: custom
+          kwargs:
+            num_classes: *num_classes
+            meta_file: # fill in your own train annotation file
+            image_reader:
+              type: fs_opencv
+              kwargs:
+                image_dir: # fill in your own train data path
+                color_mode: RGB
+            transformer: [*flip, *resize, *to_tensor, *normalize]
+      test:
+        dataset:
+          type: custom
+          kwargs:
+            num_classes: *num_classes
+            meta_file: # fill in your own test annotation file 
+            image_reader:
+              type: fs_opencv
+              kwargs:
+                image_dir: # fill in your own test data path  
+                color_mode: RGB
+            transformer: [*resize, *to_tensor, *normalize]
+            evaluator:
+              type: MR # fill in your own evaluator
+              kwargs:
+                gt_file: # fill in your own test annotation file
+                iou_thresh: 0.5
+                num_classes: *num_classes
+      batch_sampler:
+        type: aspect_ratio_group
+        kwargs:
+          sampler:
+            type: dist
+            kwargs: {}
+          batch_size: 2
+          aspect_grouping: [1,]
+      dataloader:
+        type: base
+        kwargs:
+          num_workers: 4
+          alignment: 1
+
+  .. note::
+
+    * 数据集与评估方法类型需要设定为 **custom** and **MR**
+    * 需要设置num_classes参数

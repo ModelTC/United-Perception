@@ -17,3 +17,4 @@
    guide/normalization
    guide/loss
    guide/fp16
+   guide/quant

@@ -3,7 +3,7 @@
 
 UP通过设置流程参数来设置配置文件。
 考虑到便利性和可延展性，UP为所有组建提供通常接口，包括：数据库(dataset)，存储器(saver)，和骨干网络(backbone)等。
-可以通过调用注册器 `Register <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/docs/register_modules.md>`_ 来使用这些接口。
+可以通过调用注册器来使用这些接口。
 
 配置文件
 --------
