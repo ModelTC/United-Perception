@@ -75,8 +75,8 @@ dataset: # Required.
 
 
 trainer: # Required.
-  max_epoch: 12              # total epochs for the training
-  test_freq: 12
+  max_epoch: 14              # total epochs for the training
+  test_freq: 14
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
     kwargs:
@@ -84,10 +84,10 @@ trainer: # Required.
       momentum: 0.9
       weight_decay: 0.0001
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
-    warmup_iter: 500         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_epochs: 1         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
     type: MultiStepLR
     kwargs:
-      milestones: [8,11]     # epochs to decay lr
+      milestones: [9,12]     # epochs to decay lr
       gamma: 0.1             # decay rate
 
 saver: # Required.
@@ -118,7 +118,7 @@ net:
     kwargs:
       feat_planes: 512    # channels of intermediate conv
       num_classes: 2      # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
-      num_anchors: 5
+      num_anchors: 15
       class_activation: softmax
       num_levels: 1
       initializer:

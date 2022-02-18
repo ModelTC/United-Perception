@@ -27,6 +27,8 @@ dataset:
 Step2: train
 1. Srun 直接启动脚本
 ```shell
+cfg=$3
+
 g=$(($2<8?$2:8))
 srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
     --job-name=$cfg \
@@ -43,11 +45,11 @@ python -m up train \
 2. Spring.submit 启动脚本
 ```shell
 export ROOT=$ROOT
-cfg=$2
+cfg=$3
 export PYTHONPATH=$ROOT:$PYTHONPATH
 CPUS_PER_TASK=${CPUS_PER_TASK:-4}
 
-spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=${CPUS_PER_TASK} \
+spring.submit run -p $1 -n$2 --gpu --job-name=$cfg --cpus-per-task=${CPUS_PER_TASK} \
 "python -m up train \
   --config=$cfg \
   --display=10 \
@@ -55,8 +57,8 @@ spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=$
   2>&1 | tee log.train "
 
 
-#./train.sh <num_gpu> <PARTITION> <config> <job-name>
-./train.sh 8 ToolChain configs/det/yolox/yolox_tiny.yaml yolox_tiny
+#./train.sh <PARTITION> <num_gpu> <config>
+./train.sh ToolChain 8 configs/det/yolox/yolox_tiny.yaml
 ```
 
 Step3: FP16 设置以及其他一些额外的设置
@@ -75,6 +77,8 @@ runtime:
 评测脚本, 沿袭POD的模式，现在将train test 合成了一个指定，在命令行指定 -e 即可启动测试
 
 ```shell
+cfg=$3
+
 g=$(($2<8?$2:8))
 srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
     --job-name=$cfg \
@@ -101,7 +105,7 @@ cfg=$2
 export PYTHONPATH=$ROOT:$PYTHONPATH
 CPUS_PER_TASK=${CPUS_PER_TASK:-4}
 
-spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=${CPUS_PER_TASK} \
+spring.submit run -n$1 -p ToolChain --gpu --job-name=$3 --cpus-per-task=${CPUS_PER_TASK} \
 "python -m up to_caffe \
   --config=$cfg \
   --save_prefix=tocaffe \
@@ -121,7 +125,7 @@ cfg=$2
 export PYTHONPATH=$ROOT:$PYTHONPATH
 CPUS_PER_TASK=${CPUS_PER_TASK:-4}
 
-spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=${CPUS_PER_TASK} \
+spring.submit run -n$1 -p ToolChain --gpu --job-name=$3 --cpus-per-task=${CPUS_PER_TASK} \
 "python -m up to_kestrel \
   --config=$cfg \
   --save_to=kestrel_model \
@@ -151,7 +155,7 @@ g=$(($2<8?$2:8))
 srun --mpi=pmi2 -p $1 -n$2 --gres=gpu:$g --ntasks-per-node=$g \
     --job-name=$3 \
 python -m up inference \
-  --config=$3 \\
+  --config=$3 \
   -i imgs \
   -v vis_dir \
   2>&1 | tee log.inference
