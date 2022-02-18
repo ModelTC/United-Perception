@@ -44,6 +44,28 @@ ToTensor:
     to_tensor: &to_tensor
       type: to_tensor
 
+RandAug: 随机从给定的增强序列中抽取n个增强操作，并根据给定的m值和方差std来决定增强的强度
+
+  .. code-block:: yaml
+    
+    random_augmentation: &random_augmentation
+      type: torch_random_augmentation
+      kwargs:
+        n: 2  # 随机抽取的增强个数
+        m: 7  # 每个增强操作的强度，最高为10
+        magnitude_std: 0.5  # 强度的方差
+
+RandAug Increasing: 原始的RandAug中有些操作，m值越小，增强的程度越大，Inceasing版本则是将所有的增强操作统一为m越大增强的强度越大
+
+  .. code-block:: yaml
+    
+    random_augmentation: &random_augmentation
+      type: torch_random_augmentationIncre
+      kwargs:
+        n: 2  # 随机抽取的增强个数
+        m: 7  # 每个增强操作的强度，最高为10
+        magnitude_std: 0.5  # 强度的方差
+
 BatchPad: 经常被直接加入到 dataloader 的配置文件中。
 
   .. code-block:: yaml
