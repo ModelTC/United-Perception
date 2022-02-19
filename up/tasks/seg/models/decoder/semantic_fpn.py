@@ -193,8 +193,7 @@ class SemanticFPN(SemanticNet):
         for i, upsample in enumerate(self.upsamples):
             feat = upsample(x[i])
             if i > 0:
-                feat = self.interp(upsampled_feats[0],
-                                   upsampled_feats[0].size()[2:])
+                feat = self.interp(feat, upsampled_feats[0].size()[2:])
             upsampled_feats.append(feat)
 
         # Merging features from all levels

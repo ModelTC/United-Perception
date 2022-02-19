@@ -137,6 +137,7 @@ class CustomSeg(BaseDataset):
                  num_classes,
                  evaluator=None,
                  mask_reader=None,
+                 output_pred=False,
                  ignore_label=255,
                  class_names=None,
                  mask_dump_dir=None):
@@ -148,6 +149,7 @@ class CustomSeg(BaseDataset):
 
         self._normal_init(meta_file)
         self.num_classes = num_classes
+        self.output_pred = output_pred
 
         # mask reader
         if isinstance(mask_reader, str) or mask_reader is None:
