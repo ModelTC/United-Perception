@@ -292,7 +292,8 @@ class MREvaluator(CustomEvaluator):
                  ign_iou_thresh=0.5,
                  iou_types=['bbox'],
                  eval_class_idxs=[],
-                 cross_cfg=None):
+                 cross_cfg=None,
+                 data_respective=False):
 
         super(MREvaluator, self).__init__(gt_file,
                                           num_classes,
@@ -313,6 +314,7 @@ class MREvaluator(CustomEvaluator):
         if self.class_names is None:
             self.class_names = eval_class_idxs
         self.iou_types = iou_types
+        self.data_respective = data_respective
 
     def get_miss_rate(self, tp, fp, scores, image_num, gt_num, return_index=False):
         """
@@ -416,11 +418,31 @@ class MREvaluator(CustomEvaluator):
         logger.info('\n{}'.format(table))
 
     def eval(self, res_file, res=None):
+        metrics = []
+
+        gt_files = self.gt_file
+        if not isinstance(self.gt_file, list):
+            gt_files = [self.gt_file]
+        num_device = len(res)
+        num_gts = len(gt_files)
+        res_temp = []
+        for i_gt in range(num_gts):
+            res_temp.append([[] for _ in range(num_device)])
+            for i_device in range(num_device):
+                res_temp[i_gt][i_device].append(res[i_device][i_gt])
+        for i_gt in range(num_gts):
+            metrics.append(self.single_eval(res_file, res_temp[i_gt], gt_file=gt_files[i_gt]))
+        return metrics
+
+    def single_eval(self, res_file, res=None, gt_file=None):
+        # eval respective
+        if not self.data_respective:
+            gt_file = self.gt_file
         metric_res = Metric({})
         for itype in self.iou_types:
             num_mean_cls = 0
             if not self.gt_loaded:
-                self.gts, original_gt = self.load_gts(self.gt_file)
+                self.gts, original_gt = self.load_gts(gt_file)
                 self.gt_loaded = True
             else:
                 self.reset_detected_flag()
@@ -436,7 +458,7 @@ class MREvaluator(CustomEvaluator):
                 sum_gt = self.gts['gt_num'][class_i]
                 results_i = dts.get(class_i, [])
                 results_i = sorted(results_i, key=lambda x: -x['score'])
-                class_from = self.class_from.get(class_i, [0])
+                class_from = self.class_from.get(class_i, [0]) if not self.data_respective else [0]
                 gts_img_id_set = set()
                 for data_idx in class_from:
                     gts_img_id_set = gts_img_id_set.union(self.gts['image_ids'][data_idx])
