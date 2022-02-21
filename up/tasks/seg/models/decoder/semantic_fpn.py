@@ -33,10 +33,26 @@ class SemanticNet(nn.Module):
         else:
             return F.softmax(pred, dim=1)
 
+    def interp_to_origin_image(self, pred, input):
+        image = input['image']
+        if pred.size()[-2:] != image.size()[-2:]:
+            warnings.warn(
+                f'use default interp to origin image! {pred.size()} vs {image.size()}'
+            )
+            pred = F.interpolate(pred,
+                                 image.size()[-2:],
+                                 mode='bilinear',
+                                 align_corners=True)
+        return pred
+
     def forward(self, input):
         output = self.predict(input)
         if not self.training and self.tocaffe:
-            output[self.prefix + '.blobs.seg'] = self.to_caffe_export(output['blob_pred'])
+            output[self.prefix + '.blobs.seg'] = self.to_caffe_export(
+                output['blob_pred'])
+
+        output['blob_pred'] = self.interp_to_origin_image(
+            output['blob_pred'], input)
         return output
 
 
