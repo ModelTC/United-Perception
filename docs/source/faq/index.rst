@@ -10,7 +10,7 @@
 --------
 
     1. gitlab: `gitlab <https://gitlab.bj.sensetime.com/spring2/universal-perception/issues>`_
-    2. spring 论坛: `spring <http://spring.sensetime.com/forum/t/topic/29>`_
+    2. 答疑群: pod答疑群或者spring模型生产框架&生态答疑群 
 
 提问姿势
 --------

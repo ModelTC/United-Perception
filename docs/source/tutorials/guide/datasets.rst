@@ -111,6 +111,22 @@ CocoDataset
 精度评估
 --------
 
+配置文件示例:
+
+  ..code-block:: yaml
+
+    evaluator:
+      type: MR
+      kwargs:
+        gt_file: path/your/test.json
+        iou_thresh: 0.5
+        num_classes: *num_classes
+        data_respective: False
+
+  .. note::
+
+    * UP支持多验证\测试集评估，通过设置data_repective为True，支持多数据集分别评估精度，为False时，多数据集统一评估精度
+
 UP支持MR模式评估自定义数据集精度，包括两个指标:
 
   * MR@FPPI=xxx: Miss rate while FPPI reaches some value.

@@ -17,15 +17,15 @@ __all__ = ['BaseInference']
 
 @INFERENCER_REGISTRY.register('base')
 class BaseInference(object):
-    def __init__(self, config, work_dir='./'):
+    def __init__(self, config, visualizer, work_dir='./'):
         self.args = config.get('args', {})
         opts = self.args.get('opts', [])
         config = merge_opts_into_cfg(opts, config)
         self.config = config
-        # cfg_infer = config['inference']
-        self.class_names = config.get('class_names', None)
+        self.class_names = visualizer.get('class_names', None)
         self.work_dir = work_dir
         self.vis_dir = self.args['vis_dir']
+        self.ckpt = self.args['ckpt']
         self.image_path = self.args['image_path']
 
         assert self.image_path and os.path.exists(self.image_path), 'Invalid images path.'
@@ -40,10 +40,11 @@ class BaseInference(object):
         self.build_saver()
         logger.info('build saver done')
         # build visualizer
-        self.vis_type = config['inference']['visualizer']['type']
+        self.vis_cfg = visualizer
+        self.vis_type = self.vis_cfg['type']
         # update vis_dir
-        config['inference']['visualizer']['kwargs']['vis_dir'] = self.vis_dir
-        self.visualizer = VISUALIZER_REGISTRY.build(config['inference']['visualizer'])
+        self.vis_cfg['kwargs']['vis_dir'] = self.vis_dir
+        self.visualizer = VISUALIZER_REGISTRY.build(self.vis_cfg)
         logger.info('build visualizer done')
         # resume
         self.resume()

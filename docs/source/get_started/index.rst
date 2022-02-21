@@ -14,7 +14,7 @@
 Train
 -----
 
-Step1: 修改dataset 路径，基本格式沿袭POD的格式，可以参考POD的文档 
+Step1: 修改dataset 路径 
 
   .. code-block:: bash
 
@@ -28,6 +28,7 @@ Step1: 修改dataset 路径，基本格式沿袭POD的格式，可以参考POD�
             kwargs:
               image_dir: coco/train2017
               color_mode: BGR
+          transformer: [*flip, *train_resize, *to_tensor, *normalize]
 
 
 Step2: 训练
@@ -87,7 +88,7 @@ Step3: FP16 设置以及其他一些额外的设置
 Evaluate
 --------
 
-评测脚本, 沿袭POD的模式，现在将train test 合成了一个指定，在命令行指定 -e 即可启动测试
+评测脚本, 现在将train test 合成了一个指定，在命令行指定 -e 即可启动测试
 
   .. code-block:: bash
 
@@ -110,16 +111,19 @@ Evaluate
 Demo
 ----
 
-Step1: 修改cfg，沿袭POD的格式 
+Step1: 修改cfg
 
   .. code-block:: bash
 
-    inference:
-      visualizer:
-        type: plt
+    runtime:
+      inferencer:
+        type: base
         kwargs:
-          class_names: ['__background__', 'person'] # class names
-          thresh: 0.5
+          visualizer:
+            type: plt
+            kwargs:
+              class_names: ['__background__', 'person'] # class names
+              thresh: 0.5
 
 Step2: inference
 
@@ -132,8 +136,9 @@ Step2: inference
         --job-name=$cfg \
     python -m up inference \
       --config=$cfg \
-      -i imgs \
-      -v vis_dir \
+      -i=imgs \
+      -v=vis_dir \
+      -c=ckpt \
       2>&1 | tee log.inference
 
     # ./inference.sh <PARTITION> <num_gpu> <config>

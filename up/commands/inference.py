@@ -29,6 +29,11 @@ class Inference(Subcommand):
                                 dest='image_path',
                                 required=True,
                                 help='path of images needed to be inferenced')
+        sub_parser.add_argument('-c',
+                                '--ckpt',
+                                dest='ckpt',
+                                required=True,
+                                help='path of model')
         sub_parser.add_argument('-v',
                                 '--vis_dir',
                                 dest='vis_dir',
@@ -51,6 +56,7 @@ def main(args):
     cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
         'image_path': args.image_path,
+        'ckpt': args.ckpt,
         'vis_dir': args.vis_dir,
         'opts': args.opts
     }
@@ -61,6 +67,10 @@ def main(args):
     infer_cfg = cfg['runtime'].get('inferencer', {})
     infer_cfg['type'] = infer_cfg.get('type', 'base')
     infer_cfg['kwargs'] = infer_cfg.get('kwargs', {})
+    # default visualizer
+    vis_cfg = infer_cfg['kwargs'].setdefault('visualizer', {})
+    vis_cfg['type'] = vis_cfg.get('type', 'plt')
+    vis_cfg['kwargs'] = vis_cfg.get('kwargs', {})
     cfg['runtime']['inferencer'] = infer_cfg
     inferencer = INFERENCER_REGISTRY.get(infer_cfg['type'])(cfg, **infer_cfg['kwargs'])
     inferencer.predict()
