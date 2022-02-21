@@ -4,6 +4,7 @@ from easydict import EasyDict
 
 from up.utils.general.registry_factory import DATALOADER_REGISTRY
 from up.data.samplers.batch_sampler import InfiniteBatchSampler
+from up.utils.general.registry_factory import BATCHING_REGISTRY
 
 
 __all__ = ['SegDataLoader']
@@ -14,10 +15,14 @@ class SegDataLoader(DataLoader):
 
     def __init__(self, dataset, batch_size=1, shuffle=False, sampler=None, batch_sampler=None,
                  num_workers=0, pin_memory=False, drop_last=False,
+                 alignment=1, pad_type='batch_pad', pad_value=[0, 255]
                  ):
         super(SegDataLoader, self).__init__(
             dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
             self._collate_fn, pin_memory, drop_last)
+        self.alignment = alignment
+        self.pad_image = BATCHING_REGISTRY.get(pad_type)(alignment, pad_value[0])
+        self.pad_label = BATCHING_REGISTRY.get(pad_type)(alignment, pad_value[1])
 
     def _collate_fn(self, batch):
         images = torch.stack([_.image for _ in batch])
@@ -30,6 +35,12 @@ class SegDataLoader(DataLoader):
         if gt_semantic_seg[0] is not None:
             gt_semantic_seg = torch.stack(gt_semantic_seg)
         output.gt_semantic_seg = gt_semantic_seg
+
+        if self.alignment > 1:
+            output = self.pad_image(output)  # image
+            if gt_semantic_seg[0] is not None:
+                fake_dict = {'image': gt_semantic_seg[:, None, :, :]}
+                output['gt_semantic_seg'] = self.pad_label(fake_dict)['image'][:, 0, :, :]
         return output
 
     def get_epoch_size(self):
