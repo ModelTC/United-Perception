@@ -130,8 +130,6 @@ class CustomDataset(BaseDataset):
                         else:
                             data = self.set_label_mapping(data, self.label_mapping[idx], 0)
                             data['image_source'] = idx
-                    else:
-                        data['image_source'] = idx
                     self.metas.append(data)
                     if 'image_height' not in data or 'image_width' not in data:
                         logger.warning('image size is not provided, '
@@ -158,7 +156,7 @@ class CustomDataset(BaseDataset):
         image_info = output['image_info']
         bboxes = self.tensor2numpy(output['dt_bboxes'])
         image_ids = output['image_id']
-        out_res = [[] for _ in range(len(image_info))]
+        out_res = []
         for b_ix in range(len(image_info)):
             info = image_info[b_ix]
             height, width = map(int, info[3:5])
@@ -193,7 +191,7 @@ class CustomDataset(BaseDataset):
                     'score': score,
                     'label': int(cls)
                 }
-                out_res[b_ix].append(res)
+                out_res.append(res)
         return out_res
 
     def __len__(self):
@@ -242,8 +240,7 @@ class CustomDataset(BaseDataset):
             'image_id': img_id,
             'dataset_idx': idx,
             'neg_target': data.get('neg_target', 0),
-            'cache': cache,
-            'image_source': data.get('image_source', 0)
+            'cache': cache
         })
         return input
 
