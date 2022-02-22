@@ -299,7 +299,8 @@ class CocoDataset(BaseDataset):
             'flipped': False,
             'filename': filename,
             'image_id': img_id,
-            'dataset_idx': idx
+            'dataset_idx': idx,
+            'image_sources': 0
         })
         return input
 
@@ -377,7 +378,8 @@ class CocoDataset(BaseDataset):
         if len(bboxes) == 0:
             return
 
-        dump_results = []
+        # dump_results = []
+        dump_results = [[] for _ in range(len(image_info))]
         for b_ix in range(len(image_info)):
             info = image_info[b_ix]
             img_h, img_w = map(int, info[3: 5])
@@ -432,5 +434,5 @@ class CocoDataset(BaseDataset):
                         rle['counts'] = str(rle['counts'], encoding='utf-8')
                     res['segmentation'] = rle
 
-                dump_results.append(res)
+                dump_results[b_ix].append(res)
         return dump_results
