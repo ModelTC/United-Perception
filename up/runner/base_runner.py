@@ -356,17 +356,12 @@ class BaseRunner(object):
     def _inference(self):
         self.model.cuda().eval()
         test_loader = self.data_loaders['test']
-        # multi eval
-        if 'test' in self.config['dataset']:
-            cfg_test_data = self.config['dataset']['test']
-            num_evals = len(cfg_test_data['dataset']['kwargs']['meta_file'])
-        all_results_list = [[] for _ in range(num_evals)]
+        all_results_list = []
         for _ in range(test_loader.get_epoch_size()):
             batch = self.get_batch('test')
             output = self.forward_eval(batch)
             dump_results = test_loader.dataset.dump(output)
-            for idx in range(len(batch['image_sources'])):
-                all_results_list[batch['image_sources'][idx]] += dump_results[idx]
+            all_results_list.append(dump_results)
         barrier()
         all_device_results_list = all_gather(all_results_list)
         return all_device_results_list
@@ -397,11 +392,7 @@ class BaseRunner(object):
         if env.is_master():
             logger.info("begin evaluate")
             metrics = self.data_loaders['test'].dataset.evaluate(res_file, all_device_results_list)
-            if isinstance(metrics, list):
-                for metric in metrics:
-                    logger.info(json.dumps(metric, indent=2))
-            else:
-                logger.info(json.dumps(metrics, indent=2))
+            logger.info(json.dumps(metrics, indent=2))
         else:
             metrics = Metric({})
         barrier()
