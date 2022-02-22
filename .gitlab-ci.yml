@@ -22,11 +22,11 @@ style:
 
 
 docs:
-  tags:
-    - gpu
-    - diamond
-  stage: deploy
-  script:
+    tags:
+      - gpu
+      - diamond
+    stage: deploy
+    script:
     - export MAX_JOBS=8
     - pip install sphinx==1.5.6
     - pip install docutils==0.17.1
