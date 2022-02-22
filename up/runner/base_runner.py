@@ -397,8 +397,11 @@ class BaseRunner(object):
         if env.is_master():
             logger.info("begin evaluate")
             metrics = self.data_loaders['test'].dataset.evaluate(res_file, all_device_results_list)
-            for metric in metrics:
-                logger.info(json.dumps(metric, indent=2))
+            if isinstance(metrics, list):
+                for metric in metrics:
+                    logger.info(json.dumps(metric, indent=2))
+            else:
+                logger.info(json.dumps(metrics, indent=2))
         else:
             metrics = Metric({})
         barrier()
