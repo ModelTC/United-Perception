@@ -46,13 +46,13 @@ UP 支持对每个模块注册来灵活的构建实验。
 如何注册
 --------
 
-所有的有名称的对象（函数和类等）都是可以被注册的，但结果应当是对应的事例。
+所有的有名称的对象（函数和类等）都是可以被注册的，但结果应当是对应的实例。
 比如，CocoDataset 将返回数据集而 resnet50 返回模块（ResNet instance）。
 
 注册的形式是：
 REGISTRY.register(alias).
 
-注册体是相应的事例，比如：DATASET_REGISTRY，AUGMENTATION_REGISTRY 等。
+注册体是相应的实例，比如：DATASET_REGISTRY，AUGMENTATION_REGISTRY 等。
 
 下面分别有注册 CocoDataset 和 resnet50 的例子。
 
@@ -106,10 +106,10 @@ UP 通过对应的配置文件使用注册体。定位注册体则需要使用�
 UP 开发模式
 -----------
 
-我们强烈推荐一种新的开发模式： 发布的 UP + 植入（Plugins），包含以下两部分：
+我们强烈推荐一种新的开发模式： Public UP + 插件（Plugins），包含以下两部分：
 
-* 发布的 UP： 完整的检测框架。
-* 植入： 经过注册的自定义模块。
+* Public UP： 完整的检测框架。
+* 插件： 经过注册的自定义模块。
 
 
 用户代码仓库
@@ -137,6 +137,6 @@ package 中的 FaceDataset 和 FaceNet 应当分别由 DATASET_REGISTRY 和 MODU
     export PLUGINPATH='path to father_dir_of_face'
 
 这种模式有以下的优势：
-    * 灵活导入： 在开发了一个植入体后，您仅需要将路径加入 PLUGINPATH。
-    * 使用方便： 您可以仅通过将别名加入配置文件的方式来构建传播路径。注册的细节参考注册器章节。
-    * 维护友好： 发布的 UP 是和个人植入完全独立的，您可以仅需要花费少量精力来维护您植入的代码。
+    * 灵活导入： 在开发了一个插件后，您仅需要将路径加入 PLUGINPATH。
+    * 使用方便： 您可以仅通过将别名加入配置文件的方式来构建调用路径。
+    * 维护友好： Public UP 是和Plugin完全独立的，您可以仅需要花费少量精力来维护您的代码。

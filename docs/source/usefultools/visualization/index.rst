@@ -13,12 +13,15 @@ Inference
 
   .. code-block:: yaml
     
-    inference:
-      visualizer:
-        type: plt
+    runtime:
+      inferencer:
+        type: base
         kwargs:
-          class_names: ['__background__', 'person'] # class names
-          thresh: 0.5
+          visualizer:
+            type: plt
+            kwargs:
+              class_names: ['__background__', 'person'] # class names
+              thresh: 0.5
 
 Hook
 ----
@@ -28,17 +31,17 @@ UP 支持可视化hook，你可以将可视化设置加入Hook配置中，这样
   .. code-block:: yaml
     
     - type: visualize
-        kwargs:
-          vis_gt:
-            type: plt
-            kwargs:
-              output_dir: vis_gt
-              thresh: 0.3
-          vis_dt:
-            type: plt
-            kwargs:
-              output_dir: vis_dt
-              thresh: 0.3
+      kwargs:
+        vis_gt:
+          type: plt
+          kwargs:
+            output_dir: vis_gt
+            thresh: 0.3
+        vis_dt:
+          type: plt
+          kwargs:
+            output_dir: vis_dt
+            thresh: 0.3
 
 
   

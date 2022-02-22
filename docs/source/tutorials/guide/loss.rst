@@ -3,8 +3,29 @@
 
 UP支持以下损失函数：
 
-  * entropy_loss
-  * focal_loss
-  * iou_loss
+entropy_loss
+
+  * softmax_cross_entropy
+
+  .. code-block::
+
+      loss:
+        type: softmax_cross_entropy
+        kwargs:
+          class_dim: -1
+
+  * sigmoid_cross_entropy
+  
+  .. code-block::
+     
+      loss:
+        type: sigmoid_cross_entropy
+
+l1_loss
+  
   * l1_loss
-  * smooth_l1_loss
+
+  .. code-block::
+
+      loss:
+        type: l1_loss
