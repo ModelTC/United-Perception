@@ -26,7 +26,9 @@ class PetrelHelper(object):
     _petrel_helper = None
     open = PetrelOpen
 
-    def __init__(self, conf_path='~/petreloss.conf'):
+    default_conf_path = os.environ.get('PETRELPATH', '~/petreloss.conf')
+
+    def __init__(self, conf_path=default_conf_path):
         self.conf_path = conf_path
 
         self._inited = False

@@ -3,6 +3,7 @@ import cv2
 from PIL import Image
 import numpy as np
 from up.utils.general.registry_factory import IMAGE_READER_REGISTRY
+from up.utils.general.petrel_helper import PetrelHelper
 
 
 __all__ = ['FileSystemCVReader', 'FileSystemPILReader']
@@ -123,7 +124,8 @@ class FileSystemPILReader(ImageReader):
 
 @IMAGE_READER_REGISTRY.register('ceph_opencv')
 class CephSystemCVReader(ImageReader):
-    def __init__(self, image_dir, color_mode, memcached=True, conf_path='~/petreloss.conf', default_cluster=''):
+    def __init__(self, image_dir, color_mode, memcached=True,
+                 conf_path=PetrelHelper.default_conf_path, default_cluster=''):
         super(CephSystemCVReader, self).__init__(image_dir, color_mode)
         self.image_dir = image_dir
         self.color_mode = color_mode
