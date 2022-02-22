@@ -57,6 +57,69 @@ UP支持检测任务训练、部署、推理的全部流程;
         scale: 1024
         crop_prob: 0.5
 
+损失函数
+--------
+
+UP支持focal loss，iou loss 和 smooth l1 loss
+
+focal loss:
+
+  * sigmoid_focal_loss
+
+  .. code-block:: yaml
+  
+    loss:
+      type: sigmoid_focal_loss
+      kwargs:
+        num_classes: *num_classes
+        alpha: 0.25
+        gamma: 2.0
+        init_prior: 0.01
+
+  * quality_focal_loss
+
+  .. code-block:: yaml
+
+    loss:
+      type: quality_focal_loss
+      kwargs:
+        gamma: 2.0
+        init_prior: 0.01
+
+iou loss:
+
+  .. code-block::
+
+    loss:
+      type: iou_loss
+      kwargs:
+        loss_type: iou  # type: ['iou', 'giou', 'diou', 'ciou', 'linear_iou', 'square_iou']
+
+smooth_l1_loss:
+
+  .. code-block::
+
+    loss:
+      type: smooth_l1_loss
+      kwargs:
+        sigma: 3.0
+
+compose_loc_loss:
+
+  .. code-block::
+
+    loss:
+      type: compose_loc_loss
+      kwargs:
+        loss_cfg:
+          - type: iou_loss
+            kwargs:
+              loss_type: giou
+              loss_weight: 1.0
+          - type: l1_loss
+            kwargs:
+              loss_weight: 1.0
+
 部署模块
 --------
 

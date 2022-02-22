@@ -78,7 +78,7 @@ BatchPad: 经常被直接加入到 dataloader 的配置文件中。
         pad_value: 0
         pad_type: batch_pad
 
-* 所有的增广都需要被加入 dataset.kwargs.transformer，如下所示：
+所有的增广都需要被加入 dataset.kwargs.transformer，如下所示：
 
   .. code-block:: yaml
     
@@ -87,8 +87,8 @@ BatchPad: 经常被直接加入到 dataloader 的配置文件中。
       kwargs:
         meta_file: coco/annotations/instances_train2017.json
         image_reader:
-        type: fs_opencv
+          type: fs_opencv
           kwargs:
             image_dir: coco/train2017
             color_mode: RGB
-          transformer: [*flip, *train_resize, *to_tensor, *normalize]   # add here in order
+        transformer: [*flip, *train_resize, *to_tensor, *normalize]   # add here in order

@@ -49,4 +49,4 @@ Quantization-aware方式基于float类型预训练模型进行训练
 benchmark
 ---------
 
-参见 `quant benchmark <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/doc-hjh/benchmark/quant_benchmark.md>`_
+参见 `quant benchmark <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/benchmark/quant_benchmark.md>`_

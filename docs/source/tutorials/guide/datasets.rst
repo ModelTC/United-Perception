@@ -113,7 +113,7 @@ CocoDataset
 
 配置文件示例:
 
-  ..code-block:: yaml
+  .. code-block:: yaml
 
     evaluator:
       type: MR

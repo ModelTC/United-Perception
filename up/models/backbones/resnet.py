@@ -42,6 +42,7 @@ def drop_path(x, drop_prob: float = 0., training: bool = False):
 class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
     """
+
     def __init__(self, drop_prob=None):
         super(DropPath, self).__init__()
         self.drop_prob = drop_prob
@@ -267,6 +268,85 @@ class Bottleneck(nn.Module):
         return out
 
 
+class DeformBlock(nn.Module):
+    expansion = 4
+
+    def __init__(self,
+                 inplanes,
+                 planes,
+                 stride=1,
+                 dilation=2,
+                 downsample=None,
+                 normalize={'type': 'solo_bn'},
+                 stride_in_1x1=False):
+        super(DeformBlock, self).__init__()
+
+        self.norm1_name, norm1 = build_norm_layer(planes, normalize, 1)
+        self.norm2_name, norm2 = build_norm_layer(planes, normalize, 2)
+        self.norm3_name, norm3 = build_norm_layer(planes * self.expansion, normalize, 3)
+
+        stride_1x1, stride_3x3 = (stride, 1) if stride_in_1x1 else (1, stride)
+
+        self.conv1 = nn.Conv2d(
+            inplanes,
+            planes,
+            kernel_size=1,
+            stride=stride_1x1,
+            bias=False)
+        self.add_module(self.norm1_name, norm1)
+
+        kernel_size = 3
+        padding = dilation * (kernel_size - 1) // 2
+        self.deform_offset = nn.Conv2d(
+            planes, 18, kernel_size=3, stride=stride_3x3, padding=padding, dilation=dilation)
+        self.conv2 = DeformableConv(
+            planes, planes, kernel_size=3, stride=stride_3x3, padding=padding, dilation=dilation)
+
+        self.add_module(self.norm2_name, norm2)
+        self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
+        self.add_module(self.norm3_name, norm3)
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
+
+    @property
+    def norm1(self):
+        return getattr(self, self.norm1_name)
+
+    @property
+    def norm2(self):
+        return getattr(self, self.norm2_name)
+
+    @property
+    def norm3(self):
+        return getattr(self, self.norm3_name)
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.norm1(out)
+        out = self.relu(out)
+
+        offset = self.deform_offset(out)
+
+        out = self.conv2(out, offset)
+
+        out = self.norm2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.norm3(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
 def make_layer4(inplanes,
                 block,
                 planes,
@@ -303,6 +383,7 @@ class ResNet(nn.Module):
 
         You can configure output layer and its related strides.
     """
+
     def __init__(self,
                  block,
                  layers,
