@@ -125,7 +125,8 @@ CocoDataset
 
   .. note::
 
-    * UP支持多验证\测试集评估，通过设置data_repective为True，支持多数据集分别评估精度，为False时，多数据集统一评估精度
+    * UP支持多验证\测试集评估，通过设置data_respective为True，支持多数据集分别评估精度，为False时，多数据集统一评估精度
+    * 当data_respective被设置为True时，建议将测试集的batch size设置为1，否则会由于不同数据间的padding影响最终精度
 
 UP支持MR模式评估自定义数据集精度，包括两个指标:
 

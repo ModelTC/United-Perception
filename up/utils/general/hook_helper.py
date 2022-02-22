@@ -277,13 +277,14 @@ class TrainEvalLogger(Hook):
         runner = self.runner_ref()
         if env.is_master() and runner.training:
             epoch = runner.cur_epoch()
-            for k, v in metrics.items():
-                if not isinstance(v, list):
-                    self.summary_writer.add_scalar('metrics/' + k, v, epoch)
-                    try:
-                        self.summary_writer.flush()
-                    except:  # noqa
-                        pass
+            for idx in range(len(metrics)):
+                for k, v in metrics[idx].items():
+                    if not isinstance(v, list):
+                        self.summary_writer.add_scalar('metrics_{}/'.format(idx) + k, v, epoch)
+                        try:
+                            self.summary_writer.flush()
+                        except:  # noqa
+                            pass
 
 
 @HOOK_REGISTRY.register('visualize')
