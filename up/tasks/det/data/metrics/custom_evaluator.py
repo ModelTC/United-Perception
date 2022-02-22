@@ -12,6 +12,7 @@ from prettytable import PrettyTable
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.yaml_loader import IncludeLoader
 from up.utils.general.registry_factory import EVALUATOR_REGISTRY
+from up.utils.general.petrel_helper import PetrelHelper
 from up.data.metrics.base_evaluator import Evaluator, Metric
 
 
@@ -71,7 +72,7 @@ class CustomEvaluator(Evaluator):
             gt_files = [gt_files]
         for gt_file_idx, gt_file in enumerate(gt_files):
             gt_img_ids = set()
-            with open(gt_file, 'r') as f:
+            with PetrelHelper.open(gt_file) as f:
                 for i, line in enumerate(f):
                     img = json.loads(line)
                     if self.label_mapping is not None:
@@ -543,8 +544,7 @@ class MREvaluator(CustomEvaluator):
     def get_classes(self, gt_file):
         all_classes = set()
 
-        # change to petrel
-        with open(gt_file, 'r') as f:
+        with PetrelHelper.open(gt_file) as f:
             for line in f:
                 data = json.loads(line)
                 labels = set([ins['label'] for ins in data['instances'] if ins['label'] > 0])
