@@ -123,7 +123,7 @@ class FileSystemPILReader(ImageReader):
 
 @IMAGE_READER_REGISTRY.register('ceph_opencv')
 class CephSystemCVReader(ImageReader):
-    def __init__(self, image_dir, color_mode, memcached=True, conf_path='~/.s3cfg'):
+    def __init__(self, image_dir, color_mode, memcached=True, conf_path='~/petreloss.conf', default_cluster=''):
         super(CephSystemCVReader, self).__init__(image_dir, color_mode)
         self.image_dir = image_dir
         self.color_mode = color_mode
@@ -135,6 +135,7 @@ class CephSystemCVReader(ImageReader):
         self.conf_path = os.path.expanduser(conf_path)
         self.memcached = memcached
         self.initialized = False
+        self.default_cluster = default_cluster
 
     def image_directory(self):
         return self.image_dir
@@ -142,23 +143,33 @@ class CephSystemCVReader(ImageReader):
     def image_color(self):
         return self.color_mode
 
-    @staticmethod
-    def ceph_join(root, filename):
+    def ceph_join(self, root, filename):
         if 's3://' in filename:
-            return filename
+            abs_filename = filename
         else:
-            return os.path.join(root, filename)
+            abs_filename = os.path.join(root, filename)
+
+        if abs_filename.startswith('s3://') and self.default_cluster:
+            abs_filename = self.default_cluster + ':' + abs_filename
+        return abs_filename
+
+    def bytes_to_img(self, value):
+        img_array = np.frombuffer(value, np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        assert img is not None
+        return img
 
     def __call__(self, filename, image_dir_idx=0):
-        if filename.startswith("//"):
-            filename = filename[1:]
         image_dir = get_cur_image_dir(self.image_dir, image_dir_idx)
         filename = self.ceph_join(image_dir, filename)
         if not self.initialized:
             self._init_memcached()
-        value = self.mclient.Get(filename)
-        img_array = np.fromstring(value, np.uint8)
-        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        try:
+            value = self.mclient.Get(filename)
+            img = self.bytes_to_img(value)
+        except Exception as e:  # noqa
+            value = self.mclient.Get(filename, update_cache=True)
+            img = self.bytes_to_img(value)
         if self.color_mode != 'BGR':
             img = cv2.cvtColor(img, self.cvt_color)
         return img
