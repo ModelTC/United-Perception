@@ -39,5 +39,5 @@ docs:
     - sshpass -p springpypi scp -o 'StrictHostKeyChecking no' -P 10000 -r docs/_build/html spring@10.10.40.93:~/up
     - sshpass -p springpypi ssh -o 'StrictHostKeyChecking no' -p 10000 spring@10.10.40.93 'if [ -d ~/up_bak ]; then rm -r ~/up_bak; fi'
     - echo "update up docs done"
-    # only:
-    # - schedules
+    only:
+    - schedules
