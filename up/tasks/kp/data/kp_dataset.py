@@ -3,7 +3,6 @@ from __future__ import division
 # Standard Library
 
 # Import from third library
-import torch
 import cv2
 import numpy as np
 from easydict import EasyDict
@@ -18,6 +17,7 @@ from up.utils.general.registry_factory import DATASET_REGISTRY
 __all__ = ['KeypointTrainDataset', 'KeypointTestDataset']
 # TODO: Check GPU usage after move this setting down from upper line
 cv2.ocl.setUseOpenCL(False)
+
 
 @DATASET_REGISTRY.register('keypoint_train')
 class KeypointTrainDataset(BaseDataset):
@@ -192,7 +192,7 @@ class KeypointTestDataset(BaseDataset):
             'box_score': np.float32(box_score), 'imw': img.shape[1], 'imh': img.shape[0]
         })
         return input
-    
+
     def __getitem__(self, idx):
         input = self.get_input(idx)
         input = self.transformer(input)

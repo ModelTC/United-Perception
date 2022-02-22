@@ -1,23 +1,20 @@
 # Standard Library
-import os
-import json
 
 # Import from third library
 import torch
 import cv2
 import numpy as np
-from easydict import EasyDict
 
 from up.data.datasets.transforms import Augmentation
 from up.utils.general.registry_factory import AUGMENTATION_REGISTRY
 
-__all__ = ['kp_flip', 'kp_crop_train', 'crop_square', 'random_scale',
-           'random_rotate', 'keep_aspect_ratio', 'kp_label','keep_aspect_ratio_test'
-           ,'crop_square_test','kp_crop_test']
+__all__ = ['kp_flip', 'kp_crop_train', 'crop_square', 'random_scale', 'random_rotate', 'keep_aspect_ratio',
+           'kp_label', 'keep_aspect_ratio_test', 'crop_square_test', 'kp_crop_test']
 
 
 def crop(image, ctr, box_w, box_h, rot, in_w, in_h,
          padding_val=np.array([123.675, 116.28, 103.53])):
+
     """
     crop image using input params
     :param image: input_image
