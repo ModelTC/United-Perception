@@ -2,6 +2,69 @@ runtime:
   rank_init: False
 num_kpts: &num_kpts 17
 
+keep_aspect_ratio: &keep_aspect_ratio
+  type: kp_keep_aspect_ratio
+  kwargs:
+    in_h: 256
+    in_w: 192
+
+keep_aspect_ratio_test: &keep_aspect_ratio_test
+  type: kp_keep_aspect_ratio_test
+  kwargs:
+    in_h: 256
+    in_w: 192
+
+random_scale: &random_scale
+  type: kp_random_scale
+  kwargs:
+    scale_center: 1
+    scale_factor: 0.3
+
+random_rotate: &random_rotate
+  type: kp_random_rotate
+  kwargs:
+    rotate_angle: 40
+
+crop_square: &crop_square
+  type: kp_crop_square
+
+crop_square_test: &crop_square_test
+  type: kp_crop_square_test
+
+flip: &flip
+  type: kp_flip
+  kwargs:
+    num_kpts: *num_kpts
+
+crop_train: &crop_train
+  type: kp_crop_train
+  kwargs:
+    means: [ 0.485,0.456,0.406 ]
+    stds: [ 0.229,0.224,0.225 ]
+    img_norm_factor: 255.0
+    in_h: 256
+    in_w: 192
+
+crop_test: &crop_test
+  type: kp_crop_test
+  kwargs:
+    means: [ 0.485,0.456,0.406 ]
+    stds: [ 0.229,0.224,0.225 ]
+    img_norm_factor: 255.0
+    in_h: 256
+    in_w: 192
+
+label_trans: &label_trans
+  type: kp_label_trans
+  kwargs:
+    label_type: 'Gaussian'
+    bg: True
+    radius: [2]
+    strides: [4]
+    in_h: 256
+    in_w: 192
+    num_kpts: *num_kpts
+
 evaluator: &evaluator                  # evaluation metric
   type: COCO
   kwargs:
@@ -19,22 +82,8 @@ dataset: # Required.
           kwargs:
             image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
             color_mode: RGB
+        transformer: [*keep_aspect_ratio,*random_scale,*random_rotate,*flip,*crop_train,*label_trans]
         num_kpts: *num_kpts
-        radius: [2]
-        strides: [4]
-        keep_aspect_ratio: True
-        means: [0.485,0.456,0.406]
-        stds: [0.229,0.224,0.225]
-        img_norm_factor: 255.0
-        crop_square: false
-        in_h: 256
-        in_w: 192
-        scale_center: 1
-        scale_factor: 0.3
-        rot: 40
-        label_type: 'Gaussian'
-        bg: True
-        flip: true
         evaluator: *evaluator
   test:
     dataset:
@@ -46,16 +95,9 @@ dataset: # Required.
           kwargs:
             image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
             color_mode: RGB
-        num_kpts: *num_kpts
-        keep_aspect_ratio: True
-        means: [0.485,0.456,0.406]
-        stds: [0.229,0.224,0.225]
-        img_norm_factor: 255.0
-        crop_square: false
-        in_h: 256
-        in_w: 192
-        box_scale: 1.0
+        transformer: [*keep_aspect_ratio_test,*crop_test]
         inst_score_thres: 0
+        box_scale: 1.0
         evaluator: *evaluator
 
   batch_sampler:

@@ -160,7 +160,7 @@ class kp_crop_test(Augmentation):
 
     def augment(self, data):
         img = data['image']
-        flip_image = data['flip_image']
+        flip_img = data['flip_image']
         roi_x, roi_y, roi_w, roi_h = data['bbox']
         flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h = data['flip_bbox']
         person = crop(
@@ -193,7 +193,7 @@ class kp_crop_test(Augmentation):
         person = np.transpose(person, (2, 0, 1))  # HxWxC -> CxHxW
         flip_person = np.transpose(flip_person, (2, 0, 1))  # HxWxC -> CxHxW
         data['image'] = torch.Tensor(person)
-        data['flip_img'] = torch.Tensor(flip_person)
+        data['flip_image'] = torch.Tensor(flip_person)
         return data
 
 
@@ -213,8 +213,8 @@ class crop_square_test(Augmentation):
         flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h = data['flip_bbox']
         roi_w = roi_h = max(roi_w, roi_h)
         flip_roi_w = flip_roi_h = max(flip_roi_w, flip_roi_h)
-        data['bbox'] = roi_x, roi_y, roi_w, roi_h
-        data['flip_bbox'] = flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h
+        data['bbox'] = np.float32([roi_x, roi_y, roi_w, roi_h])
+        data['flip_bbox'] = np.float32([flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h])
         return data
 
 
@@ -309,8 +309,8 @@ class keep_aspect_ratio_test(Augmentation):
         flip_roi_w = tmp_flip_roi_w
         flip_roi_h = tmp_flip_roi_h
 
-        data['bbox'] = roi_x, roi_y, roi_w, roi_h
-        data['flip_bbox'] = flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h
+        data['bbox'] = np.float32([roi_x, roi_y, roi_w, roi_h])
+        data['flip_bbox'] = np.float32([flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h])
 
         return data
 

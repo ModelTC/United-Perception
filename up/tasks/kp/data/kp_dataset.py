@@ -85,8 +85,7 @@ class KeypointTrainDataset(BaseDataset):
 
     def __getitem__(self, idx):
         input = self.get_input(idx)
-        if self.transformer is not None:
-            input = self.transformer(input)
+        input = self.transformer(input)
         return input
 
     def dump(self, output):
@@ -121,6 +120,7 @@ class KeypointTestDataset(BaseDataset):
                  meta_file,
                  image_reader,
                  inst_score_thres=0,
+                 box_scale=1.25,
                  evaluator=None,
                  transformer=None
                  ):
@@ -133,7 +133,7 @@ class KeypointTestDataset(BaseDataset):
         annos = PetrelHelper.load_json(meta_file)
         assert 'annotations' in annos
         annos = annos['annotations']
-
+        self.box_scale = box_scale
         self.path = []
         self.bbox = []
         for anno in annos:
@@ -158,14 +158,12 @@ class KeypointTestDataset(BaseDataset):
     def get_input(self, idx):
         filename = self.path[idx]
         bbox = self.bbox[idx]
+        img = self.image_reader(filename)
         x1, y1, x2, y2, box_score = bbox
         x1 = max(0, x1)
         y1 = max(0, y1)
         x2 = min(img.shape[1] - 1, x2)
         y2 = min(img.shape[0] - 1, y2)
-        roi_w = (x2 - x1 + 1) * self.box_scale
-        roi_h = (y2 - y1 + 1) * self.box_scale
-        center = ((x1 + x2) / 2, (y1 + y2) / 2)
 
         flip_img = cv2.flip(img, 1)
         flip_x1 = img.shape[1] - 1 - x2
@@ -174,13 +172,15 @@ class KeypointTestDataset(BaseDataset):
         flip_x2 = min(img.shape[1] - 1, flip_x2)
         flip_y1 = y1
         flip_y2 = y2
+
+        roi_w = (x2 - x1 + 1) * self.box_scale
+        roi_h = (y2 - y1 + 1) * self.box_scale
+        center = ((x1 + x2) / 2, (y1 + y2) / 2)
+
         flip_roi_w = (flip_x2 - flip_x1 + 1) * self.box_scale
         flip_roi_h = (flip_y2 - flip_y1 + 1) * self.box_scale
-
         flip_center = ((flip_x1 + flip_x2) / 2, (flip_y1 + flip_y2) / 2)
 
-
-        img = self.image_reader(filename)
         input = EasyDict({
             'image': img,
             'flip_image': flip_img,
@@ -195,8 +195,7 @@ class KeypointTestDataset(BaseDataset):
     
     def __getitem__(self, idx):
         input = self.get_input(idx)
-        if self.transformer is not None:
-            input = self.transformer(input)
+        input = self.transformer(input)
         return input
 
     def __len__(self):
