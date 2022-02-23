@@ -2,7 +2,7 @@
 ## 基础模型 
 | model                   | backbone            | anchor | ema | bs | epoch | general test size | mAP                     |
 | ----------------------- | ------------------- | ------ | --- | -- | ----- | ----------------- | ----------------------- |
-| retinanet-FPN           | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 37.0                    |
+| [retinanet-FPN](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/retinanet-r50_1x.yaml)           | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 37.0                    |
 | faster-rcnn-FPN         | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 38.2                    |
 | faster-rcnn-C4          | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 34.3                    |
 | faster-rcnn-C4          | resnet50            |        | no  | 16 | 14    | [800, 1333]       | 35.1                    |

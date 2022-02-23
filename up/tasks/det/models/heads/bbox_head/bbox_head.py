@@ -183,7 +183,7 @@ class BboxNet(nn.Module):
         else:
             assert len(features) == 1 and len(strides) == 1, \
                 'please setup `fpn` first if you want to use pyramid features'
-            if self.tocaffe and torch.is_tensor(strides):
+            if torch.is_tensor(strides):
                 strides = strides.tolist()
             pooled_feats = self.roi_extractor([rois], features, strides)
             cls_pred, loc_pred = self.forward_net(pooled_feats)

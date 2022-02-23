@@ -20,9 +20,9 @@ FP16模式配置
 .. code-block:: yaml
 
   runtime:
-    # linklink
+    # dist 
     fp16: True
-    # dist
+    # linklink
     fp16:
       keep_batchnorm_fp32: True
       scale_factor: dynamic

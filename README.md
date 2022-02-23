@@ -6,10 +6,10 @@
 
 ## Benckmark
 
-* [Det](mds/detection_benchmark.md)
-* [Cls](mds/classification_benchmark.md)
-* [Seg](mds/semantic_benchmark.md)
-* [Multitask](mds/multitask_benchmark.md)
+* [Det](benchmark/detection_benchmark.md)
+* [Cls](benchmark/classification_benchmark.md)
+* [Seg](benchmark/semantic_benchmark.md)
+* [Multitask](benchmark/multitask_benchmark.md)
 
 ## 说明
 

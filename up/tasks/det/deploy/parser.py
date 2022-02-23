@@ -137,7 +137,8 @@ def process_reshape(net, anchor_num, cls_channel_num, anchor_precede=True):
             if len(node.succ) == 1 and 'Softmax' == node.succ[0].content.type:
                 continue
             # add reshape layer
-            reshape_layer = add_reshape(net, net_graph, node.content, 'reshape_anchor_cls', [1, 12, 2, -1], insert=True)
+            reshape_layer = add_reshape(net, net_graph, node.content, 'reshape_anchor_cls',
+                                        [1, anchor_num, cls_channel_num, -1], insert=True)
             trans_layer = transform.add_transpose(net, net_graph, reshape_layer, 'anchor_cls', [0, 2, 1, 3])
             print('Add reshape layer: {} + transpose layer: {})'.format(reshape_layer.name, trans_layer.name))
     return net
