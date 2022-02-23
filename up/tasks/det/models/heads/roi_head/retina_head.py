@@ -18,7 +18,7 @@ class BaseNet(nn.Module):
         0 is always for the background class.
     """
 
-    def __init__(self, inplanes, num_classes, num_levels=5):
+    def __init__(self, inplanes, num_classes, num_level=5):
         """
         Arguments:
             - inplanes (:obj:`list` or :obj:`int`): input channel,
@@ -31,7 +31,7 @@ class BaseNet(nn.Module):
         super(BaseNet, self).__init__()
         self.prefix = self.__class__.__name__
         self.num_classes = num_classes
-        self.num_levels = num_levels
+        self.num_level = num_level
 
         if isinstance(inplanes, list):
             inplanes_length = len(inplanes)
@@ -44,7 +44,7 @@ class BaseNet(nn.Module):
 
     def forward(self, input):
         features = input['features']
-        mlvl_raw_preds = [self.forward_net(features[lvl], lvl) for lvl in range(self.num_levels)]
+        mlvl_raw_preds = [self.forward_net(features[lvl], lvl) for lvl in range(self.num_level)]
         output = {}
         output['preds'] = mlvl_raw_preds
         return output
@@ -63,14 +63,14 @@ class NaiveRPN(BaseNet):
                  num_classes,
                  num_anchors,
                  class_activation,
-                 num_levels=5,
+                 num_level=5,
                  Normalize=None,
                  initializer=None):
         assert num_classes == 2
-        super(NaiveRPN, self).__init__(inplanes, num_classes, num_levels)
+        super(NaiveRPN, self).__init__(inplanes, num_classes, num_level)
 
         inplanes = self.inplanes
-        num_levels = self.num_levels
+        num_level = self.num_level
         self.class_activation = class_activation
         self.conv3x3 = nn.Conv2d(inplanes, feat_planes, kernel_size=3, stride=1, padding=1)
         self.relu3x3 = nn.ReLU(inplace=True)
@@ -108,9 +108,9 @@ class RetinaSubNet(BaseNet):
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
-                 num_levels=5,
+                 num_level=5,
                  share_subnet=False):
-        super(RetinaSubNet, self).__init__(inplanes, num_classes, num_levels)
+        super(RetinaSubNet, self).__init__(inplanes, num_classes, num_level)
 
         inplanes = self.inplanes
         self.class_activation = class_activation
@@ -180,7 +180,7 @@ class RetinaHeadWithIOU(RetinaSubNet):
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=1,
-                 num_levels=5):
+                 num_level=5):
         """
         Implementation for ATSS https://arxiv.org/abs/1912.02424
         """
@@ -193,8 +193,8 @@ class RetinaHeadWithIOU(RetinaSubNet):
                                                 class_activation,
                                                 init_prior,
                                                 num_anchors,
-                                                num_levels)
-        assert num_levels is not None, "num_levels must be provided !!!"
+                                                num_level)
+        assert num_level is not None, "num_level must be provided !!!"
         self.iou_pred = nn.Conv2d(feat_planes, self.num_anchors, kernel_size=3, stride=1, padding=1)
         initialize_from_cfg(self, initializer)
         init_bias_focal(self.cls_subnet_pred, self.class_activation, init_prior, self.num_classes)
@@ -221,12 +221,12 @@ class RetinaHeadWithBN(RetinaSubNet):
                  normalize={'type': 'solo_bn'},
                  initializer=None,
                  num_conv=4,
-                 num_levels=5,
+                 num_level=5,
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
                  share_subnet=False):
-        self.num_levels = num_levels
+        self.num_level = num_level
         super(RetinaHeadWithBN, self).__init__(inplanes,
                                                feat_planes,
                                                num_classes,
@@ -236,14 +236,14 @@ class RetinaHeadWithBN(RetinaSubNet):
                                                class_activation,
                                                init_prior,
                                                num_anchors,
-                                               num_levels,
+                                               num_level,
                                                share_subnet)
 
-        assert num_levels is not None, "num_levels must be provided !!!"
+        assert num_level is not None, "num_level must be provided !!!"
 
     def build(self, num_conv, input_planes, feat_planes, normalize):
         mlvl_heads = nn.ModuleList()
-        for lvl in range(self.num_levels):
+        for lvl in range(self.num_level):
             layers = []
             inplanes = input_planes
             for conv_idx in range(num_conv):
@@ -285,12 +285,12 @@ class RetinaHeadWithBNSep(RetinaSubNet):
                  normalize={'type': 'solo_bn'},
                  initializer=None,
                  num_conv=4,
-                 num_levels=5,
+                 num_level=5,
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
                  share_subnet=False):
-        self.num_levels = num_levels
+        self.num_level = num_level
         super(RetinaHeadWithBNSep, self).__init__(inplanes,
                                                   feat_planes,
                                                   num_classes,
@@ -300,14 +300,14 @@ class RetinaHeadWithBNSep(RetinaSubNet):
                                                   class_activation,
                                                   init_prior,
                                                   num_anchors,
-                                                  num_levels,
+                                                  num_level,
                                                   share_subnet)
 
-        assert num_levels is not None, "num_levels must be provided !!!"
+        assert num_level is not None, "num_level must be provided !!!"
 
     def build(self, num_conv, input_planes, feat_planes, normalize):
         mlvl_heads = nn.ModuleList()
-        for lvl in range(self.num_levels):
+        for lvl in range(self.num_level):
             layers = []
             inplanes = input_planes
             for conv_idx in range(num_conv):
@@ -343,24 +343,24 @@ class RetinaHeadWithBNIOU(RetinaHeadWithBN):
                  normalize={'type': 'solo_bn'},
                  initializer=None,
                  num_conv=4,
-                 num_levels=5,
+                 num_level=5,
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
                  share_subnet=False):
-        self.num_levels = num_levels
+        self.num_level = num_level
         super(RetinaHeadWithBNIOU, self).__init__(inplanes,
                                                   feat_planes,
                                                   num_classes,
                                                   normalize,
                                                   initializer,
                                                   num_conv,
-                                                  num_levels,
+                                                  num_level,
                                                   class_activation,
                                                   init_prior,
                                                   num_anchors,
                                                   share_subnet)
-        assert num_levels is not None, "num_levels must be provided !!!"
+        assert num_level is not None, "num_level must be provided !!!"
         self.iou_pred = nn.Conv2d(feat_planes, self.num_anchors, kernel_size=3, stride=1, padding=1)
         initialize_from_cfg(self, initializer)
         init_bias_focal(self.cls_subnet_pred, self.class_activation, init_prior, self.num_classes)

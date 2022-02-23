@@ -30,7 +30,7 @@ class YoloXHead(nn.Module):
                  init_prior=0.01):
         super(YoloXHead, self).__init__()
         self.prefix = self.__class__.__name__
-        self.num_levels = len(inplanes)
+        self.num_level = len(inplanes)
         self.num_point = num_point
         class_channel = {'sigmoid': -1, 'softmax': 0}[class_activation] + num_classes
 
@@ -42,7 +42,7 @@ class YoloXHead(nn.Module):
         self.stems = nn.ModuleList()
         Conv = DWConv if depthwise else ConvBnAct
 
-        for i in range(self.num_levels):
+        for i in range(self.num_level):
             inplane = int(inplanes[i])
             outplane = int(outplanes * width)
             self.stems.append(
@@ -133,7 +133,7 @@ class YoloXHead(nn.Module):
 
     def forward_net(self, features, idx=0):
         mlvl_preds = []
-        for i in range(self.num_levels):
+        for i in range(self.num_level):
             feat = self.stems[i](features[i])
             cls_feat = self.cls_convs[i](feat)
             loc_feat = self.reg_convs[i](feat)
@@ -179,7 +179,7 @@ class YoloXHeadShare(nn.Module):
                  num_conv=2):
         super(YoloXHeadShare, self).__init__()
         self.prefix = self.__class__.__name__
-        self.num_levels = len(inplanes)
+        self.num_level = len(inplanes)
         self.num_point = num_point
         class_channel = {'sigmoid': -1, 'softmax': 0}[class_activation] + num_classes
 
@@ -187,7 +187,7 @@ class YoloXHeadShare(nn.Module):
         self.reg_convs = nn.ModuleList()
         self.stems = nn.ModuleList()
         outplane = int(outplanes * width)
-        for i in range(self.num_levels):
+        for i in range(self.num_level):
             inplane = int(inplanes[i])
             self.stems.append(
                 ConvBnAct(
@@ -232,7 +232,7 @@ class YoloXHeadShare(nn.Module):
 
     def build(self, num_conv, input_planes, feat_planes, normalize, act_fn):
         mlvl_heads = nn.ModuleList()
-        for lvl in range(self.num_levels):
+        for lvl in range(self.num_level):
             layers = []
             inplanes = input_planes
             for conv_idx in range(num_conv):
@@ -253,7 +253,7 @@ class YoloXHeadShare(nn.Module):
 
     def forward_net(self, features, idx=0):
         mlvl_preds = []
-        for i in range(self.num_levels):
+        for i in range(self.num_level):
             feat = self.stems[i](features[i])
             cls_feat = self.cls_convs[i](feat)
             loc_feat = self.reg_convs[i](feat)

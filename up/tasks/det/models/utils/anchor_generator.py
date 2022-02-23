@@ -18,7 +18,7 @@ __all__ = [
 class AnchorGenerator(object):
     def __init__(self):
         self._num_anchors = None
-        self._num_levels = None
+        self._num_level = None
         self._base_anchors = None
 
     def build_base_anchors(self, anchor_strides):
@@ -47,8 +47,8 @@ class AnchorGenerator(object):
         return self._num_anchors
 
     @property
-    def num_levels(self):
-        return self._num_levels
+    def num_level(self):
+        return self._num_level
 
 
 class BoxAnchorGenerator(AnchorGenerator):
@@ -188,7 +188,7 @@ class HandCraftAnchorGenerator(BoxAnchorGenerator):
         self._anchor_strides = anchor_strides
         if getattr(self, '_base_anchors', None) is not None:
             return self._base_anchors
-        self._num_levels = len(anchor_strides)
+        self._num_level = len(anchor_strides)
         self._base_anchors = []
         for idx, stride in enumerate(anchor_strides):
             anchors_over_grid = self.get_anchors_over_grid(self._anchor_ratios, self._anchor_scales, stride)
@@ -209,13 +209,13 @@ class HandCraftAnchorGenerator(BoxAnchorGenerator):
 
 @ANCHOR_GENERATOR_REGISTRY.register('cluster')
 class ClusteredAnchorGenerator(BoxAnchorGenerator):
-    def __init__(self, num_anchors_per_level, num_levels, base_anchors_file):
+    def __init__(self, num_anchors_per_level, num_level, base_anchors_file):
         super(ClusteredAnchorGenerator, self).__init__()
         self._num_anchors = num_anchors_per_level
-        self._num_levels = num_levels
+        self._num_level = num_level
         with open(base_anchors_file, 'r') as f:
-            self._shapes = np.array(json.load(f)).reshape(num_levels, num_anchors_per_level, 2)
-            assert self._shapes.size == num_anchors_per_level * num_levels * 2
+            self._shapes = np.array(json.load(f)).reshape(num_level, num_anchors_per_level, 2)
+            assert self._shapes.size == num_anchors_per_level * num_level * 2
 
     def load_anchors_over_grid(self, whs, stride):
         ws = whs[:, 0]
@@ -238,7 +238,7 @@ class ClusteredAnchorGenerator(BoxAnchorGenerator):
         # return json_anchors
         return {
             'num_anchors': self.num_anchors,
-            'num_levels': self.num_levels,
+            'num_level': self.num_level,
             'anchor_type': 'clustered',
             'anchors': json_anchors
         }

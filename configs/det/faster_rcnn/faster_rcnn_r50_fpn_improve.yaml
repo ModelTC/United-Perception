@@ -164,7 +164,7 @@ net:
       num_classes: 2      # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       num_anchors: 3
       class_activation: sigmoid
-      num_levels: 5
+      num_level: 5
       initializer:
         method: normal
         std: 0.01

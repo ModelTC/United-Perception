@@ -156,7 +156,7 @@ net:
     type: YoloV5Head
     kwargs:
       num_classes: *num_classes
-      num_levels: 3
+      num_level: 3
       num_anchors_per_level: 3
       out_strides: [8, 16, 32]
       initializer:
@@ -166,7 +166,7 @@ net:
     type: yolov5_post
     kwargs:
       num_classes: *num_classes
-      num_levels: 3
+      num_level: 3
       num_anchors_per_level: 3
       out_strides: [8, 16, 32]
       loss_weights: [0.05, 1.0, 0.5]

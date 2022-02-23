@@ -18,7 +18,7 @@ class YoloV5PostProcess(nn.Module):
     def __init__(self,
                  num_classes,
                  cfg,
-                 num_levels=3,
+                 num_level=3,
                  num_anchors_per_level=3,
                  out_strides=[8, 16, 32],
                  loss_weights=[0.05, 1.0, 0.5],
@@ -31,19 +31,19 @@ class YoloV5PostProcess(nn.Module):
         self.single_cls = (num_classes == 2)
 
         self.tocaffe = False
-        self.num_levels = num_levels
+        self.num_level = num_level
         self.num_anchors_per_level = num_anchors_per_level
         # P3-5 or P3-6 loss weight
         self.obj_loss_layer_weights = obj_loss_layer_weights
         # box loss weight, obj loss weight, cls loss weight, the input order is important
-        scale = 3 / self.num_levels
+        scale = 3 / self.num_level
         loss_weights = [loss_weights[i] * scale for i in range(3)]
         # obj loss weight is little diff
-        loss_weights[1] *= (1.4 if num_levels >= 4 else 1.)
+        loss_weights[1] *= (1.4 if num_level >= 4 else 1.)
         self.loss_type_weights = loss_weights
         self.strides = out_strides
 
-        cfg['anchor_generator']['kwargs']['num_levels'] = num_levels
+        cfg['anchor_generator']['kwargs']['num_level'] = num_level
         cfg['anchor_generator']['kwargs']['num_anchors_per_level'] = num_anchors_per_level
         cfg['roi_supervisor']['kwargs'] = {}
         cfg['roi_supervisor']['kwargs']['strides'] = out_strides
@@ -85,7 +85,7 @@ class YoloV5PostProcess(nn.Module):
         mlvl_preds = self.permute_preds(raw_mlvl_preds)
 
         output = {}
-        mlvl_anchors = torch.tensor(self.anchor_shapes.reshape(self.num_levels, -1, 2)).type_as(mlvl_preds[0][0])
+        mlvl_anchors = torch.tensor(self.anchor_shapes.reshape(self.num_level, -1, 2)).type_as(mlvl_preds[0][0])
 
         if self.training:
             mlvl_targets = self.supervisor.get_targets(input, mlvl_preds, mlvl_anchors)

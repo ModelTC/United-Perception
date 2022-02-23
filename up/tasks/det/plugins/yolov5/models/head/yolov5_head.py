@@ -18,20 +18,20 @@ class YoloV5Head(nn.Module):
     def __init__(self,
                  inplanes,
                  num_classes,
-                 num_levels=3,
+                 num_level=3,
                  num_anchors_per_level=3,
                  out_strides=[8, 16, 32],
                  initializer=None):
         super(YoloV5Head, self).__init__()
 
         if not isinstance(inplanes, list):
-            inplanes = [inplanes] * num_levels
+            inplanes = [inplanes] * num_level
 
         self.prefix = self.__class__.__name__
         self.num_classes = num_classes - 1
         self.single_cls = (num_classes == 2)
 
-        self.num_levels = num_levels
+        self.num_level = num_level
         self.num_anchors_per_level = num_anchors_per_level
         self.out_strides = out_strides
 
@@ -62,7 +62,7 @@ class YoloV5Head(nn.Module):
 
     def forward_net(self, features):
         mlvl_preds = []
-        for i in range(self.num_levels):
+        for i in range(self.num_level):
             loc_feat = self.loc_subnet[i](features[i])
             cls_feat = self.cls_subnet[i](features[i])
             obj_feat = self.obj_subnet[i](features[i])

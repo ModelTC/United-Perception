@@ -168,7 +168,7 @@ net:
         std: 0.01
       init_prior: 0.01
       num_anchors: 2
-      num_levels: 5
+      num_level: 5
       class_activation: sigmoid
       normalize:
         type: solo_bn

@@ -130,12 +130,12 @@ def check_cfg(cfg):
         net = cfg.get('net', [])
         assert len(net) > 0, "net doesn't exist."
         net_parse, idx2name = {}, {}
-        num_levels = 0
+        num_level = 0
         for idx in range(len(net)):
             name = net[idx]['name']
             net_parse[name] = net[idx]
             if name == 'neck':
-                num_levels = net_parse[name]['kwargs'].get('num_level', 0)
+                num_level = net_parse[name]['kwargs'].get('num_level', 0)
             idx2name[name] = idx
         # NaiveRPN: num_classes
         roi_head_type = net_parse['roi_head']['type']
@@ -149,11 +149,11 @@ def check_cfg(cfg):
         class_activation = 'softmax' if 'softmax' in cls_loss_type else 'sigmoid'
         logger.info('auto reset class activation')
         cfg['net'][idx2name['roi_head']]['kwargs']['class_activation'] = class_activation
-        # roi_head: num_levels:
-        if num_levels != 0:
-            cfg['net'][idx2name['roi_head']]['kwargs']['num_levels'] = num_levels
+        # roi_head: num_level:
+        if num_level != 0:
+            cfg['net'][idx2name['roi_head']]['kwargs']['num_level'] = num_level
         elif roi_head_type != 'YoloXHead':
-            cfg['net'][idx2name['roi_head']]['kwargs']['num_levels'] = 1
+            cfg['net'][idx2name['roi_head']]['kwargs']['num_level'] = 1
         # roi_head: num_anchors or num_point
         anchors = cfg['net'][idx2name[name_post]]['kwargs']['cfg']['anchor_generator']
         anchor_ratios = anchors['kwargs'].get('anchor_ratios', [])

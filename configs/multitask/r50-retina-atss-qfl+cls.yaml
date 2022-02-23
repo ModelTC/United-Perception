@@ -307,7 +307,7 @@ net: &subnet
       initializer:
         method: normal
         std: 0.01
-      num_levels: 5
+      num_level: 5
       num_conv: 4
       normalize: *norm
       init_prior: 0.01
