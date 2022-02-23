@@ -80,7 +80,7 @@ dataset: # Required.
            kwargs:
              image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
              color_mode: GRAY
-        transformer: [*seg_crop_test, *to_tensor, *normalize]
+        transformer: [*seg_resize, *to_tensor, *normalize]
         num_classes: *num_classes
         ignore_label: 255
         evaluator:
@@ -129,7 +129,7 @@ hooks:
   - type: auto_save_best
 
 net: &subnet
-  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+  - name: encoder              # backbone = resnet50(frozen_layers, out_layers, out_strides)
     type: seg_resnet50
     kwargs:
       multi_grid: True
@@ -140,7 +140,7 @@ net: &subnet
         kwargs:
           group_size: 8
   - name: decoder
-    prev: backbone
+    prev: encoder
     type: deeplabv3
     kwargs:
         num_classes: *num_classes

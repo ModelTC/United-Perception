@@ -121,7 +121,7 @@ trainer: # Required.
 saver: # Required.
   save_dir: checkpoints/icnet_seg    # dir to save checkpoints
   results_dir: results_dir/icnet_seg  # dir to save detection results. i.e., bboxes, masks, keypoints
-  pretrain_model: /mnt/lustre/share/HiLight/model_zoo/resnet50-ebb6acbb.pth   # you may need convert key
+  pretrain_model: ./icnet_r50_pretrain.pth  # you may need convert key
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 

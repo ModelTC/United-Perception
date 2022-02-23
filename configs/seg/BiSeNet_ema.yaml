@@ -118,10 +118,16 @@ trainer: # Required.
       power: 0.9
       max_epoch: *max_epoch
 
+ema:
+  enable: True
+  ema_type: exp
+  kwargs:
+    decay: 0.9998
+
 saver: # Required.
-  save_dir: checkpoints/biseg_seg    # dir to save checkpoints
-  results_dir: results_dir/biseg_seg  # dir to save detection results. i.e., bboxes, masks, keypoints
-  pretrain_model: resnet18-deep.pth
+  save_dir: checkpoints/biseg_seg_ema    # dir to save checkpoints
+  results_dir: results_dir/biseg_seg_ema  # dir to save detection results. i.e., bboxes, masks, keypoints
+  pretrain_model: ./resnet18-deep.pth
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 

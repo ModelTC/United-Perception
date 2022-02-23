@@ -13,7 +13,7 @@ seg_resize: &seg_resize
 seg_crop_train: &seg_crop_train
   type: seg_crop
   kwargs:
-    size: [1024, 1024]
+    size: [769, 769]
     crop_type: rand
 
 seg_flip: &flip
@@ -59,11 +59,11 @@ dataset: # Required.
           sampler:
             type: dist
             kwargs: {}
-          batch_size: 2
+          batch_size: 1
     dataloader:
         type: seg_base
         kwargs:
-          num_workers: 8
+          num_workers: 2
           pin_memory: True
   test:
     dataset:
@@ -99,14 +99,14 @@ dataset: # Required.
         pin_memory: False
 
 trainer: # Required.
-  max_epoch: &max_epoch 300
+  max_epoch: &max_epoch 120
   test_freq: 5
   save_freq: 5
   only_save_latest: True
   optimizer:
     type: SGD
     kwargs:
-      lr: 0.000625
+      lr: 0.00125
       momentum: 0.9
       weight_decay: 0.0005
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
@@ -119,38 +119,47 @@ trainer: # Required.
       max_epoch: *max_epoch
 
 saver: # Required.
-  save_dir: checkpoints/biseg_seg    # dir to save checkpoints
-  results_dir: results_dir/biseg_seg  # dir to save detection results. i.e., bboxes, masks, keypoints
-  pretrain_model: resnet18-deep.pth
+  save_dir: checkpoints/deeplabv3_r50_seg_ema    # dir to save checkpoints
+  results_dir: results_dir/deeplabv3_r50_seg_ema  # dir to save detection results. i.e., bboxes, masks, keypoints
+  pretrain_model: /mnt/lustre/share/HiLight/model_zoo/resnet50-ebb6acbb.pth
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+
+ema:
+  enable: True
+  ema_type: exp
+  kwargs:
+    decay: 0.9998
 
 hooks:
   - type: auto_save_best
 
 net: &subnet
   - name: encoder              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: seg_resnet18
+    type: seg_resnet50
     kwargs:
-      multi_grid: False
+      multi_grid: True
       zero_init_residual: True
-      replace_stride_with_dilation: [False, False, False]
+      replace_stride_with_dilation: [False, True, True]
       normalize:
         type: pt_sync_bn
         kwargs:
           group_size: 8
   - name: decoder
     prev: encoder
-    type: bisegnet
+    type: deeplabv3
     kwargs:
         num_classes: *num_classes
+        inner_planes: 256
+        dilations: [12, 24, 36]
         normalize:
           type: pt_sync_bn
           kwargs:
             group_size: 8
         loss:
-          type: seg_bisegnet
+          type: seg_ohem
           kwargs:
+             aux_weight: 0.4
              thresh: 0.7
              min_kept: 100000
              ignore_index: 255
