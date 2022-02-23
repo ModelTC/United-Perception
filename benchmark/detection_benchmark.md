@@ -3,32 +3,32 @@
 | model                   | backbone            | anchor | ema | bs | epoch | general test size | mAP                     |
 | ----------------------- | ------------------- | ------ | --- | -- | ----- | ----------------- | ----------------------- |
 | [retinanet-FPN](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/retinanet-r50_1x.yaml)           | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 37.0                    |
-| faster-rcnn-FPN         | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 38.2                    |
-| faster-rcnn-C4          | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 34.3                    |
-| faster-rcnn-C4          | resnet50            |        | no  | 16 | 14    | [800, 1333]       | 35.1                    |
+| [faster-rcnn-FPN](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/faster_rcnn/faster_rcnn_r50_fpn_1x.yaml)         | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 38.2                    |
+| [faster-rcnn-C4](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/faster_rcnn/faster_rcnn_r50_C4_1x.yaml)          | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 34.3                    |
+| [faster-rcnn-C4](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/faster_rcnn/faster_rcnn_r50_C4_1x.yaml)          | resnet50            |        | no  | 16 | 14    | [800, 1333]       | 35.1                    |
 | rfcn                    | resnet50            |        | no  | 16 | 12    | [800, 1333]       | 27.1                    |    
 | rfcn                    | resnet50            |        | no  | 16 | 14    | [800, 1333]       | 27.7                    |
-| YOLOX                   | nano                |        | yes | 32 | 300   | [416, 416]        | 24.8                    |
-| YOLOX                   | tiny                |        | yes | 32 | 300   | [416, 416]        | 33.0                    |
-| YOLOX                   | small               |        | yes | 32 | 300   | [640, 640]        | 40.4                    |
-| YOLOX                   | medium              |        | yes | 32 | 300   | [640, 640]        | 46.9                    |
-| YOLOX                   | large               |        | yes | 32 | 300   | [640, 640]        | 49.9                    |
+| [YOLOX](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/yolox/yolox_nano.yaml)                   | nano                |        | yes | 32 | 300   | [416, 416]        | 24.8                    |
+| [YOLOX](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/yolox/yolox_tiny.yaml)                   | tiny                |        | yes | 32 | 300   | [416, 416]        | 33.0                    |
+| [YOLOX](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/yolox/yolox_small.yaml)                   | small               |        | yes | 32 | 300   | [640, 640]        | 40.4                    |
+| [YOLOX](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/yolox/yolox_medium.yaml)                   | medium              |        | yes | 32 | 300   | [640, 640]        | 46.9                    |
+| [YOLOX](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/yolox/yolox_large.yaml)                   | large               |        | yes | 32 | 300   | [640, 640]        | 49.9                    |
 | YOLOv5-small            | darknetv5           |        | yes | 32 | 300   | [640, 640]        | 37.4                    |
-| YOLOX-ret               | nano                |   1    | yes | 32 | 300   | [416, 416]        | 25.8                    |
-| YOLOX-ret               | nano                |   2    | yes | 32 | 300   | [416, 416]        | 26.4                    |
-| YOLOX-ret-ada           | nano                |   2    | yes | 32 | 300   | [416, 416]        | 27.2                    |
-| YOLOX-ret               | tiny                |   1    | yes | 32 | 300   | [416, 416]        | 33.6                    |
-| YOLOX-ret               | tiny                |   2    | yes | 32 | 300   | [416, 416]        | 33.8                    |
-| YOLOX-ret-ada           | tiny                |   2    | yes | 32 | 300   | [416, 416]        | 35.4                    |
+| [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_n_ret_a1_comloc.yaml)               | nano                |   1    | yes | 32 | 300   | [416, 416]        | 25.8                    |
+| [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_n_ret_a2_comloc.yaml)               | nano                |   2    | yes | 32 | 300   | [416, 416]        | 26.4                    |
+| [YOLOX-ret-ada](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_n_ret_a2_comloc_ada.yaml)           | nano                |   2    | yes | 32 | 300   | [416, 416]        | 27.2                    |
+| [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_t_ret_a1_comloc.yaml)               | tiny                |   1    | yes | 32 | 300   | [416, 416]        | 33.6                    |
+| [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_t_ret_a2_comloc.yaml)               | tiny                |   2    | yes | 32 | 300   | [416, 416]        | 33.8                    |
+| [YOLOX-ret-ada](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_t_ret_a2_comloc_ada.yaml)           | tiny                |   2    | yes | 32 | 300   | [416, 416]        | 35.4                    |
 
 ## 高精度 baseline
 | model                   | backbone            | anchor | ema | bs | epoch | general test size | mAP                     |
 | ----------------------- | ------------------- | ------ | --- | -- | ----- | ----------------- | ----------------------- |
-| retinanet-improve       | resnet18            |        | no  | 32 | 100   | [800, 1333]       | 40.7                    |
-| retinanet-improve-cos-iou| resnet18           |        | no  | 32 | 100   | [800, 1333]       | 41.0                    |
-| retinanet-mosaic-cos-iou| resnet18            |        | no  | 32 | 100   | [800, 1333]       | 42.4                    |
-| faster-rcnn-FPN-improve | resnet50            |        | no  | 32 | 100   | [800, 1333]       | 43.5                    |
-| YOLOX-ret               | small               |   1    | yes | 32 | 300   | [640, 640]        | 40.4                    |
-| YOLOX-ret               | small               |   2    | yes | 32 | 300   | [640, 640]        | 40.7                    |
-| YOLOX-ret               | medium              |   1    | yes | 32 | 300   | [640, 640]        | 47.0                    |
-| YOLOX-ret               | medium              |   2    | yes | 32 | 300   | [640, 640]        | 47.4                    |
+| [retinanet-improve](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/retinanet-r18-improve.yaml)       | resnet18            |        | no  | 32 | 100   | [800, 1333]       | 40.7                    |
+| [retinanet-improve-cos-iou](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/retinanet-r18-improve_cos_ema_iou.yaml)| resnet18           |        | no  | 32 | 100   | [800, 1333]       | 41.0                    |
+| [retinanet-mosaic-cos-iou](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/retinanet-r18_mosiac_cos_ema_iou.yaml)| resnet18            |        | no  | 32 | 100   | [800, 1333]       | 42.4                    |
+| [faster-rcnn-FPN-improve](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/faster_rcnn/faster_rcnn_r50_fpn_improve.yaml) | resnet50            |        | no  | 32 | 100   | [800, 1333]       | 43.5                    |
+| [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_s_ret_a1_comloc.yaml)               | small               |   1    | yes | 32 | 300   | [640, 640]        | 40.4                    |
+| [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_s_ret_a2_comloc.yaml)               | small               |   2    | yes | 32 | 300   | [640, 640]        | 40.7                    |
+| [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_m_ret_a1_comloc.yaml)               | medium              |   1    | yes | 32 | 300   | [640, 640]        | 47.0                    |
+| [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/retinanet/yolox_m_ret_a2_comloc.yaml)               | medium              |   2    | yes | 32 | 300   | [640, 640]        | 47.4                    |
