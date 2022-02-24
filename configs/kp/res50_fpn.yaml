@@ -1,0 +1,161 @@
+runtime:
+  rank_init: False
+num_kpts: &num_kpts 17
+
+keep_aspect_ratio: &keep_aspect_ratio
+  type: kp_keep_aspect_ratio
+  kwargs:
+    in_h: 256
+    in_w: 192
+
+random_scale: &random_scale
+  type: kp_random_scale
+  kwargs:
+    scale_center: 1
+    scale_factor: 0.3
+
+random_rotate: &random_rotate
+  type: kp_random_rotate
+  kwargs:
+    rotate_angle: 40
+
+crop_square: &crop_square
+  type: kp_crop_square
+
+
+flip: &flip
+  type: kp_flip
+  kwargs:
+    match_parts: [[1,2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12], [13, 14], [15, 16]]
+
+crop_train: &crop
+  type: kp_crop
+  kwargs:
+    means: [ 0.485,0.456,0.406 ]
+    stds: [ 0.229,0.224,0.225 ]
+    img_norm_factor: 255.0
+    in_h: 256
+    in_w: 192
+
+label_trans: &label_trans
+  type: kp_label_trans
+  kwargs:
+    label_type: 'SCE'
+    bg: True
+    radius: [0,0,1,2]
+    strides: [32,16,8,4]
+    in_h: 256
+    in_w: 192
+    num_kpts: *num_kpts
+
+to_tensor: &to_tensor
+  type: custom_to_tensor
+
+evaluator: &evaluator                  # evaluation metric
+  type: COCO
+  kwargs:
+    gt_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/person_keypoints_val2017.json
+    iou_types: ['keypoints']
+
+dataset: # Required.
+  train:
+    dataset:
+      type: keypoint
+      kwargs:
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/person_keypoints_train2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+            color_mode: RGB
+        mode: train
+        flip: False
+        transformer: [*keep_aspect_ratio,*random_scale,*random_rotate,*flip,*crop,*label_trans,*to_tensor]
+        num_kpts: *num_kpts
+        evaluator: *evaluator
+  test:
+    dataset:
+      type: keypoint
+      kwargs:
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/person_keypoints_val2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
+            color_mode: RGB
+        mode: test
+        flip: True
+        transformer: [*keep_aspect_ratio,*crop,*to_tensor]
+        inst_score_thres: 0
+        box_scale: 1.0
+        evaluator: *evaluator
+
+  batch_sampler:
+    type: base
+    kwargs:
+      sampler:
+        type: dist
+        kwargs: {}
+      batch_size: 64
+  dataloader:
+    type: pytorch
+    kwargs:
+      num_workers: 4
+      pin_memory: True
+
+trainer: # Required.
+  max_epoch: 140              # total epochs for the training
+  test_freq: 10
+  save_freq: 10
+  optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
+    type: Adam
+    kwargs:
+      lr: 0.002
+  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
+    warmup_epochs: 0         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_register_type: no_scale_lr
+    type: MultiStepLR
+    kwargs:
+      milestones: [90, 120]     # epochs to decay lr
+      gamma: 0.1             # decay rate
+
+saver: # Required.
+  save_dir: checkpoints/res50_fpn_hkd     # dir to save checkpoints
+  results_dir: results_dir/res50_fpn_hkd  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
+                     # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+  pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth
+
+hooks:
+  - type: auto_checkpoint
+  - type: train_val_logger
+    kwargs:
+      freq: 10
+      skip_first_k: 5
+      logdir: log
+
+net:
+  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+    type: resnet50
+    kwargs:
+      frozen_layers: [0,1]     # layer0...1 is fixed
+      out_layers: [1,2,3,4]     # layer1...4, commonly named Conv2...5
+      out_strides: [4,8,16,32]  # tell the strides of output features
+      normalize:
+        type: solo_bn
+      initializer:
+        method: msra
+  - name: kpt_fpn_head
+    prev: backbone
+    type: keypoint_fpn
+    kwargs:
+      inplanes: 2048
+      mid_channels: 256
+      num_classes: *num_kpts
+      has_bg: true
+  - name: kp_post_process
+    type: kp_post_process
+    kwargs:
+      loss:
+        type: kp_mse      
+      test_with_gaussian_filter: True
