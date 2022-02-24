@@ -19,7 +19,7 @@ from up.utils.general.registry_factory import DATASET_REGISTRY
 from up.utils.env.dist_helper import env
 from up.data.image_reader import get_cur_image_dir
 from up.data.datasets.base_dataset import BaseDataset
-from up.data.data_utils import ImageMeta, get_image_size
+from up.data.data_utils import get_image_size
 from torch.nn.modules.utils import _pair
 from up.utils.general.petrel_helper import PetrelHelper
 
@@ -90,8 +90,7 @@ class CustomDataset(BaseDataset):
 
     def get_image_classes(self, img_index):
         # assert self.server_cfg is None, 'server mode is not support for get_image_classes'
-        meta = self.metas[img_index]
-        data = ImageMeta.decode(meta)
+        data = self.metas[img_index]
         return [
             ins['label']
             for ins in data['instances'] if not ins.get('is_ignored', False)
@@ -101,7 +100,6 @@ class CustomDataset(BaseDataset):
         self._num_images_per_class = Counter()
         self._num_instances_per_class = Counter()
         for img_anns in self.metas:
-            img_anns = ImageMeta.decode(img_anns)
             instance_counter = Counter([
                 ins['label']
                 for ins in img_anns['instances'] if not ins.get('is_ignored', False)
@@ -158,7 +156,7 @@ class CustomDataset(BaseDataset):
                         else:
                             data = self.set_label_mapping(data, self.label_mapping[idx], 0)
                             data['image_source'] = idx
-                    self.metas.append(ImageMeta.encode(data))
+                    self.metas.append(data)
                     if 'image_height' not in data or 'image_width' not in data:
                         logger.warning('image size is not provided, '
                                        'set aspect grouping to 1.')
@@ -228,8 +226,7 @@ class CustomDataset(BaseDataset):
     def get_input(self, idx):
         """parse annotation into input dict
         """
-        meta = self.metas[idx]
-        data = ImageMeta.decode(meta)
+        data = self.metas[idx]
         data = copy.deepcopy(data)
         img_id = filename = data['filename']
         gt_bboxes = []
