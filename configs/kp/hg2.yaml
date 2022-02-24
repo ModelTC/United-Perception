@@ -150,7 +150,7 @@ net:
     type: hourglass
     kwargs:
       num_stacks: 2
-      num_blocks: 4
+      num_blocks: 1
       has_bg: True
       num_classes: *num_kpts
       normalize:
@@ -166,4 +166,4 @@ net:
     kwargs:
       loss:
         type: kp_bce
-      test_with_gaussian_filter: false
+      test_with_gaussian_filter: True
