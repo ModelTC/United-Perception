@@ -20,7 +20,7 @@ __all__ = ['MREvaluator']
 
 
 class CustomEvaluator(Evaluator):
-    def __init__(self, gt_file, num_classes, iou_thresh=0.5, ign_iou_thresh=0.5, metrics_csv='metrics.csv', label_mapping=None, ignore_mode=0, cross_cfg=None, data_respective=False):  # noqa
+    def __init__(self, gt_file, num_classes, iou_thresh=0.5, ign_iou_thresh=0.5, metrics_csv='metrics.csv', label_mapping=None, ignore_mode=0, cross_cfg=None):  # noqa
         super(CustomEvaluator, self).__init__()
         self.gt_file = gt_file
         self.iou_thresh = iou_thresh
@@ -44,7 +44,6 @@ class CustomEvaluator(Evaluator):
             for label in range(1, self.num_classes):
                 self.class_from[label] = list(range(len(gt_file)))
         self.ignore_mode = ignore_mode
-        self.data_respective = data_respective
 
     def set_label_mapping(self, data, idx):
         if len(self.label_mapping[0]) == 0:
@@ -128,17 +127,11 @@ class CustomEvaluator(Evaluator):
                     dt_by_label = dts.setdefault(dt['label'], [])
                     dt_by_label.append(dt)
         else:
-            if self.data_respective:
-                for device_res in res:
-                    for line in device_res:
+            for device_res in res:
+                for lines in device_res:
+                    for line in lines:
                         dt_by_label = dts.setdefault(line['label'], [])
                         dt_by_label.append(line)
-            else:
-                for device_res in res:
-                    for lines in device_res:
-                        for line in lines:
-                            dt_by_label = dts.setdefault(line['label'], [])
-                            dt_by_label.append(line)
         return dts
 
     def calIoU(self, b1, b2):
@@ -301,8 +294,7 @@ class MREvaluator(CustomEvaluator):
                  ign_iou_thresh=0.5,
                  iou_types=['bbox'],
                  eval_class_idxs=[],
-                 cross_cfg=None,
-                 data_respective=False):
+                 cross_cfg=None):
 
         super(MREvaluator, self).__init__(gt_file,
                                           num_classes,
@@ -311,8 +303,7 @@ class MREvaluator(CustomEvaluator):
                                           label_mapping=label_mapping,
                                           ignore_mode=ignore_mode,
                                           ign_iou_thresh=ign_iou_thresh,
-                                          cross_cfg=cross_cfg,
-                                          data_respective=data_respective)
+                                          cross_cfg=cross_cfg)
 
         if len(eval_class_idxs) == 0:
             eval_class_idxs = list(range(1, num_classes))
@@ -427,31 +418,11 @@ class MREvaluator(CustomEvaluator):
         logger.info('\n{}'.format(table))
 
     def eval(self, res_file, res=None):
-        if not self.data_respective:
-            return [self.single_eval(res_file, res, self.gt_file)]
-        num_device = len(res)
-        gt_files = self.gt_file if isinstance(self.gt_file, list) else [self.gt_file]
-        num_metas = len(gt_files)
-        multi_res = [[[] for _ in range(num_device)] for _ in range(num_metas)]
-
-        for d_idx in range(num_device):
-            res_device = res[d_idx]
-            for r_items in res_device:
-                for r_item in r_items:
-                    idx_meta = r_item['image_source']
-                    multi_res[idx_meta][d_idx].append(r_item)
-
-        metrics = []
-        for m_idx in range(num_metas):
-            metrics.append(self.single_eval(res_file, multi_res[m_idx], gt_files[m_idx]))
-        return metrics
-
-    def single_eval(self, res_file, res=None, gt_file=None):
         metric_res = Metric({})
         for itype in self.iou_types:
             num_mean_cls = 0
             if not self.gt_loaded:
-                self.gts, original_gt = self.load_gts(gt_file)
+                self.gts, original_gt = self.load_gts(self.gt_file)
                 self.gt_loaded = True
             else:
                 self.reset_detected_flag()
@@ -467,7 +438,7 @@ class MREvaluator(CustomEvaluator):
                 sum_gt = self.gts['gt_num'][class_i]
                 results_i = dts.get(class_i, [])
                 results_i = sorted(results_i, key=lambda x: -x['score'])
-                class_from = self.class_from.get(class_i, [0]) if not self.data_respective else [0]
+                class_from = self.class_from.get(class_i, [0])
                 gts_img_id_set = set()
                 for data_idx in class_from:
                     gts_img_id_set = gts_img_id_set.union(self.gts['image_ids'][data_idx])
