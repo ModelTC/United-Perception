@@ -3,6 +3,7 @@ from __future__ import division
 # Standard Library
 import collections
 import sys
+import copy
 
 # Import from third library
 import numpy as np
@@ -60,3 +61,61 @@ def coin_tossing(prob):
     """
     """
     return torch.rand(1)[0].item() < prob
+
+
+class ImageMeta(object):
+    """A class that provide a simple interface to encode and decode dict to save memory
+    """
+    @classmethod
+    def encode(self, dict_obj):
+        """
+        Note:
+            As image_height and image_width have no use any more, abandon them to save more memory.
+
+        Arguments:
+            dict_obj: single original data read from json
+
+        Returns:
+            list_data: [filename, [instances]]
+        """
+        meta_info = copy.deepcopy(dict_obj)
+
+        if 'instances' in meta_info:
+            meta_info.pop('instances')
+
+        instances = []
+        for item in dict_obj.get('instances', []):
+            polygons = [np.array(poly, dtype=np.float32) for poly in item.get('mask', [])]
+            instance = item['bbox'] + [item.get('label', None), item.get('is_ignored', False), polygons]
+            instances.append(instance)
+        bucket = dict_obj.get('bucket', None)
+        neg_target = dict_obj.get('neg_target', 0)
+        image_source = dict_obj.get('image_source', 0)
+        key = dict_obj.get('key', dict_obj.get('keys', None))
+        list_obj = [
+            dict_obj['filename'], instances, (bucket, key, neg_target, image_source, meta_info)
+        ]
+        return list_obj
+
+    @classmethod
+    def decode(self, list_obj):
+        filename, instances, buckey = list_obj
+        decoded_instances = []
+        for ins in instances:
+            ins = {
+                'bbox': ins[:4],
+                'label': ins[4],
+                'is_ignored': ins[5],
+                'mask': ins[6]
+            }
+            decoded_instances.append(ins)
+        dict_obj = {
+            'filename': filename,
+            'bucket': buckey[0],
+            'key': buckey[1],
+            'instances': decoded_instances,
+            'neg_target': buckey[2],
+            'image_source': buckey[3],
+            'meta_info': buckey[4]
+        }
+        return dict_obj
