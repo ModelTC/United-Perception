@@ -13,7 +13,6 @@ from ..data_utils import (
     is_tensor_image,
 )
 
-
 __all__ = [
     'has_image',
     'has_gt_bboxes',
@@ -204,6 +203,10 @@ class CustomImageToTensor(Augmentation):
             data['image'] = data['image'].div(255)
         if 'gt_semantic_seg' in data:
             data['gt_semantic_seg'] = torch.from_numpy(data['gt_semantic_seg'].copy())
+        if 'flip_image' in data:
+            flip_image = data['flip_image']
+            flip_image = np.transpose(flip_image, (2, 0, 1))
+            data['flip_image'] = torch.from_numpy(flip_image).float()
         return data
 
 

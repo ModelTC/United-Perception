@@ -8,13 +8,17 @@ import numpy as np
 from up.data.datasets.transforms import Augmentation
 from up.utils.general.registry_factory import AUGMENTATION_REGISTRY
 
-__all__ = ['kp_flip', 'kp_crop_train', 'crop_square', 'random_scale', 'random_rotate', 'keep_aspect_ratio',
-           'kp_label', 'keep_aspect_ratio_test', 'crop_square_test', 'kp_crop_test']
+__all__ = ['kp_flip',
+           'crop_square',
+           'random_scale',
+           'random_rotate',
+           'kp_label',
+           'keep_aspect_ratio',
+           'kp_crop']
 
 
 def crop(image, ctr, box_w, box_h, rot, in_w, in_h,
          padding_val=np.array([123.675, 116.28, 103.53])):
-
     """
     crop image using input params
     :param image: input_image
@@ -74,16 +78,16 @@ def clamp(x, lb, ub):
 
 @AUGMENTATION_REGISTRY.register('kp_flip')
 class kp_flip(Augmentation):
-    def __init__(self, num_kpts):
+    def __init__(self, match_parts):
         super(kp_flip, self).__init__()
-        self.num_kpts = num_kpts
+        self.match_parts = match_parts
 
-    def flip_point(self, input_kpts, roi_width, num_kpts):
+    def flip_point(self, input_kpts, roi_width, match_parts):
         """
         Args:
             input_kpts: keypoints for a person in ROI
             roi_width: ROI's width
-            num_kpts : keypoints number
+            match_parts
         Return:
             None
         Side Effect:
@@ -94,14 +98,7 @@ class kp_flip(Augmentation):
             if kpts[i][0] >= 0:
                 kpts[i][0] = roi_width - 1 - kpts[i][0]
 
-        # # After flip, the person's left hand will become to right hand and so on.
-        if num_kpts == 17:
-            match_parts = {1: 2, 3: 4, 5: 6, 7: 8, 9: 10, 11: 12, 13: 14, 15: 16}
-        elif num_kpts == 14:
-            match_parts = {0: 3, 1: 4, 2: 5, 6: 9, 7: 10, 8: 11}
-        else:
-            raise NotImplementedError('undefined match relation for kpt_num = ' + str(num_kpts))
-        for left_index, right_index in match_parts.items():
+        for left_index, right_index in match_parts:
             tmp = kpts[left_index].copy()
             kpts[left_index] = kpts[right_index].copy()
             kpts[right_index] = tmp
@@ -114,40 +111,18 @@ class kp_flip(Augmentation):
         if np.random.rand() > 0.5:
             img = cv2.flip(img, 1)
             cx = img.shape[1] - cx - 1
-            kpts = self.flip_point(kpts, img.shape[1], self.num_kpts)
+            kpts = self.flip_point(kpts, img.shape[1], self.match_parts)
         data['bbox'] = cx, cy, bw, bh
         data['image'] = img
         data['kpts'] = kpts
         return data
 
 
-@AUGMENTATION_REGISTRY.register('kp_crop_train')
-class kp_crop_train(Augmentation):
-    def __init__(self, in_w, in_h, img_norm_factor, means, stds):
-        super(kp_crop_train, self).__init__()
-        self.in_w = in_w
-        self.in_h = in_h
-        self.img_norm_factor = float(img_norm_factor)
-        self.means = np.array(means)
-        self.stds = np.array(stds)
-
-    def augment(self, data):
-        img = data['image']
-        cx, cy, bw, bh = data['bbox']
-        rot = data['rot']
-        crop_file = crop(img, (cx, cy), bw, bh, rot, self.in_w,
-                         self.in_h, padding_val=self.img_norm_factor * self.means)
-        crop_file = np.array(crop_file).copy()
-        crop_file = ((crop_file / self.img_norm_factor) - self.means) / self.stds
-        crop_file = np.transpose(crop_file, (2, 0, 1))
-        data['image'] = torch.Tensor(crop_file)
-        return data
-
-
-@AUGMENTATION_REGISTRY.register('kp_crop_test')
-class kp_crop_test(Augmentation):
-    def __init__(self, in_w, in_h, img_norm_factor, means, stds):
-        super(kp_crop_test, self).__init__()
+@AUGMENTATION_REGISTRY.register('kp_crop')
+class kp_crop(Augmentation):
+    def __init__(self, in_w, in_h, img_norm_factor=255.0, means=[0.485, 0.456, 0.406],
+                 stds=[0.229, 0.224, 0.225]):
+        super(kp_crop, self).__init__()
         self.in_w = in_w
         self.in_h = in_h
         self.img_norm_factor = float(img_norm_factor)
@@ -157,61 +132,50 @@ class kp_crop_test(Augmentation):
 
     def augment(self, data):
         img = data['image']
-        flip_img = data['flip_image']
-        roi_x, roi_y, roi_w, roi_h = data['bbox']
-        flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h = data['flip_bbox']
-        person = crop(
-            img,
-            (roi_x, roi_y),
-            roi_w,
-            roi_h,
-            0,
-            self.in_w,
-            self.in_h,
-            self.padding_val
-        )
-        person = np.asarray(person)
-
-        flip_person = crop(
-            flip_img,
-            (flip_roi_x, flip_roi_y),
-            flip_roi_w,
-            flip_roi_h,
-            0,
-            self.in_w,
-            self.in_h,
-            self.padding_val
-        )
-        flip_person = np.asarray(flip_person)
-
-        person = ((person / self.img_norm_factor) - self.means) / self.stds
-        flip_person = ((flip_person / self.img_norm_factor) - self.means) / self.stds
-
-        person = np.transpose(person, (2, 0, 1))  # HxWxC -> CxHxW
-        flip_person = np.transpose(flip_person, (2, 0, 1))  # HxWxC -> CxHxW
-        data['image'] = torch.Tensor(person)
-        data['flip_image'] = torch.Tensor(flip_person)
+        cx, cy, bw, bh = data['bbox']
+        if not data['flip']:
+            rot = data['rot']
+        else:
+            rot = 0
+            flip_img = data['flip_image']
+            flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h = data['flip_bbox']
+            flip_person = crop(
+                flip_img,
+                (flip_roi_x, flip_roi_y),
+                flip_roi_w,
+                flip_roi_h,
+                rot,
+                self.in_w,
+                self.in_h,
+                self.padding_val
+            )
+            flip_person = np.asarray(flip_person)
+            flip_person = ((flip_person / self.img_norm_factor) - self.means) / self.stds
+            data['flip_image'] = flip_person
+        crop_file = crop(img,
+                         (cx, cy),
+                         bw,
+                         bh,
+                         rot,
+                         self.in_w,
+                         self.in_h,
+                         self.padding_val)
+        crop_file = np.array(crop_file).copy()
+        crop_file = ((crop_file / self.img_norm_factor) - self.means) / self.stds
+        data['image'] = crop_file
         return data
 
 
 @AUGMENTATION_REGISTRY.register('kp_crop_square')
 class crop_square(Augmentation):
     def augment(self, data):
-        cx, cy, bw, bh = data['bbox']
-        bw = bh = max(bw, bh)
-        data['bbox'] = cx, cy, bw, bh
-        return data
-
-
-@AUGMENTATION_REGISTRY.register('kp_crop_square_test')
-class crop_square_test(Augmentation):
-    def augment(self, data):
         roi_x, roi_y, roi_w, roi_h = data['bbox']
-        flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h = data['flip_bbox']
         roi_w = roi_h = max(roi_w, roi_h)
-        flip_roi_w = flip_roi_h = max(flip_roi_w, flip_roi_h)
         data['bbox'] = np.float32([roi_x, roi_y, roi_w, roi_h])
-        data['flip_bbox'] = np.float32([flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h])
+        if data['flip']:
+            flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h = data['flip_bbox']
+            flip_roi_w = flip_roi_h = max(flip_roi_w, flip_roi_h)
+            data['flip_bbox'] = np.float32([flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h])
         return data
 
 
@@ -274,40 +238,20 @@ class keep_aspect_ratio(Augmentation):
         self.in_h = in_h
 
     def augment(self, data):
-        cx, cy, bw, bh = data['bbox']
-        gt_scale = 1. * self.in_w / self.in_h
-        tmp_bw = max(bw, bh * gt_scale)
-        tmp_bh = max(bh, bw / gt_scale)
-        bw = tmp_bw
-        bh = tmp_bh
-        data['bbox'] = cx, cy, bw, bh
-        return data
-
-
-@AUGMENTATION_REGISTRY.register('kp_keep_aspect_ratio_test')
-class keep_aspect_ratio_test(Augmentation):
-    def __init__(self, in_w, in_h):
-        super(keep_aspect_ratio_test, self).__init__()
-        self.in_w = in_w
-        self.in_h = in_h
-
-    def augment(self, data):
         roi_x, roi_y, roi_w, roi_h = data['bbox']
-        flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h = data['flip_bbox']
-
         gt_scale = 1. * self.in_w / self.in_h
         tmp_roi_w = max(roi_w, roi_h * gt_scale)
         tmp_roi_h = max(roi_h, roi_w / gt_scale)
         roi_w = tmp_roi_w
         roi_h = tmp_roi_h
-
-        tmp_flip_roi_w = max(flip_roi_w, flip_roi_h * gt_scale)
-        tmp_flip_roi_h = max(flip_roi_h, flip_roi_w / gt_scale)
-        flip_roi_w = tmp_flip_roi_w
-        flip_roi_h = tmp_flip_roi_h
-
         data['bbox'] = np.float32([roi_x, roi_y, roi_w, roi_h])
-        data['flip_bbox'] = np.float32([flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h])
+        if data['flip']:
+            flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h = data['flip_bbox']
+            tmp_flip_roi_w = max(flip_roi_w, flip_roi_h * gt_scale)
+            tmp_flip_roi_h = max(flip_roi_h, flip_roi_w / gt_scale)
+            flip_roi_w = tmp_flip_roi_w
+            flip_roi_h = tmp_flip_roi_h
+            data['flip_bbox'] = np.float32([flip_roi_x, flip_roi_y, flip_roi_w, flip_roi_h])
 
         return data
 
