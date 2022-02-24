@@ -4,7 +4,7 @@ import numpy as np
 from scipy.ndimage import filters
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from up.models.losses import build_loss
-
+from functools import reduce
 
 __all__ = ['BaseKpPostProcess']
 
@@ -19,11 +19,17 @@ class BaseKpPostProcess(nn.Module):
 
     def get_loss(self, input):
         target = input['label']
-        loss = self.loss(input['pred'], target[0])
+        if isinstance(input['pred'], list):
+            loss = reduce(lambda x, y: x + y, map(self.loss, input['pred'], target))
+        else:
+            loss = self.loss(input['pred'], target[0])
         return {'All.loss': loss}
 
     def get_output(self, input):
-        score_map = input['pred'].cpu()
+        if isinstance(input['pred'], list):
+            score_map = input['pred'][-1].cpu()
+        else:
+            score_map = input['pred'].cpu()
         if self.do_sig:
             score_map = nn.functional.sigmoid(score_map)
         kpts = self.final_preds(score_map.numpy(),
