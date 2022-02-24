@@ -101,11 +101,11 @@ dataset: # Required.
       alignment: 32
       pin_memory: True
 
-ema:
- enable: True
- ema_type: exp
- kwargs:
-   decay: 0.9998
+# ema:
+#  enable: True
+#  ema_type: exp
+#  kwargs:
+#    decay: 0.9998
 
 trainer: # Required.
   max_epoch: &max_epoch 100             # total epochs for the training
@@ -128,9 +128,9 @@ trainer: # Required.
       eta_min: 0.00001             # decay rate
 
 saver: # Required.
-  save_dir: checkpoints/ret18_cos_ema_iou    # dir to save checkpoints
+  save_dir: checkpoints/ret18_cos_iou    # dir to save checkpoints
   pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet18-5c106cde.pth
-  results_dir: results_dir/ret18_cos_ema_iou  # dir to save detection results. i.e., bboxes, masks, keypoints
+  results_dir: results_dir/ret18_cos_iou  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
   save_result: True
