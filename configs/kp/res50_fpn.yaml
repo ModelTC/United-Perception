@@ -105,8 +105,8 @@ dataset: # Required.
 
 trainer: # Required.
   max_epoch: 140              # total epochs for the training
-  test_freq: 10
-  save_freq: 10
+  test_freq: 1
+  save_freq: 1
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: Adam
     kwargs:
@@ -157,5 +157,5 @@ net:
     type: kp_post_process
     kwargs:
       loss:
-        type: kp_mse      
+        type: kp_bce
       test_with_gaussian_filter: True

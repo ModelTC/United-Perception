@@ -1,5 +1,4 @@
 import torch.nn as nn
-import numpy as np
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from up.utils.model.normalize import build_norm_layer
 
@@ -94,28 +93,31 @@ class KeypointFPNHead(nn.Module):
             stride=1,
             padding=1)
         self.bn_s2 = build_norm_layer(mid_channels, normalize)[1]
-
+        if has_bg:
+            bg_num = 1
+        else:
+            bg_num = 0
         self.predict5 = nn.Conv2d(
             mid_channels,
-            num_classes,
+            num_classes + bg_num,
             kernel_size=3,
             stride=1,
             padding=1)
         self.predict4 = nn.Conv2d(
             mid_channels,
-            num_classes,
+            num_classes + bg_num,
             kernel_size=3,
             stride=1,
             padding=1)
         self.predict3 = nn.Conv2d(
             mid_channels,
-            num_classes,
+            num_classes + bg_num,
             kernel_size=3,
             stride=1,
             padding=1)
         self.predict2 = nn.Conv2d(
             mid_channels,
-            num_classes,
+            num_classes + bg_num,
             kernel_size=3,
             stride=1,
             padding=1)
