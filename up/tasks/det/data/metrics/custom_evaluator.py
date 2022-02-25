@@ -44,6 +44,7 @@ class CustomEvaluator(Evaluator):
             for label in range(1, self.num_classes):
                 self.class_from[label] = list(range(len(gt_file)))
         self.ignore_mode = ignore_mode
+        self.data_respective = data_respective
 
     def set_label_mapping(self, data, idx):
         if len(self.label_mapping[0]) == 0:
@@ -127,11 +128,17 @@ class CustomEvaluator(Evaluator):
                     dt_by_label = dts.setdefault(dt['label'], [])
                     dt_by_label.append(dt)
         else:
-            for device_res in res:
-                for lines in device_res:
-                    for line in lines:
+            if self.data_respective:
+                for device_res in res:
+                    for line in device_res:
                         dt_by_label = dts.setdefault(line['label'], [])
                         dt_by_label.append(line)
+            else:
+                for device_res in res:
+                    for lines in device_res:
+                        for line in lines:
+                            dt_by_label = dts.setdefault(line['label'], [])
+                            dt_by_label.append(line)
         return dts
 
     def calIoU(self, b1, b2):
@@ -303,7 +310,8 @@ class MREvaluator(CustomEvaluator):
                                           label_mapping=label_mapping,
                                           ignore_mode=ignore_mode,
                                           ign_iou_thresh=ign_iou_thresh,
-                                          cross_cfg=cross_cfg)
+                                          cross_cfg=cross_cfg,
+                                          data_respective=data_respective)
 
         if len(eval_class_idxs) == 0:
             eval_class_idxs = list(range(1, num_classes))
