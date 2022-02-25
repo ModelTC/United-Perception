@@ -101,7 +101,6 @@ setup(
         'Development Status :: 3 - Alpha',
         "Programming Language :: Python :: 3",
         "Operating System :: POSIX :: Linux"),
-    install_requires=read_requirements(),
     ext_modules=get_extensions(),
     cmdclass={"build_ext": torch.utils.cpp_extension.BuildExtension},
 )
