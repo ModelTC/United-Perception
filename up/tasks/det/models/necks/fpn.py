@@ -34,8 +34,7 @@ class FPN(nn.Module):
                  initializer=None,
                  align_corners=True,
                  use_p5=False,
-                 skip=False,
-                 upsample_refine=False):
+                 skip=False):
         """
         Arguments:
             - inplanes (:obj:`list` of :obj:`int`): input channel
@@ -69,7 +68,6 @@ class FPN(nn.Module):
         self.align_corners = align_corners
         self.use_p5 = use_p5
         self.skip = skip
-        self.upsample_refine = upsample_refine
         assert num_level == len(out_strides)
 
         if upsample == 'deconv':
@@ -89,10 +87,6 @@ class FPN(nn.Module):
                     self.get_pconv_name(lvl_idx),
                     build_conv_norm(outplanes, outplanes, kernel_size=3,
                                     stride=1, padding=1, normalize=normalize))
-                if self.upsample_refine and lvl_idx < len(inplanes) - 1:
-                    self.add_module(
-                        self.get_upsample_refine_name(lvl_idx),
-                        build_conv_norm(outplanes, outplanes, 1, normalize=normalize))
             else:
                 if self.downsample == 'pool':
                     self.add_module(
@@ -103,12 +97,6 @@ class FPN(nn.Module):
                         self.get_downsample_name(lvl_idx),
                         nn.Conv2d(outplanes, outplanes, kernel_size=3, stride=2, padding=1))
         initialize_from_cfg(self, initializer)
-
-    def get_upsample_refine_name(self, idx):
-        return 'c{}_refine'.format(idx + self.start_level)
-
-    def get_upsample_refine(self, idx):
-        return getattr(self, self.get_upsample_refine_name(idx))
 
     def get_lateral_name(self, idx):
         return 'c{}_lateral'.format(idx + self.start_level)
@@ -127,11 +115,6 @@ class FPN(nn.Module):
 
     def get_pconv(self, idx):
         return getattr(self, self.get_pconv_name(idx))
-
-    def upsample_refine_conv(self, x, idx):
-        if self.upsample_refine:
-            return self.get_upsample_refine(idx)(x)
-        return x
 
     def forward(self, input):
         """
@@ -168,20 +151,20 @@ class FPN(nn.Module):
         for lvl_idx in range(len(self.inplanes))[::-1]:
             if lvl_idx < len(self.inplanes) - 1:
                 if self.upsample == 'deconv':
-                    laterals[lvl_idx] += self.upsample_refine_conv(self.deconv(laterals[lvl_idx + 1]), lvl_idx)
+                    laterals[lvl_idx] += self.deconv(laterals[lvl_idx + 1])
                 elif self.tocaffe_friendly:
-                    laterals[lvl_idx] += self.upsample_refine_conv(F.interpolate(laterals[lvl_idx + 1],
-                                                                   scale_factor=2,
-                                                                   mode=self.upsample,
-                                                                   align_corners=self.align_corners), lvl_idx)
+                    laterals[lvl_idx] += F.interpolate(laterals[lvl_idx + 1],
+                                                       scale_factor=2,
+                                                       mode=self.upsample,
+                                                       align_corners=self.align_corners)
                 else:
                     # nart_tools may not support to interpolate to the size of other feature
                     # you may need to modify upsample or interp layer in prototxt manually.
                     upsize = laterals[lvl_idx].shape[-2:]
-                    laterals[lvl_idx] += self.upsample_refine_conv(F.interpolate(laterals[lvl_idx + 1],
-                                                                   size=upsize,
-                                                                   mode=self.upsample,
-                                                                   align_corners=self.align_corners), lvl_idx)
+                    laterals[lvl_idx] += F.interpolate(laterals[lvl_idx + 1],
+                                                       size=upsize,
+                                                       mode=self.upsample,
+                                                       align_corners=self.align_corners)
             out = self.get_pconv(lvl_idx)(laterals[lvl_idx])
             features.append(out)
         features = features[::-1]
