@@ -6,7 +6,7 @@ from up.utils.model.normalize import build_norm_layer
 __all__ = ['KeypointSBHead']
 
 
-@MODULE_ZOO_REGISTRY.register('keypoint_sb')
+@MODULE_ZOO_REGISTRY.register('kp_sb_head')
 class KeypointSBHead(nn.Module):
     """
     keypoint head for solo top-down keypoint detection method.(HKD)

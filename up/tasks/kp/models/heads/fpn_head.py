@@ -4,7 +4,7 @@ from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 __all__ = ['KeypointFPNHead']
 
 
-@MODULE_ZOO_REGISTRY.register('kp_fpn')
+@MODULE_ZOO_REGISTRY.register('kp_fpn_head')
 class KeypointFPNHead(nn.Module):
     def __init__(self,
                  inplanes,

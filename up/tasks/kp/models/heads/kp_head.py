@@ -2,7 +2,7 @@ import torch.nn as nn
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 
-@MODULE_ZOO_REGISTRY.register('base_kp')
+@MODULE_ZOO_REGISTRY.register('kp_head')
 class BaseKpHead(nn.Module):
     def __init__(self, num_classes, has_bg, input_feature_idx=-1):
         super(BaseKpHead, self).__init__()
