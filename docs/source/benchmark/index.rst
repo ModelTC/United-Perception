@@ -21,6 +21,11 @@ Seg
 
 v0.0.1 基准 `segmentation v0.0.1 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/benchmark/semantic_benchmark.md>`_
 
+Kp
+--
+
+v0.0.1 基准 `keypoints v0.0.1 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/dev/benchmark/keypoint_benchmark.md>`_
+
 Multitask
 ---------
 

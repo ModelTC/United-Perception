@@ -14,4 +14,5 @@
    tasks/det
    tasks/distill
    tasks/seg
+   tasks/keypoints
    tasks/multitask
