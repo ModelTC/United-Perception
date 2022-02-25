@@ -55,7 +55,7 @@ class KDRunner(BaseRunner):
         self.mimic_loss_type = self.config['mimic'].get('mimic_type', 'kl')
         self.mimic_loss_weight = self.config['mimic'].get('loss_weight', 1.0)
         self.mimic_norm = self.config['mimic'].get('mimic_norm', False)
-        self.task_loss = self.config['mimic'].get('task_loss', False)
+        self.task_loss = self.config['mimic'].get('task_loss', True)
         self.teacher_mimic_name = self.config['mimic']['teacher'].get('mimic_name', None)
         self.student_mimic_name = self.config['mimic']['student'].get('mimic_name', None)
         self.mimicker = Mimicker(teacher_model=self.teacher_model, student_model=self.model)
