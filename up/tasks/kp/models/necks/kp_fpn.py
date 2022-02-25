@@ -10,10 +10,8 @@ class KeypointFPN(nn.Module):
     def __init__(self,
                  inplanes,
                  outplanes,
-                 num_classes,
                  normalize={'type': 'solo_bn'}):
         super(KeypointFPN, self).__init__()
-        self.num_classes = num_classes
         self.relu = nn.ReLU(inplace=True)
 
         self.upsample5 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
