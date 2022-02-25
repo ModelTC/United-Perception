@@ -20,12 +20,12 @@
 
 | model                                | setting | Params(M) | FLOPS(G) | ema   | train size | bs   | epoch | test size | top-1 |
 | ------------------------------------ | ------- | --------- | -------- | ----- | ---------- | ---- | ----- | --------- | ----- |
-| resnet18+bag of tricks               | coslr   | 11.690    | 1.813    | False | 224        | 2048 | 200   | 224       | 70.95 |
-| resnet18+strikes                     | coslr   | 11.690    | 1.813    | True  | 224        | 2048 | 300   | 224       | 72.78 |
+| [resnet18+bag of tricks](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/cls/resnet/res18_200e_bag_of_tricks.yaml)               | coslr   | 11.690    | 1.813    | False | 224        | 2048 | 200   | 224       | 70.95 |
+| [resnet18+strikes](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/cls/resnet/res18_strikes_300e_bce.yaml)                     | coslr   | 11.690    | 1.813    | True  | 224        | 2048 | 300   | 224       | 72.78 |
 | resnet18+resnet152                   | step    | 11.690    | 1.813    | False | 224        | 2048 | 180   | 224       | 72.83 |
-| resnet18+resnet152+bag of tricks     | step    | 11.690    | 1.813    | False | 224        | 2048 | 180   | 224       | 73.03 |
-| resnet50+bag of tricks               | coslr   | 25.557    | 4.087    | False | 224        | 2048 | 200   | 224       | 78.35 |
-| resnet50+strikes                     | coslr   | 25.557    | 4.087    | False | 224        | 2048 | 300   | 224       | 79.16 |
+| [resnet18+resnet152+bag of tricks](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/cls/resnet/res18_kd_bag_of_tricks.yaml)     | step    | 11.690    | 1.813    | False | 224        | 2048 | 180   | 224       | 73.03 |
+| resnet50+bag of tricks               | coslr   | 25.557    | 4.087    | False | 224        | 2048 | 200   | 224       | 78.21 |
+| [resnet50+strikes](https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/cls/resnet/res50_strikes_300e_bce.yaml)                     | coslr   | 25.557    | 4.087    | False | 224        | 2048 | 300   | 224       | 79.16 |
 | resnet50-D + bag of tricks           | coslr   | 25        | 4.3      | False | 224        | 2048 | 200   | 224       | 78.9  |
 
 ## 下游baseLine
@@ -34,3 +34,5 @@
 | ------------------------------------ | ------- | --------- | -------- | ----- | ---------- | ---- | ----- | --------- | ----- |
 | resnet50/flower                      | step    | 25.557    | 4.087    | False | 224        | 64   | 150   | 224       | 96.86 |
 | resnet50/cars                        | step    | 25.557    | 4.087    | False | 224        | 64   | 150   | 224       | 92.06 |
+| resnet50+strikes/flower              | step    | 25.557    | 4.087    | False | 224        | 64   | 300   | 224       | 97.26 |
+| resnet50+strikes/cars                | step    | 25.557    | 4.087    | False | 224        | 64   | 300   | 224       | 93.52 |
