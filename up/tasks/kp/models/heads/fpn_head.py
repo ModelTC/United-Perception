@@ -13,6 +13,7 @@ class KeypointFPNHead(nn.Module):
                  num_level=4):
         super(KeypointFPNHead, self).__init__()
         self.num_classes = num_classes
+        self.has_bg = has_bg
 
         for lvl in range(num_level):
             self.add_module(self.get_predict_name(lvl),
@@ -38,6 +39,6 @@ class KeypointFPNHead(nn.Module):
 
     def forward_net(self, input):
         out = []
-        for idx, x in enumerate(input['features']):
+        for idx, x in enumerate(input['features'][::-1]):
             out.append(self.get_predict(idx)(x))
         return out

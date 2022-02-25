@@ -105,8 +105,9 @@ dataset: # Required.
 
 trainer: # Required.
   max_epoch: 140              # total epochs for the training
-  test_freq: 1
-  save_freq: 1
+  test_freq: 10
+  save_freq: 10
+  only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: Adam
     kwargs:
@@ -120,19 +121,14 @@ trainer: # Required.
       gamma: 0.1             # decay rate
 
 saver: # Required.
-  save_dir: checkpoints/res50_fpn_hkd     # dir to save checkpoints
-  results_dir: results_dir/res50_fpn_hkd  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
+  save_dir: checkpoints/res50_fpn     # dir to save checkpoints
+  results_dir: results_dir/res50_fpn  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
   pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth
 
 hooks:
-  - type: auto_checkpoint
-  - type: train_val_logger
-    kwargs:
-      freq: 10
-      skip_first_k: 5
-      logdir: log
+  - type: auto_save_best
 
 net:
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
@@ -142,17 +138,36 @@ net:
       out_layers: [1,2,3,4]     # layer1...4, commonly named Conv2...5
       out_strides: [4,8,16,32]  # tell the strides of output features
       normalize:
-        type: solo_bn
+        type: sync_bn
+        kwargs:
+            group_size: 8
       initializer:
         method: msra
-  - name: kpt_fpn_head
+  - name: neck
     prev: backbone
-    type: keypoint_fpn
+    type: FPN
     kwargs:
-      inplanes: 2048
-      mid_channels: 256
+      outplanes: 256
+      start_level: 2
+      num_level: 4                # if num_level>len(backbone.out_layers), additional conv with be stacked.
+      out_strides: [4,8,16,32] # strides of output features. aka., anchor strides for roi_head
+      downsample: pool            # method to downsample, for FPN, it's pool, for RetienaNet, it's conv
+      upsample: bilinear           # method to interp, nearest or bilinear
+      align_corners: True
+      initializer:
+        method: xavier
+      normalize:
+        type: sync_bn
+        kwargs:
+             group_size: 8
+      upsample_refine: True
+  - name: kpt_fpn_head
+    prev: neck
+    type: kp_fpn
+    kwargs:
       num_classes: *num_kpts
       has_bg: true
+      num_level: 4
   - name: kp_post_process
     type: kp_post_process
     kwargs:

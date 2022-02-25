@@ -131,19 +131,14 @@ trainer: # Required.
       gamma: 0.1             # decay rate
 
 saver: # Required.
-  save_dir: checkpoints/hg2_hkd     # dir to save checkpoints
-  results_dir: results_dir/hg2_hkd  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
+  save_dir: checkpoints/hg2    # dir to save checkpoints
+  results_dir: results_dir/hg2 # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume:  True # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 #  pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet18-5c106cde.pth
 
 hooks:
-  - type: auto_checkpoint
-  - type: train_val_logger
-    kwargs:
-      freq: 10
-      skip_first_k: 5
-      logdir: log
+  - type: auto_save_best
 
 net:
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
@@ -154,13 +149,15 @@ net:
       has_bg: True
       num_classes: *num_kpts
       normalize:
-        type: solo_bn
+        type: sync_bn
+        kwargs:
+            group_size: 8
   - name: kpt_base_head
     prev: backbone
     type: base_kp
     kwargs:
-        has_bg: false
-        num_classes: *num_kpts
+      has_bg: false
+      num_classes: *num_kpts
   - name: kp_post_process
     type: kp_post_process
     kwargs:
