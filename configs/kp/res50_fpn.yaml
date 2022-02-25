@@ -145,25 +145,16 @@ net:
         method: msra
   - name: neck
     prev: backbone
-    type: FPN
+    type: kp_fpn
     kwargs:
       outplanes: 256
-      start_level: 2
-      num_level: 4                # if num_level>len(backbone.out_layers), additional conv with be stacked.
-      out_strides: [4,8,16,32] # strides of output features. aka., anchor strides for roi_head
-      downsample: pool            # method to downsample, for FPN, it's pool, for RetienaNet, it's conv
-      upsample: bilinear           # method to interp, nearest or bilinear
-      align_corners: True
-      initializer:
-        method: xavier
       normalize:
         type: sync_bn
         kwargs:
              group_size: 8
-      upsample_refine: True
   - name: kpt_fpn_head
     prev: neck
-    type: kp_fpn
+    type: kp_fpn_head
     kwargs:
       num_classes: *num_kpts
       has_bg: true

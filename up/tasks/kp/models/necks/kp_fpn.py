@@ -104,7 +104,7 @@ class KeypointFPN(nn.Module):
         c2_lat = self.c2_lateral(c2)
         p2 = self.relu(self.bn_s2(self.conv_after_sum2(c2_lat + p3_up)))
 
-        out = [p5, p4, p3, p2]
+        out = [p2, p3, p4, p5]
 
         return {"features": out}
 

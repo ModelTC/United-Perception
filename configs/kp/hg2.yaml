@@ -154,7 +154,7 @@ net:
             group_size: 8
   - name: kpt_base_head
     prev: backbone
-    type: base_kp
+    type: kp_head
     kwargs:
       has_bg: false
       num_classes: *num_kpts

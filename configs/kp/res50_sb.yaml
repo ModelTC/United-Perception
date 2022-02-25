@@ -145,7 +145,7 @@ net:
         method: msra
   - name: kpt_sb_head
     prev: backbone
-    type: keypoint_sb
+    type: kp_sb_head
     kwargs:
       mid_channels: 256
       num_classes: *num_kpts
