@@ -145,9 +145,9 @@ net: &subnet
             smooth_ratio: 0.1
             num_classes: *num_classes
 
-teacher: 
+teacher:
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet50
+    type: resnet152
     kwargs:
       frozen_layers: []
       out_layers: [4]     # layer1...4, commonly named Conv2...5
@@ -163,14 +163,15 @@ teacher:
        in_plane: &teacher_out_channel 2048
        input_feature_idx: -1
 mimic:
-  mimic_name: res50_to_res18
+  mimic_name: res152_to_res18
   mimic_type: kl
-  loss_weight: 1.0 
+  loss_weight: 1.0
   teacher:
     mimic_name: ['head.classifier']
-    teacher_weight: /mnt/lustre/baishihao/UP/res50_strikes/checkpoints/cls_std/ckpt_best.pth
+    teacher_weight: /mnt/lustre/baishihao/universal-perception/resnet152/teacher.pth.tar
   student:
     mimic_name: ['head.classifier']
+    student_weight: /mnt/lustre/baishihao/universal-perception/res18/res18.pth.tar
 
 
 runtime:

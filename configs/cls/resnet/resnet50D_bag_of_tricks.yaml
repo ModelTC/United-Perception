@@ -1,13 +1,11 @@
 num_classes: &num_classes 1000
 
-cutmix_mixup: &cutmix_mixup
-  type: torch_cutmix_mixup
+mixup: &mixup
+  type: torch_mixup
   kwargs:
-    mixup_alpha: 0.1
-    cutmix_alpha: 1.0
-    num_classes: 1000
+    alpha: 0.2
+    num_classes: *num_classes
     extra_input: True
-    transform: True
 
 random_resized_crop: &random_resized_crop
  type: torch_random_resized_crop
@@ -21,9 +19,10 @@ random_horizontal_flip: &random_horizontal_flip
 pil_color_jitter: &pil_color_jitter
  type: torch_color_jitter
  kwargs:
-  brightness: 0.4
-  contrast: 0.4
-  saturation: 0.4
+  brightness: 0.2
+  contrast: 0.2
+  saturation: 0.2
+  hue: 0.1
 
 center_crop: &center_crop
   type: torch_center_crop
@@ -51,12 +50,11 @@ dataset: # Required.
       kwargs:
         meta_file: /mnt/lustre/share/images/meta/train.txt
         image_reader:
-          type: ceph_opencv
-          kwargs:
-            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
-            color_mode: RGB
-            memcached: false
-        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize, *cutmix_mixup]
+           type: fs_pillow
+           kwargs:
+             image_dir: /mnt/lustre/share/images/train
+             color_mode: RGB
+        transformer: [*mixup, *random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize]
     batch_sampler:
         type: base
         kwargs:
@@ -67,7 +65,7 @@ dataset: # Required.
     dataloader:
         type: cls_base
         kwargs:
-          num_workers: 12
+          num_workers: 4
           pin_memory: True
   test:
     dataset:
@@ -75,11 +73,10 @@ dataset: # Required.
       kwargs:
         meta_file: /mnt/lustre/share/images/meta/val.txt
         image_reader:
-          type: ceph_opencv
+          type: fs_pillow
           kwargs:
-            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/val
+            image_dir: /mnt/lustre/share/images/val
             color_mode: RGB
-            memcached: false
         transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
         evaluator:
           type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
@@ -95,38 +92,36 @@ dataset: # Required.
     dataloader:
       type: cls_base
       kwargs:
-        num_workers: 8
+        num_workers: 4
         pin_memory: False
 
-ema:
-    enable: True
-    kwargs:
-        decay: 0.9999
-
 trainer: # Required.
-  max_epoch: 100
+  max_epoch: 200
   test_freq: 5
   save_freq: 5
   only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
-    type: LAMB
+    type: SGD
     kwargs:
-      lr: 0.008
-      weight_decay: 0.02
+      lr: 0.4
+      nesterov: True
+      momentum: 0.9
+      weight_decay: 0.0001
   lr_scheduler:
-    warmup_iter: 3130
+    warmup_iter: 62560
     warmup_type: linear
     warmup_register_type: no_scale_lr
-    warmup_ratio: 0.02
+    warmup_ratio: 0.0001597444089456869
     type: CosineAnnealingLR
     kwargs:
-        T_max: 100
-        eta_min: 0.0
-        warmup_iter: 3130
+        T_max: 200
+        eta_min: 0.000001
+        warmup_iter: 0
+
 saver: # Required.
-  save_dir: res50_100e_strikes_bce/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: res50_100e_strikes_bce/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  save_dir: res50D/checkpoints/resnet_D     # dir to save checkpoints
+  results_dir: res50D/results_dir/resnet_D  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:
@@ -134,7 +129,7 @@ hooks:
 
 net: &subnet
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet50
+    type: resnet50_D
     kwargs:
       frozen_layers: []
       out_layers: [4]     # layer1...4, commonly named Conv2...5
@@ -153,6 +148,7 @@ net: &subnet
     type: base_cls_postprocess
     kwargs:
        cls_loss:
-         type: bce
+         type: label_smooth_ce
          kwargs:
-           bias: True
+            smooth_ratio: 0.1
+            num_classes: *num_classes

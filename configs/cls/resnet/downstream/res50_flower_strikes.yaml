@@ -1,11 +1,11 @@
-num_classes: &num_classes 1000
+num_classes: &num_classes 102
 
 cutmix_mixup: &cutmix_mixup
   type: torch_cutmix_mixup
   kwargs:
     mixup_alpha: 0.1
     cutmix_alpha: 1.0
-    num_classes: 1000
+    num_classes: 102
     extra_input: True
     transform: True
 
@@ -24,6 +24,13 @@ pil_color_jitter: &pil_color_jitter
   brightness: 0.4
   contrast: 0.4
   saturation: 0.4
+
+random_augmentation: &random_augmentation
+  type: torch_random_augmentationIncre
+  kwargs:
+    n: 2  # number of augmentation operations
+    m: 7  # magnitude of each operation
+    magnitude_std: 0.5  # standard deviation of magnitude
 
 center_crop: &center_crop
   type: torch_center_crop
@@ -49,14 +56,14 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_type: custom_cls
+        meta_file: ./followers_im_folder/train.txt
         image_reader:
-          type: ceph_opencv
-          kwargs:
-            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
-            color_mode: RGB
-            memcached: false
-        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize, *cutmix_mixup]
+           type: fs_pillow
+           kwargs:
+             image_dir: ./followers_im_folder/train
+             color_mode: RGB
+        transformer:  [*random_resized_crop, *random_horizontal_flip, *random_augmentation, *to_tensor, *normalize, *cutmix_mixup]
     batch_sampler:
         type: base
         kwargs:
@@ -67,19 +74,19 @@ dataset: # Required.
     dataloader:
         type: cls_base
         kwargs:
-          num_workers: 12
+          num_workers: 4
           pin_memory: True
   test:
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/val.txt
+        meta_type: custom_cls
+        meta_file: ./followers_im_folder/val.txt
         image_reader:
-          type: ceph_opencv
+          type: fs_pillow
           kwargs:
-            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/val
+            image_dir: ./followers_im_folder/test/
             color_mode: RGB
-            memcached: false
         transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
         evaluator:
           type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
@@ -91,42 +98,46 @@ dataset: # Required.
         sampler:
           type: dist
           kwargs: {}
-        batch_size: 64
+        batch_size: 32
     dataloader:
       type: cls_base
       kwargs:
-        num_workers: 8
+        num_workers: 4
         pin_memory: False
 
-ema:
-    enable: True
-    kwargs:
-        decay: 0.9999
+#ema:
+#    enable: True
+#    kwargs:
+#        decay: 0.9999
 
 trainer: # Required.
-  max_epoch: 100
+  max_epoch: 300
   test_freq: 5
   save_freq: 5
   only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
-    type: LAMB
+    type: SGD
     kwargs:
-      lr: 0.008
-      weight_decay: 0.02
+      lr: 0.01
+      nesterov: True
+      momentum: 0.9
+      weight_decay: 0.0005
   lr_scheduler:
-    warmup_iter: 3130
+    warmup_iter: 0
     warmup_type: linear
     warmup_register_type: no_scale_lr
-    warmup_ratio: 0.02
+    warmup_ratio: 0.25
     type: CosineAnnealingLR
     kwargs:
-        T_max: 100
+        T_max: 300
         eta_min: 0.0
-        warmup_iter: 3130
+        warmup_iter: 0
+
 saver: # Required.
-  save_dir: res50_100e_strikes_bce/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: res50_100e_strikes_bce/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: res50_flower_strikes/checkpoints/cls_std     # dir to save checkpoints
+  results_dir: res50_flower_strikes/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  pretrain_model: ./res50_strickes/ckpt_latest.pth
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:

@@ -20,6 +20,13 @@ from .convnext import (  # noqa: F401
     convnext_tiny, convnext_small, convnext_base, convnext_large, convnext_xlarge
 )
 
+from .resnet_D import (resnet101_D,  # noqa
+                       resnet152_D,
+                       resnet18_D,
+                       resnet34_D,
+                       resnet50_D,
+                       resnet_custom_D)
+
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 imported_vars = list(globals().items())

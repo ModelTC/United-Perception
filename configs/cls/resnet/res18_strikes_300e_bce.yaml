@@ -155,4 +155,4 @@ net: &subnet
        cls_loss:
          type: bce
          kwargs:
-           {}
+           bias: True

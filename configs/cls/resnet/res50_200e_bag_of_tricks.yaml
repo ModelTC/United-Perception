@@ -1,13 +1,11 @@
 num_classes: &num_classes 1000
 
-cutmix_mixup: &cutmix_mixup
-  type: torch_cutmix_mixup
+mixup: &mixup
+  type: torch_mixup
   kwargs:
-    mixup_alpha: 0.1
-    cutmix_alpha: 1.0
+    alpha: 0.2
     num_classes: 1000
     extra_input: True
-    transform: True
 
 random_resized_crop: &random_resized_crop
  type: torch_random_resized_crop
@@ -21,9 +19,10 @@ random_horizontal_flip: &random_horizontal_flip
 pil_color_jitter: &pil_color_jitter
  type: torch_color_jitter
  kwargs:
-  brightness: 0.4
-  contrast: 0.4
-  saturation: 0.4
+  brightness: 0.2
+  contrast: 0.2
+  saturation: 0.2
+  hue: 0.1
 
 center_crop: &center_crop
   type: torch_center_crop
@@ -56,7 +55,7 @@ dataset: # Required.
             image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
             color_mode: RGB
             memcached: false
-        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize, *cutmix_mixup]
+        transformer: [*mixup, *random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize]
     batch_sampler:
         type: base
         kwargs:
@@ -95,37 +94,39 @@ dataset: # Required.
     dataloader:
       type: cls_base
       kwargs:
-        num_workers: 8
+        num_workers: 12
         pin_memory: False
 
 ema:
-    enable: True
-    kwargs:
-        decay: 0.9999
+   enable: True
+   kwargs:
+       decay: 0.9999
 
 trainer: # Required.
-  max_epoch: 100
+  max_epoch: 200
   test_freq: 5
   save_freq: 5
   only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
-    type: LAMB
+    type: SGD
     kwargs:
-      lr: 0.008
-      weight_decay: 0.02
+      nesterov: True
+      lr: 0.8
+      momentum: 0.9
+      weight_decay: 0.00005
   lr_scheduler:
     warmup_iter: 3130
     warmup_type: linear
     warmup_register_type: no_scale_lr
-    warmup_ratio: 0.02
+    warmup_ratio: 0.25
     type: CosineAnnealingLR
     kwargs:
-        T_max: 100
+        T_max: 200
         eta_min: 0.0
         warmup_iter: 3130
 saver: # Required.
-  save_dir: res50_100e_strikes_bce/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: res50_100e_strikes_bce/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: res50_bag_200e/checkpoints/cls_std     # dir to save checkpoints
+  results_dir: res50_bag200e/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
@@ -153,6 +154,7 @@ net: &subnet
     type: base_cls_postprocess
     kwargs:
        cls_loss:
-         type: bce
+         type: label_smooth_ce
          kwargs:
-           bias: True
+            smooth_ratio: 0.1
+            num_classes: *num_classes
