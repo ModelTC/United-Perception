@@ -2,7 +2,7 @@
 ====
 
 UP支持分类任务训练、部署、推理的全部流程;
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/dev/up/tasks/cls>`_
+`具体代码 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/up/tasks/cls>`_
 
 配置文件
 --------

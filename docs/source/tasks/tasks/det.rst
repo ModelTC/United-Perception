@@ -2,7 +2,7 @@
 ====
 
 UP支持检测任务训练、部署、推理的全部流程;
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/dev/up/tasks/det>`_
+`具体代码 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/up/tasks/det>`_
 
 配置文件
 --------

@@ -2,7 +2,7 @@
 ==============
 
 UP支持多任务的联合训练，推理; 训练流程为每个task分支网络处理对应的训练数据，计算loss，之后将各任务loss计算总和并反向传播更新梯度
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/dev/up/tasks/multitask>`_
+`具体代码 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/up/tasks/multitask>`_
 
 配置文件
 --------
