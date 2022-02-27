@@ -1,7 +1,7 @@
 发布历史/Release History
 ========================
 
-v0.0.1
+v0.1.0
 -------
 
 Hightlights
