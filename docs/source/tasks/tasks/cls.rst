@@ -2,12 +2,12 @@
 ====
 
 UP支持分类任务训练、部署、推理的全部流程;
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/up/tasks/cls>`_
+`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/cls>`_
 
 配置文件
 --------
 
-`代码仓库 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/configs/cls>`_
+`代码仓库 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/cls>`_
 其中包括常用算法配置文件与部署示例
 
 数据集相关模块
@@ -244,7 +244,7 @@ UP提供了resnet50在下游分类任务的示例代码，训练下游任务一�
         save_dir: res50_car/checkpoints/cls_std     # dir to save checkpoints
         results_dir: res50_car/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
         auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
-        pretrain_model: universal-perception/res50/ckpt_latest.pth
+        pretrain_model: united-perception/res50/ckpt_latest.pth
 
 
 UP提供的基准下游分类任务的配置为：初始学习率为预训练学习率的0.1/0.01，训练150epoch，每50epoch衰减一次学习率（lr * 0.1），具体的配置为：

@@ -196,7 +196,7 @@ to_kestrel, UP 支持将模型转化为kestrel格式
 部署例子:
 
 检测配置：
-`Detection deploy configs <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/configs/det/deploy>`_
+`Detection deploy configs <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det/deploy>`_
 
 分类配置：
-`Classification deploy configs <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/configs/cls/deploy>`_
+`Classification deploy configs <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/cls/deploy>`_

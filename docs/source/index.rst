@@ -10,7 +10,7 @@ Welcome to UP's documentation!
    :width: 150px
 
 
-UP (universal-perception)是一套基于Distributed PyTorch实现的通用感知任务框架，目标是兼顾研究和产品化支持。
+UP (united-perception)是一套基于Distributed PyTorch实现的通用感知任务框架，目标是兼顾研究和产品化支持。
 
 .. toctree::
    :maxdepth: 1

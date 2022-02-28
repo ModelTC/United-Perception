@@ -2,14 +2,14 @@
 ========
 
 UP支持模型蒸馏训练; 具体流程为通过蒸馏teacher模型与student模型的若干个特征图，提升student模型性能
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/tree/master/up/tasks/distill>`_
+`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/distill>`_
 
 
 子任务配置文件示例
 ------------------
 
-* `classification <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/cls/resnet/res18_kd.yaml>`_
-* `detection <https://gitlab.bj.sensetime.com/spring2/universal-perception/-/blob/master/configs/det/faster_rcnn/faster_rcnn_r50_fpn_1x_mimic.yaml>`_
+* `classification <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/cls/resnet/res18_kd.yaml>`_
+* `detection <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/det/faster_rcnn/faster_rcnn_r50_fpn_1x_mimic.yaml>`_
 
 配置文件说明
 ------------

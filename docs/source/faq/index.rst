@@ -9,7 +9,7 @@
 提问渠道
 --------
 
-    1. gitlab: `gitlab <https://gitlab.bj.sensetime.com/spring2/universal-perception/issues>`_
+    1. gitlab: `gitlab <https://gitlab.bj.sensetime.com/spring2/united-perception/issues>`_
     2. 答疑群: pod答疑群或者spring模型生产框架&生态答疑群 
 
 提问姿势

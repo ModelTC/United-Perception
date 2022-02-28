@@ -116,7 +116,7 @@ saver: # Required.
   save_dir: res50_pet/checkpoints/cls_std     # dir to save checkpoints
   results_dir: res50_pet/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
-  pretrain_model: /mnt/lustre/baishihao/universal-perception/res50/ckpt_latest.pth
+  pretrain_model: /mnt/lustre/baishihao/united-perception/res50/ckpt_latest.pth
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:

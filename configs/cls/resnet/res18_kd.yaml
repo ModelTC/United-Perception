@@ -168,10 +168,10 @@ mimic:
   loss_weight: 1.0
   teacher:
     mimic_name: ['head.classifier']
-    teacher_weight: /mnt/lustre/baishihao/universal-perception/resnet152/teacher.pth.tar
+    teacher_weight: /mnt/lustre/baishihao/united-perception/resnet152/teacher.pth.tar
   student:
     mimic_name: ['head.classifier']
-    student_weight: /mnt/lustre/baishihao/universal-perception/res18/res18.pth.tar
+    student_weight: /mnt/lustre/baishihao/united-perception/res18/res18.pth.tar
 
 
 runtime:

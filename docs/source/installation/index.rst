@@ -5,7 +5,7 @@
 
 .. code-block:: bash
 
-    git clone git@gitlab.bj.sensetime.com:spring2/universal-perception.git UP 
+    git clone git@gitlab.bj.sensetime.com:spring2/united-perception.git UP 
     cd UP
 
 2. 激活环境：激活集群 Pytorch 环境
