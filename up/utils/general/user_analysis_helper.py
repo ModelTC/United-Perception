@@ -1,5 +1,4 @@
-import threading
-from spring.nart.tools.io import send
+from spring_aux.analytics.io import send_async as send
 
 from up.utils.env.dist_helper import env
 from up import __version__
@@ -167,5 +166,4 @@ def send_info(cfg=None, func=''):
         except:  # noqa
             pass
     if env.is_master():
-        t = threading.Thread(target=send, args=(UPINFO, ))
-        t.start()
+        send(UPINFO)

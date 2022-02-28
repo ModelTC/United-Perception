@@ -1,9 +1,9 @@
-# United Perception
+## United Perception
 
 <img src=./up-logo.png width=50% />
 
 
-# 文档
+## 文档
 
 [up 官方文档](http://spring.sensetime.com/docs/up/index.html)
 ## Benckmark
@@ -13,6 +13,10 @@
 * [Seg](benchmark/semantic_benchmark.md)
 * [Multitask](benchmark/multitask_benchmark.md)
 * [keypoint](benchmark/keypoint_benchmark.md)
+
+## 版本发布
+
+[release-note](https://confluence.sensetime.com/pages/viewpage.action?pageId=376865557)
 
 ## 说明
 
