@@ -1,9 +1,11 @@
-# UP
+# United Perception
 
-![image](up-logo.png)
+<img src=./up-logo.png width=50% />
 
-详细教程参见 [up 官方文档](http://spring.sensetime.com/docs/up/index.html)
 
+# 文档
+
+[up 官方文档](http://spring.sensetime.com/docs/up/index.html)
 ## Benckmark
 
 * [Det](benchmark/detection_benchmark.md)
