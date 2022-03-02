@@ -35,7 +35,7 @@ def get_subnetwork_from_cfg(cfg):
             subnet['bbox_feat_planes'] = net.get('kwargs', {}).get('feat_planes', 'none')
             subnet['bbox_class_activation_type'] = 'sigmoid' if 'sigmoid' in net.get('kwargs', {}).get(
                 'cfg', {}).get('cls_loss', {}).get('type', '') else 'softmax'
-        subnet[f'{name}_normalize'] = net.get('kwargs', {}).get('normalize', 'without normalize or with default.')
+        # subnet[f'{name}_normalize'] = net.get('kwargs', {}).get('normalize', 'without normalize or with default.')
         mtype = net.get('type', '')
         if mtype.find('.') >= 0:
             net_name = mtype.split('.')[-1]
