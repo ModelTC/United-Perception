@@ -50,9 +50,10 @@ class RoiPredictor(object):
     @ToCaffe.disable_trace
     @torch.no_grad()
     @to_float32
-    def predict(self, mlvl_anchors, mlvl_preds, image_info):
+    def predict(self, mlvl_anchors, mlvl_preds, image_info, return_pos_inds=None):
         mlvl_resutls = []
-        for anchors, preds in zip(mlvl_anchors, mlvl_preds):
+        for lvl, (anchors, preds) in enumerate(zip(mlvl_anchors, mlvl_preds)):
+            self.lvl = lvl
             results = self.single_level_predict(anchors, preds, image_info)
             mlvl_resutls.append(results)
         if len(mlvl_resutls) > 0:
