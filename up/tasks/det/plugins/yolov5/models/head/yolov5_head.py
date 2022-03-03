@@ -73,7 +73,8 @@ class YoloV5Head(nn.Module):
 
     def forward(self, input):
         features = input['features']
-        assert isinstance(features, list), 'Only support list'
+        # assert isinstance(features, list), 'Only support list'
         raw_mlvl_preds = self.forward_net(features)
-        input['preds'] = raw_mlvl_preds
-        return input
+        output = {}
+        output['preds'] = raw_mlvl_preds
+        return output

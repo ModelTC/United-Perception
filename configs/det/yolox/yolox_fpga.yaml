@@ -1,0 +1,206 @@
+num_classes: &num_classes 81
+runtime:
+    aligned: True
+    async_norm: True
+    special_bn_init: True
+
+mosaic: &mosaic
+  type: mosaic
+  kwargs:
+    extra_input: True
+    tar_size: 640
+    fill_color: 0
+
+random_perspective: &random_perspective
+  type: random_perspective_yolox
+  kwargs:
+    degrees: 10.0 # 0.0
+    translate: 0.1
+    scale: [0.5, 1.5] # 0.5
+    shear: 2.0 # 0.0
+    perspective: 0.0
+    fill_color: 0  # 0
+    border: [-320, -320]
+
+flip: &flip
+  type: flip
+  kwargs:
+    flip_p: 0.5
+
+to_tensor: &to_tensor
+  type: custom_to_tensor
+
+train_resize: &train_resize
+  type: keep_ar_resize_max
+  kwargs:
+    random_size: [10, 20]
+    padding_type: left_top
+    padding_val: 0
+
+test_resize: &test_resize
+  type: keep_ar_resize_max
+  kwargs:
+    max_size: 320
+    padding_type: left_top
+    padding_val: 0
+
+normalize_inverse: &normalize_inverse
+  type: normalize_inverse
+
+dataset:
+  train:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: coco/annotations/instances_train2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: coco/train2017
+            color_mode: GRAY
+        transformer: [*mosaic, *random_perspective, *flip, *train_resize, *to_tensor]
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 8
+  test:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: &gt_file coco/annotations/instances_val2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: coco/val2017
+            color_mode: GRAY
+        transformer: [*test_resize, *to_tensor]
+        evaluator:
+          type: COCO
+          kwargs:
+            gt_file: *gt_file
+            iou_types: [bbox]
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 8
+  dataloader:
+    type: base
+    kwargs:
+      num_workers: 8
+      alignment: 32
+      worker_init: True
+      pad_type: batch_pad
+
+trainer: # Required.
+  max_epoch: &max_epoch 300             # total epochs for the training
+  save_freq: 5
+  test_freq: 5
+  optimizer:                 # optimizer = SGD(params,lr=0.01,momentum=0.937,weight_decay=0.0005)
+    register_type: yolov5
+    type: SGD
+    kwargs:
+      lr: 0.00015625
+      momentum: 0.9
+      nesterov: True
+      weight_decay: 0.0005      # weight_decay = 0.0005 * batch_szie / 64
+  lr_scheduler:
+    lr_register_type: yolox_base
+    warmup_epochs: 5       # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_type: yolox_cos
+    type: YoloXCosineLR
+    kwargs:
+      T_max: *max_epoch
+      min_lr_scale: 0.05
+      no_aug_epoch: &no_aug_epoch 15
+
+saver:
+  save_dir: checkpoints/pretrained_fp32
+  results_dir: results_dir/pretrained_fp32
+  resume_model: pretrained_fp32/yolox_fpga.pth
+  auto_resume: False
+  
+hooks:
+  - type: yolox_noaug
+    kwargs:
+      no_aug_epoch: *no_aug_epoch
+      max_epoch: *max_epoch
+      transformer: [*flip, *train_resize, *to_tensor]
+  - type: auto_save_best
+
+ema:
+  enable: True
+  ema_type: exp
+  kwargs:
+    decay: 0.9998
+
+net:
+  - name: backbone
+    type: yolox
+    kwargs:
+      wid_mul: 0.375
+      dep_mul: 0.33
+      out_layers: [2, 3, 4]
+      out_strides: [8, 16, 32]
+      normalize:
+        type: solo_bn
+      act_fn: {'type': 'ReLU' }
+      use_spp_pool: False
+      focus_type: 'stem_focus'
+      input_channels: 1
+  - name: neck
+    prev: backbone
+    type: YoloxPAFPN
+    kwargs:
+      depth: 0.33
+      out_strides: [8, 16, 32]
+      act_fn: {'type': 'ReLU'}
+  - name: roi_head
+    prev: neck
+    type: YoloXHead
+    kwargs:
+      num_classes: *num_classes  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      width: 0.375
+      num_point: &dense_points 1
+      act_fn: {'type': 'ReLU'}
+  - name: yolox_post
+    prev: roi_head
+    type: yolox_post
+    kwargs:
+      num_classes: *num_classes  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      cfg:
+        loc_loss:
+          type: iou_loss
+          kwargs:
+            loss_type: square_iou
+            loss_weight: 5.0
+        cls_loss:
+          type: sigmoid_cross_entropy
+        obj_loss:
+          type: sigmoid_cross_entropy
+        anchor_generator:
+          type: fcos # yolox
+          kwargs:
+            dense_points: *dense_points
+            center: False
+        roi_supervisor:
+          type: ota
+          kwargs:
+            num_classes: *num_classes
+            matcher:
+              type: ota
+              kwargs:
+                num_classes: *num_classes
+        roi_predictor:
+          type: yolox
+          kwargs:
+            num_classes: *num_classes
+            pre_nms_score_thresh: 0.01
+            nms:
+              type: naive
+              nms_iou_thresh: 0.65

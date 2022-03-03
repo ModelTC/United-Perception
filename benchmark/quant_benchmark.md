@@ -4,3 +4,5 @@
 |-----------------------|-----------|----------|----------|
 | retinanet-r18-improve | 40.7      | 40.5     | 40.7     |
 | yolox_s               | 40.4      | 39.4     | 39.8     |
+
+More quant benchmark can be seen at [quant benchmark](https://github.com/ModelTC/MQBench/blob/main/docs/source/benchmark/ObjectDetection/Benchmark.rst).

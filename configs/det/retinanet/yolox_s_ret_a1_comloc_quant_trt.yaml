@@ -3,12 +3,12 @@ runtime:
     aligned: True
     # async_norm: True
     special_bn_init: True
-    rank_init: True
 
     runner:
       type: quant
 
 quant:
+    ptq_only: False
     deploy_backend: tensorrt
     cali_batch_size: 900
     prepare_args:
@@ -17,6 +17,9 @@ quant:
         a_observer: EMAMinMaxObserver
         w_fakequantize: FixedFakeQuantize
         a_fakequantize: FixedFakeQuantize
+      leaf_module: [Space2Depth, FrozenBatchNorm2d]
+      extra_quantizer_dict:
+        additional_module_type: [ConvFreezebn2d, ConvFreezebnReLU2d]
 
 
 mixup: &mixup
@@ -151,7 +154,7 @@ trainer: # Required.
 saver:
   save_dir: checkpoints/yolox_s_ret_a1_comloc_quant_trt
   results_dir: results_dir/yolox_s_ret_a1_comloc_quant_trt
-  pretrain_model: pretrained_fp32/ckpt_best.pth
+  resume_model: pretrained_fp32/ckpt_best.pth
   auto_resume: False
 
 
@@ -168,7 +171,7 @@ net:
     kwargs:
       out_layers: [2, 3, 4]
       out_strides: [8, 16, 32]
-      normalize: {'type': 'freeze_bn' }
+      normalize: {'type': 'mqbench_freeze_bn' }
       act_fn: {'type': 'Silu' }
   - name: neck
     prev: backbone
@@ -176,7 +179,7 @@ net:
     kwargs:
       depth: 0.33
       out_strides: [8, 16, 32]
-      normalize: {'type': 'freeze_bn' }
+      normalize: {'type': 'mqbench_freeze_bn' }
       act_fn: {'type': 'Silu'}
   - name: roi_head
     prev: neck
@@ -185,7 +188,7 @@ net:
       num_classes: *num_classes
       width: 0.5
       num_point: &dense_points 1
-      normalize: {'type': 'freeze_bn' }
+      normalize: {'type': 'mqbench_freeze_bn' }
       act_fn: {'type': 'Silu'}
   - name: post_process
     prev: roi_head

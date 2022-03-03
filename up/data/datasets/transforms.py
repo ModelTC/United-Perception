@@ -201,7 +201,7 @@ class CustomImageToTensor(Augmentation):
         data['image'] = torch.from_numpy(image).float()
         if self.norm_image:
             data['image'] = data['image'].div(255)
-        if 'gt_semantic_seg' in data:
+        if 'gt_semantic_seg' in data and data['gt_semantic_seg'] is not None:
             data['gt_semantic_seg'] = torch.from_numpy(data['gt_semantic_seg'].copy())
         if 'flip_image' in data:
             flip_image = data['flip_image']
