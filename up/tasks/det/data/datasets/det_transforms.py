@@ -440,6 +440,7 @@ class BatchPad(object):
         return data
 
 
+@AUGMENTATION_REGISTRY.register('expand')
 class ImageExpand(Augmentation):
     """ expand image with means
     """
