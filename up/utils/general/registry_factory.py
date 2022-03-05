@@ -89,3 +89,6 @@ TOKESTREL_REGISTRY = Registry()
 
 # distill
 DISTILL_REGISTRY = Registry()
+
+# box_coder
+BOX_CODER_REGISTRY = Registry()

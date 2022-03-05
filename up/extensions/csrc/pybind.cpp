@@ -6,6 +6,10 @@
 #include "focal_loss/focal_loss.h"
 #include "cross_focal_loss/cross_focal_loss.h"
 #include "iou_overlap/iou_overlap.h"
+#include "roiaware_pool3d/roiaware_pool3d.h"
+#include "roipoint_pool3d/roipoint_pool3d.h"
+#include "iou3d_nms/iou3d_cpu.h"
+#include "iou3d_nms/iou3d_nms.h"
 #include <torch/torch.h>
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
@@ -83,4 +87,27 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     pybind11::module iou = m.def_submodule("overlaps",
                                            "calculate iou between bboxes & gts");
     iou.def("iou", &gpu_iou_overlaps, "bbox iou overlaps with gt (CUDA)");
+    
+    // pybind roiaware_pool3d
+    pybind11::module rw = m.def_submodule("roiaware_pool3d",
+                                          "roiaware pool3d");
+    rw.def("forward", &roiaware_pool3d_gpu, "roiaware pool3d forward (CUDA)");
+    rw.def("backward", &roiaware_pool3d_gpu_backward, "roiaware pool3d backward (CUDA)");
+    rw.def("points_in_boxes_gpu", &points_in_boxes_gpu, "points_in_boxes_gpu forward (CUDA)");
+    rw.def("points_in_boxes_cpu", &points_in_boxes_cpu, "points_in_boxes_cpu forward (CUDA)");
+
+    // pybind roipoint_pool3d
+    pybind11::module rp = m.def_submodule("roipoint_pool3d",
+                                          "roipool3d");
+    rp.def("forward", &roipool3d_gpu, "roipool3d forward (CUDA)");
+
+    // pybind  iou3d_nms
+    pybind11::module iou3d_nms = m.def_submodule("iou3d_nms",
+                                                 "nms of 3d boxes");
+	iou3d_nms.def("boxes_overlap_bev_gpu", &boxes_overlap_bev_gpu, "oriented boxes overlap");
+	iou3d_nms.def("boxes_iou_bev_gpu", &boxes_iou_bev_gpu, "oriented boxes iou");
+	iou3d_nms.def("nms_gpu", &nms_gpu, "oriented nms gpu");
+	iou3d_nms.def("nms_normal_gpu", &nms_normal_gpu, "nms gpu");
+	iou3d_nms.def("boxes_iou_bev_cpu", &boxes_iou_bev_cpu, "oriented boxes iou");
+
 }

@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from up.models.losses.loss import BaseLoss, _reduce
 from up.utils.general.registry_factory import LOSSES_REGISTRY
 
+
 __all__ = [
     'GeneralizedCrossEntropyLoss',
     'SoftMaxCrossEntropyLoss',
@@ -57,7 +58,7 @@ class SoftMaxCrossEntropyLoss(GeneralizedCrossEntropyLoss):
                                              activation_type=activation_type,
                                              ignore_index=ignore_index)
 
-    def forward(self, input, target, reduction, normalizer=None):
+    def forward(self, input, target, reduction, normalizer=None, weights=None):
         """Refer to `official documents <https://pytorch.org/docs/1.3.1/nn.functional.html#torch.nn.functional.cross_entropy>`_
         """
         if self.class_dim == -1:
@@ -68,11 +69,17 @@ class SoftMaxCrossEntropyLoss(GeneralizedCrossEntropyLoss):
             D = input.numel() // N // C
             input = input.reshape(N, C, D)
             target = target.reshape(N, D)
+        if weights is not None:
+            loss = F.cross_entropy(input, target, reduction='none', ignore_index=self.ignore_index)
+            loss = loss * weights
+            loss = _reduce(loss, reduction=reduction, normalizer=normalizer)
+            return loss
         if normalizer is None:
-            return F.cross_entropy(input, target, reduction=reduction, ignore_index=self.ignore_index)
+            loss = F.cross_entropy(input, target, reduction=reduction, ignore_index=self.ignore_index)
         else:
             loss = F.cross_entropy(input, target, reduction='none', ignore_index=self.ignore_index)
-            return _reduce(loss, reduction, normalizer=normalizer)
+            loss = _reduce(loss, reduction, normalizer=normalizer)
+        return loss
 
 
 @LOSSES_REGISTRY.register('sigmoid_cross_entropy')

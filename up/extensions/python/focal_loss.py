@@ -7,7 +7,6 @@ from .._C import focal_loss
 
 
 class SigmoidFocalLossFunction(Function):
-
     @staticmethod
     def forward(self, preds, targets, weight_pos, gamma, alpha, num_classes, reduction):
         """
@@ -24,7 +23,6 @@ class SigmoidFocalLossFunction(Function):
 
         preds_size = preds.size()
         targets_size = targets.size()
-
         assert(preds_size[0] == targets_size[0]), f'{preds_size} vs {targets_size}'
         assert(preds_size[1] == self.num_classes), f'{preds_size} vs {self.num_classes}'
 

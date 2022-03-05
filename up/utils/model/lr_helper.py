@@ -3,7 +3,7 @@ import copy
 # Import from third library
 import torch
 import math
-from torch.optim.lr_scheduler import MultiStepLR, StepLR, ReduceLROnPlateau, CosineAnnealingLR
+from torch.optim.lr_scheduler import MultiStepLR, StepLR, ReduceLROnPlateau, CosineAnnealingLR, _LRScheduler
 from ..general.registry_factory import WARM_LR_REGISTRY, LR_REGISTRY
 from ..general.registry_factory import LR_SCHEDULER_REGISTY, WARM_SCHEDULER_REGISTY
 
@@ -66,6 +66,7 @@ class PolyLR(torch.optim.lr_scheduler._LRScheduler):
 class ExponentialWarmUpLR(object):
     """Scheduler that update learning rate exponentially
     """
+
     def __init__(self, warmup_iter, init_lr, target_lr):
         lr_scale = [target_lr[i] / init_lr[i] for i in range(len(target_lr))]
         self.gamma = [lr_s**(1.0 / max(1, warmup_iter - 1)) for lr_s in lr_scale]
@@ -79,6 +80,7 @@ class ExponentialWarmUpLR(object):
 class LinearWarmUpLR(object):
     """Scheduler that update learning rate linearly
     """
+
     def __init__(self, warmup_iter, init_lr, target_lr):
         self.gamma = [(target_lr[i] - init_lr[i]) / max(1, warmup_iter - 1) for i in range(len(target_lr))]
         self.warmup_iter = warmup_iter
@@ -171,6 +173,7 @@ class BaseLRScheduler(object):
         class ChainIterLR(standard_scheduler_class):
             """Unified scheduler that chains warmup scheduler and standard scheduler
             """
+
             def __init__(self, *args, **kwargs):
                 super(ChainIterLR, self).__init__(*args, **kwargs)
 
@@ -198,6 +201,113 @@ class BaseLRScheduler(object):
         if self.cfg_scheduler.get('type') == 'SWALR':
             total_lr = self.optimizer.param_groups[0]['lr'] * self.lr_scale
             self.cfg_scheduler['kwargs'].setdefault("total_lr", total_lr)
+
+
+@LR_REGISTRY.register('OneCycleLR')
+class OneCycleLR(_LRScheduler):
+    def __init__(self,
+                 max_epoch,
+                 data_size,
+                 optimizer,
+                 max_lr,
+                 total_steps=None,
+                 epochs=None,
+                 steps_per_epoch=None,
+                 pct_start=0.3,
+                 anneal_strategy='cos',
+                 cycle_momentum=True,
+                 base_momentum=0.85,
+                 max_momentum=0.95,
+                 div_factor=25.,
+                 final_div_factor=1e4,
+                 three_phase=False,
+                 last_epoch=-1,
+                 verbose=False):
+        self.optimizer = optimizer
+        self.total_steps = max_epoch * data_size
+        self.last_epoch = last_epoch
+        self._schedule_phases = [
+            {
+                'end_step': float(pct_start * self.total_steps) - 1,
+                'start_lr': 'initial_lr',
+                'end_lr': 'max_lr',
+                'start_momentum': 'max_momentum',
+                'end_momentum': 'base_momentum',
+            },
+            {
+                'end_step': self.total_steps - 1,
+                'start_lr': 'max_lr',
+                'end_lr': 'min_lr',
+                'start_momentum': 'base_momentum',
+                'end_momentum': 'max_momentum',
+            },
+        ]
+
+        # Initialize learning rate variables
+        max_lrs = self._format_param('max_lr', self.optimizer, max_lr)
+        if last_epoch == -1:
+            for idx, group in enumerate(self.optimizer.param_groups):
+                group['initial_lr'] = max_lrs[idx] / div_factor
+                group['max_lr'] = max_lrs[idx]
+                group['min_lr'] = group['initial_lr'] / final_div_factor
+
+        # Initialize momentum variables
+        self.cycle_momentum = cycle_momentum
+        if self.cycle_momentum:
+            if 'momentum' not in self.optimizer.defaults and 'betas' not in self.optimizer.defaults:
+                raise ValueError('optimizer must support momentum with `cycle_momentum` option enabled')
+            self.use_beta1 = 'betas' in self.optimizer.defaults
+            max_momentums = self._format_param('max_momentum', optimizer, max_momentum)
+            base_momentums = self._format_param('base_momentum', optimizer, base_momentum)
+            if last_epoch == -1:
+                for m_momentum, b_momentum, group in zip(max_momentums, base_momentums, optimizer.param_groups):
+                    if self.use_beta1:
+                        _, beta2 = group['betas']
+                        group['betas'] = (m_momentum, beta2)
+                    else:
+                        group['momentum'] = m_momentum
+                    group['max_momentum'] = m_momentum
+                    group['base_momentum'] = b_momentum
+
+        super(OneCycleLR, self).__init__(optimizer, last_epoch)
+
+    def _format_param(self, name, optimizer, param):
+        """Return correctly formatted lr/momentum for each param group."""
+        if isinstance(param, (list, tuple)):
+            if len(param) != len(optimizer.param_groups):
+                raise ValueError("expected {} values for {}, got {}".format(
+                    len(optimizer.param_groups), name, len(param)))
+            return param
+        else:
+            return [param] * len(optimizer.param_groups)
+
+    def get_lr(self):
+        lrs = []
+        step_num = self.last_epoch
+        for group in self.optimizer.param_groups:
+            start_step = 0
+            for i, phase in enumerate(self._schedule_phases):
+                end_step = phase['end_step']
+                if step_num <= end_step or i == len(self._schedule_phases) - 1:
+                    pct = (step_num - start_step) / (end_step - start_step)
+                    cos_out = math.cos(math.pi * pct) + 1
+                    computed_lr = group[phase['end_lr']] + \
+                        (group[phase['start_lr']] - group[phase['end_lr']]) / 2.0 * cos_out
+                    if self.cycle_momentum:
+                        computed_momentum = group[phase['end_momentum']] + \
+                            (group[phase['start_momentum']] - group[phase['end_momentum']]) / 2.0 * cos_out
+                    break
+                start_step = phase['end_step']
+
+            lrs.append(computed_lr)
+            if self.cycle_momentum:
+                if self.use_beta1:
+                    _, beta2 = group['betas']
+                    group['betas'] = (computed_momentum, beta2)
+                else:
+                    group['momentum'] = computed_momentum
+
+        return lrs
 
 
 if __name__ == '__main__':

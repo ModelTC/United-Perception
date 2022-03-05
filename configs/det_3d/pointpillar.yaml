@@ -1,0 +1,267 @@
+num_point_features: &num_point_features 4
+class_names: &class_names ['Car', 'Pedestrian', 'Cyclist']
+
+runtime:
+   runner:
+      type: point
+
+point_sampling: &point_sampling
+ type: point_sampling
+ kwargs:
+    root_path: /mnt/lustre/share/wangxiaodan/data/kitti/
+    class_names: *class_names
+    db_info_paths: ['/mnt/lustre/share/wangxiaodan/data/kitti_infos/kitti_dbinfos_train.pkl']
+    db_info_filters: {
+        filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
+        filter_by_difficulty: [-1],
+    }
+    sample_groups: ['Car:15','Pedestrian:15', 'Cyclist:15']
+    num_point_features: *num_point_features
+    database_with_fakelidar: False
+    remove_extra_width: [0.0, 0.0, 0.0]
+    limit_whole_scene: False
+    use_road_plane: True
+
+point_flip: &point_flip
+ type: point_flip
+ kwargs:
+   along_axis_list: ['x']
+
+point_rotation: &point_rotation
+ type: point_rotation
+ kwargs:
+    rot_range: [-0.78539816, 0.78539816]
+
+point_scaling: &point_scaling
+  type: point_scaling
+  kwargs:
+    scale_range: [0.95, 1.05]
+
+to_voxel_train: &to_voxel_train
+  type: point_to_voxel
+  kwargs:
+    point_cloud_range: &point_cloud_range [0, -39.68, -3, 69.12, 39.68, 1]
+    num_point_features: *num_point_features
+    voxel_size: &voxel_size [0.16, 0.16, 4]
+    max_points_per_voxel: &max_points_per_voxel 32
+    max_number_of_voxels: 16000
+    shuffle_enabled: True
+
+to_voxel_test: &to_voxel_test
+  type: point_to_voxel
+  kwargs:
+    point_cloud_range: *point_cloud_range
+    num_point_features: *num_point_features
+    voxel_size: *voxel_size
+    max_points_per_voxel: *max_points_per_voxel
+    max_number_of_voxels: 40000
+    shuffle_enabled: False
+
+dataset: # Required.
+  train:
+    dataset:
+      type: kitti
+      kwargs:
+        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti_infos/kitti_infos_train.pkl
+        class_names: *class_names
+        get_item_list: &get_item_list ['points']
+        training: True
+        transformer: [*point_sampling, *point_flip,*point_rotation,*point_scaling, *to_voxel_train] # [*point_flip,*point_rotation,*point_scaling]
+        image_reader:
+          type: kitti
+          kwargs:
+            image_dir: /mnt/lustre/share/wangxiaodan/data/kitti/training/
+            color_mode: None
+
+  test:
+    dataset:
+      type: kitti
+      kwargs:
+        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti_infos/kitti_infos_val.pkl
+        class_names: *class_names
+        get_item_list: *get_item_list
+        training: False
+        transformer: [*to_voxel_test]
+        image_reader:
+          type: kitti
+          kwargs:
+            image_dir: /mnt/lustre/share/wangxiaodan/data/kitti/training/
+            color_mode: None
+        evaluator:
+          type: kitti
+          kwargs:
+            recall_thresh_list: [0.3, 0.5, 0.7]
+            gt_file: /mnt/lustre/share/wangxiaodan/data/kitti/training/
+            
+  batch_sampler:
+    type: point
+    kwargs:
+      sampler:
+        type: dist
+        kwargs: {}
+      batch_size: 4
+
+  dataloader: 
+    type: point
+    kwargs:
+      num_workers: 8
+      alignment: 32
+      pin_memory: True
+
+
+trainer: # Required.
+  max_epoch: &max_epoch 80             # total epochs for the training
+  test_freq: 80
+  save_freq: 5
+  optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
+    type: AdamW
+    kwargs:
+      lr: 0.0009375 # 0.000625
+      betas: [0.9, 0.99]
+      weight_decay: 0.01
+  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
+    warmup_epochs: 0       # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_type: linear
+    warmup_ratio: 0.001
+    type: OneCycleLR
+    kwargs:
+      max_epoch: *max_epoch
+      max_lr: 0.003
+      pct_start: 0.4
+      base_momentum: 0.85
+      max_momentum: 0.95
+      div_factor: 10
+
+saver: # Required.
+  save_dir: checkpoints/ret50    # dir to save checkpoints
+  results_dir: results_dir/ret50  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True
+
+hooks:
+  - type: auto_save_best
+  - type: grad_clipper
+    kwargs:
+      mode: pre_defined  # specific norm
+      norm_type: 2
+      max_norm: 10
+net:
+  - name: backbone3d         
+    type: pillar_vfe
+    kwargs:
+      num_point_features: *num_point_features
+      num_filters: [64]
+
+  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+    prev: backbone3d    
+    type: base_bev
+    kwargs:
+      layer_nums: [3, 5, 5]
+      layer_strides: [2, 2, 2]
+      num_filters: [64, 128, 256]
+      upsample_strides: [1, 2, 4]
+      num_upsample_filters: [128, 128, 128]
+
+  - name: roi_head
+    prev: backbone
+    type: anchor_head_single
+    kwargs:
+      num_classes: &num_classes 3
+      anchor_classes: &anchor_classes 
+        [
+          {
+              'class_name': 'Car',
+              'anchor_sizes': [[3.9, 1.6, 1.56]],
+              'anchor_rotations': [0, 1.57],
+              'anchor_bottom_heights': [-1.78],
+              'align_center': False,
+              'feature_map_stride': 2,
+              'matched_threshold': 0.6,
+              'unmatched_threshold': 0.45
+          },
+          {
+              'class_name': 'Pedestrian',
+              'anchor_sizes': [[0.8, 0.6, 1.73]],
+              'anchor_rotations': [0, 1.57],
+              'anchor_bottom_heights': [-0.6],
+              'align_center': False,
+              'feature_map_stride': 2,
+              'matched_threshold': 0.5,
+              'unmatched_threshold': 0.35
+          },
+          {
+              'class_name': 'Cyclist',
+              'anchor_sizes': [[1.76, 0.6, 1.73]],
+              'anchor_rotations': [0, 1.57],
+              'anchor_bottom_heights': [-0.6],
+              'align_center': False,
+              'feature_map_stride': 2,
+              'matched_threshold': 0.5,
+              'unmatched_threshold': 0.35
+          }
+        ]
+      code_size: &code_size 7
+      num_dir_bins: &num_dir_bins 2
+      initializer:
+        method: normal
+        std: 0.001
+      init_prior: 0.01
+      class_activation: sigmoid
+
+
+  - name: post_process
+    prev: roi_head
+    type: anchor_head_post
+    kwargs:
+      num_dir_bins: *num_dir_bins
+      dir_offset: 0.78539
+      dir_limit_offset: 0.0
+      cfg:
+        anchor_generator:
+          type: 3d
+          kwargs:
+            anchor_range: *point_cloud_range
+            anchor_classes: *anchor_classes
+        box_coder: 
+          type: residual
+          kwargs:
+            code_size: *code_size
+            encode_angle_by_sincos: False
+        roi_supervisor:
+          type: axis_aligned
+          kwargs:
+            anchor_classes: *anchor_classes
+            pos_fraction: -1.0
+            sample_size: 512
+            norm_by_num_examples: False
+            match_height: False
+            use_multihead: False
+        roi_predictor:
+          type: axis_aligned
+          kwargs:
+            recall_thresh_list: [0.3, 0.5, 0.7]
+            score_thresh: 0.1
+            output_raw_score: False
+            cfg:
+              multi_classes_nms: False
+              nms_type: nms_gpu
+              nms_thresh: 0.01
+              nms_pre_maxsize: 4096
+              nms_post_maxsize: 500
+
+        cls_loss:
+          type: sigmoid_focal_loss
+          kwargs:
+            num_classes: 4 # 3+1
+            alpha: 0.25
+            gamma: 2.0
+        loc_loss:
+          type: smooth_l1_loss
+          kwargs:
+            sigma: 3.0
+            loss_weight: 2.0
+            code_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        dir_loss:
+          type: softmax_cross_entropy
+          kwargs:
+            class_dim: 1
+            loss_weight: 0.2
