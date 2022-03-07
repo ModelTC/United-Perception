@@ -8,8 +8,8 @@ from up.utils.model.bn_helper import (
     FrozenBatchNorm2d,
     GroupNorm,
     PyTorchSyncBN,
-    GroupSyncBatchNorm,
     TaskBatchNorm2d,
+    GroupSyncBatchNorm,
     SyncTaskBatchNorm2d
 )
 
@@ -19,9 +19,9 @@ _norm_cfg = {
     'caffe_freeze_bn': ('bn', CaffeFrozenBatchNorm2d),
     'gn': ('gn', GroupNorm),
     'pt_sync_bn': ('bn', PyTorchSyncBN),
+    'taskbn': ('bn', TaskBatchNorm2d),
     'link_sync_bn': ('bn', GroupSyncBatchNorm),
     'sync_bn': ('bn', GroupSyncBatchNorm),
-    'taskbn': ('bn', TaskBatchNorm2d),
     'task_sync_bn': ('bn', SyncTaskBatchNorm2d)
 }
 

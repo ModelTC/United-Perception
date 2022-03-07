@@ -3,8 +3,11 @@ import copy
 import yaml
 import pandas
 
-import spring.nart.tools.caffe.utils.graph as graph
-import spring.nart.tools.kestrel.utils.net_transform as transform
+try:
+    import spring.nart.tools.caffe.utils.graph as graph
+    import spring.nart.tools.kestrel.utils.net_transform as transform
+except Exception as err:
+    print(err)
 
 from up.utils.general.tocaffe_helper import parse_resize_scale
 

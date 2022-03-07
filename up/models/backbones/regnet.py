@@ -1,7 +1,8 @@
 try:
-    import linklink
-except:  # noqa
     from spring import linklink
+except:  # noqa
+    from up.utils.general.fake_linklink import linklink
+
 import numpy as np
 import torch.nn as nn
 import math

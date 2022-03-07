@@ -1,7 +1,10 @@
 import os
 import time
 
-from spring_aux.adela.adela import Adela
+try:
+    from spring_aux.adela.adela import Adela
+except Exception as err:
+    print(err)
 
 from .tokestrel_helper import to_kestrel
 from up.utils.general.cfg_helper import merge_opts_into_cfg

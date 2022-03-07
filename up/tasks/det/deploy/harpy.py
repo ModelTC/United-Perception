@@ -2,13 +2,16 @@ import os
 import json
 import yaml
 
-import spring.nart.tools.caffe.count as count
-import spring.nart.tools.caffe.utils.graph as graph
-import spring.nart.tools.kestrel.utils.scaffold as scaffold
 try:
-    import spring.nart.tools.proto.caffe_pb2 as caffe_pb2
-except:  # noqa
-    from spring.nart.tools.proto import caffe_pb2
+    import spring.nart.tools.caffe.count as count
+    import spring.nart.tools.caffe.utils.graph as graph
+    import spring.nart.tools.kestrel.utils.scaffold as scaffold
+    try:
+        import spring.nart.tools.proto.caffe_pb2 as caffe_pb2
+    except:  # noqa
+        from spring.nart.tools.proto import caffe_pb2
+except Exception as err:
+    print(err)
 
 from . import parser as up_parser
 from .parser import BaseProcessor

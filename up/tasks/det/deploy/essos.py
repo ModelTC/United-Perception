@@ -3,9 +3,12 @@ import yaml
 import json
 import torch
 
-import spring.nart.tools.caffe.count as count
-import spring.nart.tools.caffe.utils.graph as graph
-import spring.nart.tools.kestrel.utils.scaffold as scaffold
+try:
+    import spring.nart.tools.caffe.count as count
+    import spring.nart.tools.caffe.utils.graph as graph
+    import spring.nart.tools.kestrel.utils.scaffold as scaffold
+except Exception as err:
+    print(err)
 
 from . import parser as up_parser
 from up.utils.general.registry_factory import MODEL_HELPER_REGISTRY, KS_PARSER_REGISTRY, KS_PROCESSOR_REGISTRY

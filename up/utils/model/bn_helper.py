@@ -7,8 +7,8 @@ from up.utils.general.log_helper import default_logger as logger
 
 try:
     import spring.linklink as link
-except: # noqa
-    link = None
+except:  # noqa
+    from up.utils.general.fake_linklink import link
 
 
 def simple_group_split(world_size, rank, num_groups):

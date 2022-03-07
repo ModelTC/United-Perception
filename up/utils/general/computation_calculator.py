@@ -261,7 +261,7 @@ register_hooks = {
     nn.Linear: count_linear,
     nn.Dropout: count_zero,
     FrozenBatchNorm2d: count_bn,
-    GroupSyncBatchNorm: count_bn,
     nn.MaxPool2d: count_zero,
     nn.CrossEntropyLoss: count_zero,
+    GroupSyncBatchNorm: count_bn
 }
