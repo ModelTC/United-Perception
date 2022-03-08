@@ -1,5 +1,4 @@
 import torch
-from up.extensions.python import iou3d_nms_utils
 from up.utils.general.registry_factory import ROI_PREDICTOR_REGISTRY
 from up.tasks.det_3d.models.utils.model_nms_utils import class_agnostic_nms, multi_classes_nms
 
@@ -19,10 +18,9 @@ class AxisAlignedPredictor(object):
         batch_box_preds = batch_preds['batch_box_preds']
         cls_preds_normalized = batch_preds['cls_preds_normalized']
 
-        pred_list, recall_dict = self.get_predict_list(
+        pred_list = self.get_predict_list(
             batch_dict, batch_cls_preds, batch_box_preds, cls_preds_normalized)
-        recall_dict.update({'pred_dicts': pred_list})
-        return recall_dict
+        return pred_list
 
     def get_predict_list(self, batch_dict, batch_cls_preds, batch_box_preds, cls_preds_normalized):
         """
@@ -44,8 +42,7 @@ class AxisAlignedPredictor(object):
 
         self.num_classes = len(batch_dict['class_names'])
         batch_size = batch_dict['batch_size']
-        recall_dict = {}
-        pred_dicts = []
+        pred_list = []
         for index in range(batch_size):
             if batch_dict.get('batch_index', None) is not None:
                 assert batch_box_preds.shape.__len__() == 2
@@ -54,7 +51,6 @@ class AxisAlignedPredictor(object):
                 assert batch_box_preds.shape.__len__() == 3
                 batch_mask = index
             box_preds = batch_box_preds[batch_mask]
-            src_box_preds = box_preds
 
             if not isinstance(batch_cls_preds, list):
                 cls_preds = batch_cls_preds[batch_mask]
@@ -116,58 +112,12 @@ class AxisAlignedPredictor(object):
                 final_scores = selected_scores
                 final_labels = label_preds[selected]
                 final_boxes = box_preds[selected]
-            box_preds = final_boxes if 'rois' not in batch_dict else src_box_preds
-            recall_dict = self.generate_recall_record(
-                box_preds, recall_dict, index, batch_dict, self.recall_thresh_list
-            )
 
             record_dict = {
                 'pred_boxes': final_boxes,
                 'pred_scores': final_scores,
                 'pred_labels': final_labels
             }
-            pred_dicts.append(record_dict)
+            pred_list.append(record_dict)
 
-        return pred_dicts, recall_dict
-
-    def generate_recall_record(self, box_preds, recall_dict, batch_index, data_dict=None, thresh_list=None):
-        if 'gt_boxes' not in data_dict:
-            return recall_dict
-
-        rois = data_dict['rois'][batch_index] if 'rois' in data_dict else None
-        gt_boxes = data_dict['gt_boxes'][batch_index]
-
-        if recall_dict.__len__() == 0:
-            recall_dict = {'gt': 0}
-            for cur_thresh in thresh_list:
-                recall_dict['roi_%s' % (str(cur_thresh))] = 0
-                recall_dict['rcnn_%s' % (str(cur_thresh))] = 0
-
-        cur_gt = gt_boxes
-        k = cur_gt.__len__() - 1
-        while k > 0 and cur_gt[k].sum() == 0:
-            k -= 1
-        cur_gt = cur_gt[:k + 1]
-
-        if cur_gt.shape[0] > 0:
-            if box_preds.shape[0] > 0:
-                iou3d_rcnn = iou3d_nms_utils.boxes_iou3d_gpu(box_preds[:, 0:7], cur_gt[:, 0:7])
-            else:
-                iou3d_rcnn = torch.zeros((0, cur_gt.shape[0]))
-
-            if rois is not None:
-                iou3d_roi = iou3d_nms_utils.boxes_iou3d_gpu(rois[:, 0:7], cur_gt[:, 0:7])
-
-            for cur_thresh in thresh_list:
-                if iou3d_rcnn.shape[0] == 0:
-                    recall_dict['rcnn_%s' % str(cur_thresh)] += 0
-                else:
-                    rcnn_recalled = (iou3d_rcnn.max(dim=0)[0] > cur_thresh).sum().item()
-                    recall_dict['rcnn_%s' % str(cur_thresh)] += rcnn_recalled
-                if rois is not None:
-                    roi_recalled = (iou3d_roi.max(dim=0)[0] > cur_thresh).sum().item()
-                    recall_dict['roi_%s' % str(cur_thresh)] += roi_recalled
-
-            recall_dict['gt'] += cur_gt.shape[0]
-
-        return recall_dict
+        return pred_list

@@ -10,7 +10,7 @@ point_sampling: &point_sampling
  kwargs:
     root_path: /mnt/lustre/share/wangxiaodan/data/kitti/
     class_names: *class_names
-    db_info_paths: ['/mnt/lustre/share/wangxiaodan/data/kitti_infos/kitti_dbinfos_train.pkl']
+    db_info_paths: ['/mnt/lustre/share/wangxiaodan/data/kitti/kitti_infos/kitti_dbinfos_train.pkl']
     db_info_filters: {
         filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
         filter_by_difficulty: [-1],
@@ -62,7 +62,7 @@ dataset: # Required.
     dataset:
       type: kitti
       kwargs:
-        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti_infos/kitti_infos_train.pkl
+        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti/kitti_infos/kitti_infos_train.pkl
         class_names: *class_names
         get_item_list: &get_item_list ['points']
         training: True
@@ -77,7 +77,7 @@ dataset: # Required.
     dataset:
       type: kitti
       kwargs:
-        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti_infos/kitti_infos_val.pkl
+        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti/kitti_infos/kitti_infos_val.pkl
         class_names: *class_names
         get_item_list: *get_item_list
         training: False
@@ -94,7 +94,7 @@ dataset: # Required.
             gt_file: /mnt/lustre/share/wangxiaodan/data/kitti/training/
             
   batch_sampler:
-    type: point
+    type: base
     kwargs:
       sampler:
         type: dist
@@ -133,8 +133,8 @@ trainer: # Required.
       div_factor: 10
 
 saver: # Required.
-  save_dir: checkpoints/ret50    # dir to save checkpoints
-  results_dir: results_dir/ret50  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: checkpoints/    # dir to save checkpoints
+  results_dir: results_dir/  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True
 
 hooks:
@@ -166,39 +166,7 @@ net:
     type: anchor_head_single
     kwargs:
       num_classes: &num_classes 3
-      anchor_classes: &anchor_classes 
-        [
-          {
-              'class_name': 'Car',
-              'anchor_sizes': [[3.9, 1.6, 1.56]],
-              'anchor_rotations': [0, 1.57],
-              'anchor_bottom_heights': [-1.78],
-              'align_center': False,
-              'feature_map_stride': 2,
-              'matched_threshold': 0.6,
-              'unmatched_threshold': 0.45
-          },
-          {
-              'class_name': 'Pedestrian',
-              'anchor_sizes': [[0.8, 0.6, 1.73]],
-              'anchor_rotations': [0, 1.57],
-              'anchor_bottom_heights': [-0.6],
-              'align_center': False,
-              'feature_map_stride': 2,
-              'matched_threshold': 0.5,
-              'unmatched_threshold': 0.35
-          },
-          {
-              'class_name': 'Cyclist',
-              'anchor_sizes': [[1.76, 0.6, 1.73]],
-              'anchor_rotations': [0, 1.57],
-              'anchor_bottom_heights': [-0.6],
-              'align_center': False,
-              'feature_map_stride': 2,
-              'matched_threshold': 0.5,
-              'unmatched_threshold': 0.35
-          }
-        ]
+      base_anchors_file: &base_anchors_file anchors.json
       code_size: &code_size 7
       num_dir_bins: &num_dir_bins 2
       initializer:
@@ -220,7 +188,7 @@ net:
           type: 3d
           kwargs:
             anchor_range: *point_cloud_range
-            anchor_classes: *anchor_classes
+            base_anchors_file : *base_anchors_file
         box_coder: 
           type: residual
           kwargs:
@@ -229,7 +197,7 @@ net:
         roi_supervisor:
           type: axis_aligned
           kwargs:
-            anchor_classes: *anchor_classes
+            base_anchors_file : *base_anchors_file
             pos_fraction: -1.0
             sample_size: 512
             norm_by_num_examples: False

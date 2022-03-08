@@ -59,8 +59,8 @@ class AnchorHeadSingle(nn.Module):
                 batch_preds = self.generate_predicted_boxes(batch_size, cls_preds, box_preds, dir_pred)
         else:
             batch_preds = self.generate_predicted_boxes(batch_size, cls_preds, box_preds, dir_pred)
-            results = self.predictor.predict(input, batch_preds)
-            output.update(results)
+            pred_list = self.predictor.predict(input, batch_preds)
+            output.update({'pred_list': pred_list})
         return output
 
     def generate_predicted_boxes(self, batch_size, cls_preds, box_preds, dir_cls_preds=None):

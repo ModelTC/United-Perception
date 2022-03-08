@@ -1,12 +1,15 @@
 import torch
+import numpy as np
+import json
 from up.utils.general.registry_factory import ANCHOR_GENERATOR_REGISTRY
 
 
 @ANCHOR_GENERATOR_REGISTRY.register('3d')
 class AnchorGenerator(object):
-    def __init__(self, anchor_range, anchor_classes):
+    def __init__(self, anchor_range, base_anchors_file):
         super().__init__()
-        self.anchor_generator_cfg = anchor_classes
+        with open(base_anchors_file, 'r') as f:
+            self.anchor_generator_cfg = np.array(json.load(f))
         self.anchor_range = anchor_range
         self.anchor_sizes = [config['anchor_sizes'] for config in self.anchor_generator_cfg]
         self.anchor_rotations = [config['anchor_rotations'] for config in self.anchor_generator_cfg]

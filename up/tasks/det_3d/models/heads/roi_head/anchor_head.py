@@ -1,4 +1,6 @@
 import torch.nn as nn
+import json
+import numpy as np
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from up.utils.model.initializer import init_bias_focal, initialize_from_cfg
 
@@ -28,11 +30,13 @@ class BaseAnchorHead(nn.Module):
 
 @MODULE_ZOO_REGISTRY.register('anchor_head_single')
 class AnchorHeadSingle(BaseAnchorHead):
-    def __init__(self, inplanes, num_classes, anchor_classes, code_size, num_dir_bins,
+    def __init__(self, inplanes, num_classes, base_anchors_file, code_size, num_dir_bins,
                  use_direction_classifier=True, initializer=None, class_activation='sigmoid', init_prior=0.01):
         super(AnchorHeadSingle, self).__init__(inplanes, num_classes)
 
         self.class_activation = class_activation
+        with open(base_anchors_file, 'r') as f:
+            anchor_classes = np.array(json.load(f))
         num_anchors_per_location = []
         for anchor_class in anchor_classes:
             num_rotations = len(anchor_class['anchor_rotations'])

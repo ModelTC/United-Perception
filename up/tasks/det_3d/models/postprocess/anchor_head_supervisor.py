@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import json
 from up.extensions.python import iou3d_nms_utils
 from up.tasks.det_3d.data import box_utils
 from up.utils.general.registry_factory import ROI_SUPERVISOR_REGISTRY
@@ -10,11 +11,11 @@ __all__ = ['AxisAlignedSupervisor']
 
 @ROI_SUPERVISOR_REGISTRY.register('axis_aligned')
 class AxisAlignedSupervisor(object):
-    def __init__(self, anchor_classes, pos_fraction, sample_size,
+    def __init__(self, base_anchors_file, pos_fraction, sample_size,
                  norm_by_num_examples=False, match_height=False, use_multihead=False):
         super().__init__()
-
-        anchor_generator_cfg = anchor_classes
+        with open(base_anchors_file, 'r') as f:
+            anchor_generator_cfg = np.array(json.load(f))
         self.match_height = match_height
         self.anchor_class_names = [config['class_name'] for config in anchor_generator_cfg]
         self.pos_fraction = pos_fraction if pos_fraction >= 0 else None

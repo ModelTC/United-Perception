@@ -2,12 +2,13 @@
 import copy
 import numpy as np
 import pickle
-import os
+import torch
 from collections import defaultdict
 from up.tasks.det_3d.data.box_utils import boxes3d_lidar_to_kitti_camera, boxes3d_kitti_camera_to_imageboxes
 from up.utils.general.registry_factory import DATASET_REGISTRY
 from up.tasks.det_3d.data.data_utils import get_pad_params
 from up.data.datasets.base_dataset import BaseDataset
+from up.extensions.python import iou3d_nms_utils
 
 
 @DATASET_REGISTRY.register('kitti')
@@ -102,8 +103,7 @@ class KittiDataset(BaseDataset):
 
         return pts_valid_flag
 
-    @staticmethod
-    def generate_prediction_dicts(batch_dict, pred_dicts, class_names, output_path=None):
+    def get_template_prediction(self, num_samples):
         """
         Args:
             batch_dict:
@@ -118,50 +118,58 @@ class KittiDataset(BaseDataset):
         Returns:
 
         """
-        def get_template_prediction(num_samples):
-            ret_dict = {
-                'name': np.zeros(num_samples), 'truncated': np.zeros(num_samples),
-                'occluded': np.zeros(num_samples), 'alpha': np.zeros(num_samples),
-                'bbox': np.zeros([num_samples, 4]), 'dimensions': np.zeros([num_samples, 3]),
-                'location': np.zeros([num_samples, 3]), 'rotation_y': np.zeros(num_samples),
-                'score': np.zeros(num_samples), 'boxes_lidar': np.zeros([num_samples, 7])
-            }
-            return ret_dict
+        ret_dict = {
+            'name': np.zeros(num_samples), 'truncated': np.zeros(num_samples),
+            'occluded': np.zeros(num_samples), 'alpha': np.zeros(num_samples),
+            'bbox': np.zeros([num_samples, 4]), 'dimensions': np.zeros([num_samples, 3]),
+            'location': np.zeros([num_samples, 3]), 'rotation_y': np.zeros(num_samples),
+            'score': np.zeros(num_samples), 'boxes_lidar': np.zeros([num_samples, 7])
+        }
+        return ret_dict
 
-        def generate_single_sample_dict(batch_index, box_dict):
-            pred_scores = box_dict['pred_scores'].cpu().numpy()
-            pred_boxes = box_dict['pred_boxes'].cpu().numpy()
-            pred_labels = box_dict['pred_labels'].cpu().numpy()
-            pred_dict = get_template_prediction(pred_scores.shape[0])
-            if pred_scores.shape[0] == 0:
-                return pred_dict
-
-            calib = batch_dict['calib'][batch_index]
-            image_shape = batch_dict['image_shape'][batch_index].cpu().numpy()
-            pred_boxes_camera = boxes3d_lidar_to_kitti_camera(pred_boxes, calib)
-            pred_boxes_img = boxes3d_kitti_camera_to_imageboxes(
-                pred_boxes_camera, calib, image_shape=image_shape
-            )
-
-            pred_dict['name'] = np.array(class_names)[pred_labels - 1]
-            pred_dict['alpha'] = -np.arctan2(-pred_boxes[:, 1], pred_boxes[:, 0]) + pred_boxes_camera[:, 6]
-            pred_dict['bbox'] = pred_boxes_img
-            pred_dict['dimensions'] = pred_boxes_camera[:, 3:6]
-            pred_dict['location'] = pred_boxes_camera[:, 0:3]
-            pred_dict['rotation_y'] = pred_boxes_camera[:, 6]
-            pred_dict['score'] = pred_scores
-            pred_dict['boxes_lidar'] = pred_boxes
-
+    def generate_single_sample_dict(self, calib, image_shape, box_dict):
+        pred_scores = box_dict['pred_scores'].cpu().numpy()
+        pred_boxes = box_dict['pred_boxes'].cpu().numpy()
+        pred_labels = box_dict['pred_labels'].cpu().numpy()
+        pred_dict = self.get_template_prediction(pred_scores.shape[0])
+        if pred_scores.shape[0] == 0:
             return pred_dict
 
-        annos = []
-        for index, box_dict in enumerate(pred_dicts):
-            frame_id = batch_dict['frame_id'][index]
+        pred_boxes_camera = boxes3d_lidar_to_kitti_camera(pred_boxes, calib)
+        pred_boxes_img = boxes3d_kitti_camera_to_imageboxes(
+            pred_boxes_camera, calib, image_shape=image_shape
+        )
 
-            single_pred_dict = generate_single_sample_dict(index, box_dict)
+        pred_dict['name'] = np.array(self.classes)[pred_labels - 1]
+        pred_dict['alpha'] = -np.arctan2(-pred_boxes[:, 1], pred_boxes[:, 0]) + pred_boxes_camera[:, 6]
+        pred_dict['bbox'] = pred_boxes_img
+        pred_dict['dimensions'] = pred_boxes_camera[:, 3:6]
+        pred_dict['location'] = pred_boxes_camera[:, 0:3]
+        pred_dict['rotation_y'] = pred_boxes_camera[:, 6]
+        pred_dict['score'] = pred_scores
+        pred_dict['boxes_lidar'] = pred_boxes
+
+        return pred_dict
+
+    def dump(self, output):
+        pred_list = output['pred_list']
+        recall_thresh_list = self.evaluator.recall_thresh_list
+        dump_list = []
+        recall_dict = {}
+        for index, box_dict in enumerate(pred_list):
+            frame_id = output['frame_id'][index]
+            calib = output['calib'][index]
+            image_shape = output['image_shape'][index].cpu().numpy()
+            single_pred_dict = self.generate_single_sample_dict(calib, image_shape, box_dict)
             single_pred_dict['frame_id'] = frame_id
-            annos.append(single_pred_dict)
 
+            recall_dict = self.generate_recall_record(
+                box_dict['pred_boxes'], recall_dict, index, output, recall_thresh_list
+            )
+            single_pred_dict['recall_dict'] = recall_dict
+
+            dump_list.append(single_pred_dict)
+            '''
             if output_path is not None:
                 cur_det_file = os.path.join(output_path, '{}.txt'.format(frame_id))
                 with open(cur_det_file, 'w') as f:
@@ -176,18 +184,57 @@ class KittiDataset(BaseDataset):
                                  dims[idx][1], dims[idx][2], dims[idx][0], loc[idx][0],
                                  loc[idx][1], loc[idx][2], single_pred_dict['rotation_y'][idx],
                                  single_pred_dict['score'][idx]), file=f)
+            '''
+        return dump_list
 
-        return annos
+    def generate_recall_record(self, box_preds, recall_dict, batch_index, data_dict=None, thresh_list=None):
+        if 'gt_boxes' not in data_dict:
+            return recall_dict
 
-    def dump(self, output):
-        pred_dicts, ret_dict = output
+        rois = data_dict['rois'][batch_index] if 'rois' in data_dict else None
+        gt_boxes = data_dict['gt_boxes'][batch_index]
 
-    def evaluate(self, res_file, class_names, kitti_infos, res=None):
+        if recall_dict.__len__() == 0:
+            recall_dict = {'gt': 0}
+            for cur_thresh in thresh_list:
+                recall_dict['roi_%s' % (str(cur_thresh))] = 0
+                recall_dict['rcnn_%s' % (str(cur_thresh))] = 0
+
+        cur_gt = gt_boxes
+        k = cur_gt.__len__() - 1
+        while k > 0 and cur_gt[k].sum() == 0:
+            k -= 1
+        cur_gt = cur_gt[:k + 1]
+
+        if cur_gt.shape[0] > 0:
+            if box_preds.shape[0] > 0:
+                iou3d_rcnn = iou3d_nms_utils.boxes_iou3d_gpu(box_preds[:, 0:7], cur_gt[:, 0:7])
+            else:
+                iou3d_rcnn = torch.zeros((0, cur_gt.shape[0]))
+
+            if rois is not None:
+                iou3d_roi = iou3d_nms_utils.boxes_iou3d_gpu(rois[:, 0:7], cur_gt[:, 0:7])
+
+            for cur_thresh in thresh_list:
+                if iou3d_rcnn.shape[0] == 0:
+                    recall_dict['rcnn_%s' % str(cur_thresh)] += 0
+                else:
+                    rcnn_recalled = (iou3d_rcnn.max(dim=0)[0] > cur_thresh).sum().item()
+                    recall_dict['rcnn_%s' % str(cur_thresh)] += rcnn_recalled
+                if rois is not None:
+                    roi_recalled = (iou3d_roi.max(dim=0)[0] > cur_thresh).sum().item()
+                    recall_dict['roi_%s' % str(cur_thresh)] += roi_recalled
+
+            recall_dict['gt'] += cur_gt.shape[0]
+
+        return recall_dict
+
+    def evaluate(self, res_file, res=None):
         """
         Arguments:
             - res_file (:obj:`str`): filename
         """
-        metrics = self.evaluator.eval(res_file, class_names, kitti_infos, res) if self.evaluator else {}
+        metrics = self.evaluator.eval(res_file, self.class_names, self.kitti_infos, res) if self.evaluator else {}
         return metrics
 
     @staticmethod
@@ -308,13 +355,13 @@ class KittiDataset(BaseDataset):
 
         if self.training:
             assert 'gt_boxes' in input_dict, 'gt_boxes should be provided for training'
-            gt_boxes_mask = np.array([n in self.class_names for n in input_dict['gt_names']], dtype=np.bool_)
+            gt_boxes_mask = np.array([n in self.classes for n in input_dict['gt_names']], dtype=np.bool_)
             input_dict.update({'gt_boxes_mask': gt_boxes_mask})
         return input_dict
 
     def __getitem__(self, idx):
         input = self.get_input(idx)
-        input.update({'training': self.training, 'class_names': self.class_names})
+        input.update({'training': self.training, 'class_names': self.classes})
         input = self.transformer(input)
         if self.training and len(input['gt_boxes']) == 0:
             new_index = np.random.randint(self.__len__())
