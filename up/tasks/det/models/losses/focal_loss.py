@@ -199,20 +199,20 @@ class SigmoidFocalLoss(GeneralizedCrossEntropyLoss):
         normalizer = torch.Tensor([normalizer]).type_as(input).to(input.device)
         if self.dynamic_normalizer:
             normalizer = dynamic_normalizer(input, target, self.alpha, self.gamma)
-        if weights is not None and weights.shape.__len__() == 2 or (
-                weights.shape.__len__() == 1 and target.shape.__len__() == 2):
-            loss = SigmoidFocalLossFunction.apply(
-                input,
-                target,
-                normalizer,
-                self.gamma,
-                self.alpha,
-                self.num_channels,
-                'none')
-            weights = weights.reshape(-1).unsqueeze(-1)
-            assert weights.shape.__len__() == loss.shape.__len__()
-            loss = loss * weights
-            return _reduce(loss, reduction='sum')
+        if weights is not None:
+            if weights.shape.__len__() == 2 or (weights.shape.__len__() == 1 and target.shape.__len__() == 2):
+                loss = SigmoidFocalLossFunction.apply(
+                    input,
+                    target,
+                    normalizer,
+                    self.gamma,
+                    self.alpha,
+                    self.num_channels,
+                    'none')
+                weights = weights.reshape(-1).unsqueeze(-1)
+                assert weights.shape.__len__() == loss.shape.__len__()
+                loss = loss * weights
+                return _reduce(loss, reduction='sum')
 
         loss = SigmoidFocalLossFunction.apply(
             input, target, normalizer, self.gamma, self.alpha, self.num_channels, reduction)
