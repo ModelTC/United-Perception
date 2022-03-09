@@ -9,11 +9,11 @@ export TORCH_CUDA_ARCH_LIST='3.5;5.0+PTX;6.0;7.0'
 
 pip uninstall -y nart_tools
 pip uninstall -y nart==0.2.4
-# pip uninstall -y torchvision
+pip uninstall -y torchvision
 pip uninstall -y springvision==1.0.1
 pip uninstall -y kestrel==1.5.4-patch1
 pip install --user -r requirements.txt
 
 partition=$1
-# srun -p $partition --gres=gpu:1 python setup.py build_ext -i
-python setup.py build_ext -i
+srun -p $partition --quotatype=spot --gres=gpu:1 python setup.py build_ext -i
+# python setup.py build_ext -i

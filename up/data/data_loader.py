@@ -81,9 +81,11 @@ class BaseDataLoader(DataLoader):
         neg_targets = [_.get('neg_target', 0) for _ in batch]
         image_sources = [_.get('image_source', 0) for _ in batch]
 
+        gt_masks = [_.get('gt_masks', None) for _ in batch]
         gt_bboxes = [_.get('gt_bboxes', None) for _ in batch]
         gt_ignores = [_.get('gt_ignores', None) for _ in batch]
         caches = [_.get('cache', False) for _ in batch]
+        gt_semantic_seg = [_.get('gt_semantic_seg', None) for _ in batch]
 
         output = EasyDict({
             'image': images,
@@ -96,8 +98,12 @@ class BaseDataLoader(DataLoader):
             'caches': caches
         })
 
+        output['gt_masks'] = gt_masks if gt_masks[0] is not None else None
         output['gt_bboxes'] = gt_bboxes if gt_bboxes[0] is not None else None
         output['gt_ignores'] = gt_ignores if gt_ignores[0] is not None else None
+        if gt_semantic_seg[0] is not None:
+            fake_dict = {'image': gt_semantic_seg}
+            output['gt_semantic_seg'] = self.pad(fake_dict)['image']
         output = self.pad(output)
         return output
 

@@ -1,7 +1,7 @@
 import torch
 from up.utils.general.registry_factory import ROI_SUPERVISOR_REGISTRY
 from up.tasks.det.models.utils.matcher import build_matcher
-# from up.tasks.det.plugins.condinst.models.postprocess.condinst_postprocess import add_bitmasks
+from up.tasks.det.plugins.condinst.models.postprocess.condinst_postprocess import add_bitmasks
 from up.utils.general.registry_factory import MATCHER_REGISTRY
 
 __all__ = ['FcosSupervisor']
@@ -26,10 +26,10 @@ class FcosSupervisor(object):
             - input[:obj:`strides`] (list of int): stride of each layer of FPN
             - input[:obj:`ignore_regions`] (list of FloatTensor): None or [B, num_igs, 4] (x1, y1, x2, y2)
         """
-        # if has_mask:
-        #     image = input['image']
-        #     gt_masks = input['gt_masks']
-        #     gt_bitmasks, gt_bitmasks_full = add_bitmasks(gt_masks, image, self.mask_out_stride)
+        if has_mask:
+            image = input['image']
+            gt_masks = input['gt_masks']
+            gt_bitmasks, gt_bitmasks_full = add_bitmasks(gt_masks, image, self.mask_out_stride)
 
         gt_bboxes = input['gt_bboxes']  # [B, num_gts, 5]
         strides = input['strides']
@@ -54,10 +54,10 @@ class FcosSupervisor(object):
                 ig = None
                 if igs is not None:
                     ig = igs[b_ix]
-                # if has_mask:
-                #     gt_masks_per_im = gt_bitmasks_full[b_ix]
-                #     labels, bbox_targets, gt_inds = self.matcher.match(
-                #         points, gt, loc_ranges, num_points_per, strides, ig, gt_masks_per_im)
+                if has_mask:
+                    gt_masks_per_im = gt_bitmasks_full[b_ix]
+                    labels, bbox_targets, gt_inds = self.matcher.match(
+                        points, gt, loc_ranges, num_points_per, strides, ig, gt_masks_per_im)
                 else:
                     labels, bbox_targets, gt_inds = self.matcher.match(
                         points, gt, loc_ranges, num_points_per, strides, ig)
@@ -73,9 +73,9 @@ class FcosSupervisor(object):
                         loc_target_ix[l_ix] /= strides[l_ix]
                     loc_target[b_ix] = torch.cat(loc_target_ix)
 
-        # if has_mask:
-        #     return cls_target, loc_target, sample_cls_mask, sample_loc_mask, gt_inds_target, \
-        #         gt_bitmasks, gt_bitmasks_full
+        if has_mask:
+            return cls_target, loc_target, sample_cls_mask, sample_loc_mask, gt_inds_target, \
+                gt_bitmasks, gt_bitmasks_full
         return cls_target, loc_target, sample_cls_mask, sample_loc_mask
 
 
