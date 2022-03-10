@@ -2,12 +2,19 @@ import numpy as np
 import torch
 import torch.nn as nn
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from up.utils.model.normalize import build_norm_layer
 
 
 @MODULE_ZOO_REGISTRY.register('base_bev')
 class BaseBEVBackbone(nn.Module):
-    def __init__(self, inplanes, layer_nums=None, layer_strides=None, num_filters=None,
-                 upsample_strides=None, num_upsample_filters=None):
+    def __init__(self,
+                 inplanes,
+                 layer_nums=None,
+                 layer_strides=None,
+                 num_filters=None,
+                 upsample_strides=None,
+                 num_upsample_filters=None,
+                 normalize={'type': 'solo_bn'}):
         super().__init__()
         if layer_nums is not None:
             assert len(layer_nums) == len(layer_strides) == len(num_filters)
@@ -30,13 +37,13 @@ class BaseBEVBackbone(nn.Module):
                     c_in_list[idx], num_filters[idx], kernel_size=3,
                     stride=layer_strides[idx], padding=0, bias=False
                 ),
-                nn.BatchNorm2d(num_filters[idx], eps=1e-3, momentum=0.01),
+                build_norm_layer(num_filters[idx], normalize)[1],
                 nn.ReLU()
             ]
             for k in range(layer_nums[idx]):
                 cur_layers.extend([
                     nn.Conv2d(num_filters[idx], num_filters[idx], kernel_size=3, padding=1, bias=False),
-                    nn.BatchNorm2d(num_filters[idx], eps=1e-3, momentum=0.01),
+                    build_norm_layer(num_filters[idx], normalize)[1],
                     nn.ReLU()
                 ])
             self.blocks.append(nn.Sequential(*cur_layers))
@@ -49,7 +56,7 @@ class BaseBEVBackbone(nn.Module):
                             upsample_strides[idx],
                             stride=upsample_strides[idx], bias=False
                         ),
-                        nn.BatchNorm2d(num_upsample_filters[idx], eps=1e-3, momentum=0.01),
+                        build_norm_layer(num_upsample_filters[idx], normalize)[1],
                         nn.ReLU()
                     ))
                 else:
@@ -60,7 +67,7 @@ class BaseBEVBackbone(nn.Module):
                             stride,
                             stride=stride, bias=False
                         ),
-                        nn.BatchNorm2d(num_upsample_filters[idx], eps=1e-3, momentum=0.01),
+                        build_norm_layer(num_upsample_filters[idx], normalize)[1],
                         nn.ReLU()
                     ))
 
@@ -68,7 +75,7 @@ class BaseBEVBackbone(nn.Module):
         if len(upsample_strides) > num_levels:
             self.deblocks.append(nn.Sequential(
                 nn.ConvTranspose2d(c_in, c_in, upsample_strides[-1], stride=upsample_strides[-1], bias=False),
-                nn.BatchNorm2d(c_in, eps=1e-3, momentum=0.01),
+                build_norm_layer(c_in, normalize)[1],
                 nn.ReLU(),
             ))
         self.out_planes = c_in
