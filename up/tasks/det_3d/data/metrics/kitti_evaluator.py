@@ -82,7 +82,8 @@ class KittiEvaluator(Evaluator):
         eval_gt_annos = [copy.deepcopy(info['annos']) for info in kitti_infos]
         recall_dict = self.get_metric(eval_det_annos)
         result, recall_dict = kitti_eval.get_official_eval_result(eval_gt_annos, eval_det_annos, class_names)
-        return result, recall_dict
+        logger.info(json.dumps(result, indent=2))
+        return recall_dict
 
     @staticmethod
     def add_subparser(name, subparsers):

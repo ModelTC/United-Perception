@@ -454,16 +454,19 @@ def mask_points_by_range(points, limit_range):
 
 class VoxelGeneratorWrapper():
     def __init__(self, vsize_xyz, coors_range_xyz, num_point_features, max_num_points_per_voxel, max_num_voxels):
-        try:
-            from spconv.utils import VoxelGeneratorV2 as VoxelGenerator
-            self.spconv_ver = 1
-        except BaseException:
-            try:
-                from spconv.utils import VoxelGenerator
-                self.spconv_ver = 1
-            except BaseException:
-                from spconv.utils import Point2VoxelCPU3d as VoxelGenerator
-                self.spconv_ver = 2
+        # try:
+        #     from spconv.utils import VoxelGeneratorV2 as VoxelGenerator
+        #     self.spconv_ver = 1
+        # except BaseException:
+        #     try:
+        #         from spconv.utils import VoxelGenerator
+        #         self.spconv_ver = 1
+        #     except BaseException:
+        #         from spconv.utils import Point2VoxelCPU3d as VoxelGenerator
+        #         self.spconv_ver = 2
+
+        from up.tasks.det_3d.models.utils import VoxelGenerator
+        self.spconv_ver = 1
 
         if self.spconv_ver == 1:
             self._voxel_generator = VoxelGenerator(
