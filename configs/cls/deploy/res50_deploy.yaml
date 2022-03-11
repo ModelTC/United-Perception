@@ -2,7 +2,8 @@ num_classes: &num_classes 1000
 
 to_kestrel:
   toks_type: cls
-  model_name: Res50
+  plugin: classifier
+  detector: detector # res50
   add_softmax: False
   pixel_means: [123.675, 116.28, 103.53]
   pixel_stds: [58.395, 57.12, 57.375]

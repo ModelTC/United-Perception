@@ -56,9 +56,9 @@ class ClsWrapper(torch.nn.Module):
         output = self.detector(input)
         print(f'detector output:{output.keys()}')
         if self.add_softmax:
-            output['logits'] = self.softmax(output['logits'])
-        blob_names = ['logits']
-        blob_datas = [output['logits']]
+            output['scores'] = self.softmax(output['scores'])
+        blob_names = ['scores']
+        blob_datas = [output['scores']]
         return blob_names, blob_datas
 
 
@@ -75,7 +75,7 @@ class SegWrapper(torch.nn.Module):
             'image': image
         }
         print(f'before detector forward')
-        output = self.model(input)
+        output = self.detector(input)
         print(f'model output:{output.keys()}')
         blob_names = []
         blob_datas = []

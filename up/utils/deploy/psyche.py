@@ -33,7 +33,7 @@ def parse_dataset_param(dataset_cfg):
     transformer_cfg = kwargs_cfg['transformer']
 
     # keep scale consistent with tocaffe input blobs shape
-    input_h, input_w = parse_resize_scale(dataset_cfg)
+    input_h, input_w = parse_resize_scale(dataset_cfg, 'seg')
 
     pixel_cfg = get_transform(transformer_cfg, 'normalize')
     pixel_means = up_parser.getdotattr(pixel_cfg, 'kwargs.mean')
@@ -140,6 +140,8 @@ class PsycheProcessor(BaseProcessor):
         net_info['packname'] = 'model'
         net_info['backend'] = 'kestrel_caffe'
         kestrel_param.update(out_info)
+        # save model
+        scaffold.generate_model(net, self.save_path, net_info['packname'])
 
         common_param = generate_common_param(net_info, self.max_batch_size)
         kestrel_param['model_files'] = common_param

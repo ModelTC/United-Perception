@@ -287,18 +287,15 @@ class ClsToKestrel(object):
         nnie_cfg = config['to_kestrel'].get('nnie', None)
 
         version = self.config['to_kestrel'].get('version', '1.0.0')
-        kestrel_model = '{}_{}.tar'.format(detector, version)
         to_kestrel_yml = 'temp_to_kestrel.yml'
         with open(to_kestrel_yml, 'w') as f:
             json.dump(self.parameters, f, indent=2)
 
         if self.save_to is None:
-            self.save_to = kestrel_model
-        else:
-            self.save_to = os.path.join(self.save_to, kestrel_model)
+            self.save_to = detector
 
         cmd = 'python -m spring.nart.tools.kestrel.classifier {} {} -v {} -c {} -n {} -p {}'.format(
-            prototxt, caffemodel, version, to_kestrel_yml, detector, self.save_to)
+            prototxt, caffemodel, version, to_kestrel_yml, self.save_to, self.save_to)
         mv_cmd = 'mv model* temp_to_kestrel.yml -t ./to_kestrel/'
 
         logger.info('Converting Model to Kestrel...')

@@ -16,6 +16,7 @@ class BaseKpPostProcess(nn.Module):
         self.test_with_gaussian_filter = test_with_gaussian_filter
         self.loss = build_loss(loss)
         self.do_sig = loss['type'] != 'mse'
+        self.tocaffe = False
 
     def get_loss(self, input):
         target = input['label']
@@ -65,6 +66,10 @@ class BaseKpPostProcess(nn.Module):
 
     def forward(self, input):
         output = {}
+        if self.tocaffe:
+            output['blob_pred'] = input['pred']
+            return output
+
         if self.training:
             output.update(self.get_loss(input))
         else:
