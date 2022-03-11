@@ -5,10 +5,8 @@ import json
 import copy
 import torch
 
-from up.utils.general.tocaffe_helper import to_caffe
-from up.utils.general.cfg_helper import merge_opts_into_cfg
 from up.utils.general.log_helper import default_logger as logger
-from up.utils.general.registry_factory import TOKESTREL_REGISTRY, KS_PROCESSOR_REGISTRY, KS_PARSER_REGISTRY
+from up.utils.general.registry_factory import TOKESTREL_REGISTRY, KS_PROCESSOR_REGISTRY
 
 __all__ = ['DetToKestrel', 'ClsToKestrel', 'SegToKestrel', 'KpToKestrel']
 
@@ -113,7 +111,7 @@ class KpToKestrel(object):
             json.dump(self.parameters, f, indent=2)
 
         if self.save_to is None:
-            self.save_to = self.config['to_kestrel']['save_to']
+            self.save_to = config['to_kestrel']['save_to']
 
         cmd = 'python -m spring.nart.tools.kestrel.raven {} {} -v {} -c {} -n {} -p {}'.format(
             prototxt, caffemodel, version, to_kestrel_yml, self.save_to, self.save_to)
@@ -149,7 +147,6 @@ class SegToKestrel(object):
 
         config = copy.deepcopy(self.config)
         plugin = config['to_kestrel']['plugin']
-        detector = config['to_kestrel']['detector']
 
         version = config['to_kestrel'].get('version', "1.0.0")
         parameters_json = 'tmp_parameters_json'
@@ -166,7 +163,7 @@ class SegToKestrel(object):
 
         ks_processor = KS_PROCESSOR_REGISTRY[plugin](prototxt,
                                                      caffemodel, b=1,
-                                                     n=detector, v=version,
+                                                     n=self.save_to, v=version,
                                                      p=self.save_to,
                                                      k=parameters_json,
                                                      i=self.input_channel,
@@ -200,7 +197,6 @@ class DetToKestrel(object):
         # we get anchors.json, $prefix.prototxt, $prefix.caffemodel
         config = copy.deepcopy(self.config)
         plugin = config['to_kestrel']['plugin']
-        detector = config['to_kestrel']['detector']
         nnie_cfg = config['to_kestrel'].get('nnie', None)
 
         if config['to_kestrel'].get('sigmoid', None) is not None:
@@ -211,7 +207,6 @@ class DetToKestrel(object):
             self.parameters['retina_class_first'] = True
 
         version = config['to_kestrel'].get('version', "1.0.0")
-        # kestrel_model = '{}_{}.tar'.format(detector, version)
         parameters_json = 'tmp_parameters_json'
         # convert torch.tensor in parameters to int or list
         for key in self.parameters:
@@ -233,7 +228,7 @@ class DetToKestrel(object):
 
         ks_processor = KS_PROCESSOR_REGISTRY[plugin](prototxt,
                                                      caffemodel, b=1,
-                                                     n=detector, v=version,
+                                                     n=self.save_to, v=version,
                                                      p=self.save_to,
                                                      k=parameters_json,
                                                      i=self.input_channel,
@@ -283,7 +278,6 @@ class ClsToKestrel(object):
         prototxt = '{}.prototxt'.format(prefix)
 
         config = copy.deepcopy(self.config)
-        detector = config['to_kestrel']['detector']
         nnie_cfg = config['to_kestrel'].get('nnie', None)
 
         version = self.config['to_kestrel'].get('version', '1.0.0')
@@ -292,7 +286,7 @@ class ClsToKestrel(object):
             json.dump(self.parameters, f, indent=2)
 
         if self.save_to is None:
-            self.save_to = detector
+            self.save_to = config['to_kestrel']['save_to']
 
         cmd = 'python -m spring.nart.tools.kestrel.classifier {} {} -v {} -c {} -n {} -p {}'.format(
             prototxt, caffemodel, version, to_kestrel_yml, self.save_to, self.save_to)
@@ -307,37 +301,7 @@ class ClsToKestrel(object):
         nnie_cfg = self.config['to_kestrel'].get('nnie', None)
         if nnie_cfg is not None:
             logger.info('Converting Model to NNIE...')
-            self.to_nnie(nnie_cfg, self.config, prototxt, caffemodel, detector)
+            self.to_nnie(nnie_cfg, self.config, prototxt, caffemodel, self.save_to)
 
         logger.info('Save kestrel model to: {}'.format(self.save_to))
         return self.save_to
-
-
-def get_kestrel_parameters(config):
-    plugin = config['to_kestrel']['plugin']
-    parser = KS_PARSER_REGISTRY[plugin](config)
-    return parser.get_kestrel_parameters()
-
-
-def to_kestrel(config, save_to=None, serialize=False):
-    opts = config.get('args', {}).get('opts', [])
-    config = merge_opts_into_cfg(opts, config)
-    input_channel = config['to_kestrel'].get('input_channel', 3)
-    resize_hw = None
-    if config['to_kestrel'].get('resize_hw', '') != '':
-        resize_hw = config['to_kestrel'].get('resize_hw', '640x1024')
-        resize_hw = (int(i) for i in resize_hw.strip().split("x"))
-        resize_hw = (input_channel, *resize_hw)
-    caffemodel_name = to_caffe(config, input_size=resize_hw, input_channel=input_channel)
-    toks_type = config['to_kestrel'].get('toks_type', 'det')
-    parameters = get_kestrel_parameters(config)
-    logger.info(f'parameters:{parameters}')
-    tokestrel_ins = TOKESTREL_REGISTRY[toks_type](config,
-                                                  caffemodel_name,
-                                                  parameters,
-                                                  save_to,
-                                                  serialize,
-                                                  input_channel)
-    save_to = tokestrel_ins.process()
-
-    return save_to

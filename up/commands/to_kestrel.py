@@ -8,8 +8,7 @@ from up.utils.general.yaml_loader import load_yaml
 
 # Import from local
 from .subcommand import Subcommand
-from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY
-from up.utils.general.tokestrel_helper import to_kestrel
+from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGISTRY
 from up.utils.general.user_analysis_helper import send_info
 
 
@@ -54,8 +53,14 @@ def main(args):
     cfg['args'] = {
         'opts': args.opts
     }
+    cfg['runtime'] = cfg.setdefault('runtime', {})
+    runner_cfg = cfg['runtime'].get('runner', {})
+    runner_cfg['type'] = runner_cfg.get('type', 'base')
+    runner_cfg['kwargs'] = runner_cfg.get('kwargs', {})
+    cfg['runtime']['runner'] = runner_cfg
     send_info(cfg, func="to_kestrel")
-    to_kestrel(cfg, args.save_to, args.serialize)
+    runner = RUNNER_REGISTRY.get(runner_cfg['type'])(cfg, **runner_cfg['kwargs'])
+    runner.to_kestrel(args.save_to, args.serialize)
 
 
 def _main(args):

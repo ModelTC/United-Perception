@@ -1,7 +1,7 @@
 import yaml
 import numpy as np
 
-from up.tasks.det.deploy import parser as up_parser
+from up.utils.deploy import parser as up_parser
 from up.utils.general.registry_factory import KS_PARSER_REGISTRY
 
 __all__ = ['ClassifierParser']

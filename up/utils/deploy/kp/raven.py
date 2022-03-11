@@ -3,7 +3,7 @@ import yaml
 
 from up.utils.general.user_analysis_helper import get_task_from_cfg
 from up.utils.general.tocaffe_helper import parse_resize_scale
-from up.tasks.det.deploy import parser as up_parser
+from up.utils.deploy import parser as up_parser
 from up.utils.general.registry_factory import KS_PARSER_REGISTRY
 
 __all__ = ['RavenParser']

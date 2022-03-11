@@ -4,8 +4,7 @@ from __future__ import division
 import argparse
 from up.utils.general.yaml_loader import load_yaml
 from .subcommand import Subcommand
-from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY
-from up.utils.general.tocaffe_helper import to_caffe
+from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGISTRY
 from up.utils.general.user_analysis_helper import send_info
 
 
@@ -48,10 +47,17 @@ class ToCaffe(Subcommand):
 def main(args):
     cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
+        'config_path': args.config,
         'opts': args.opts
     }
+    cfg['runtime'] = cfg.setdefault('runtime', {})
+    runner_cfg = cfg['runtime'].get('runner', {})
+    runner_cfg['type'] = runner_cfg.get('type', 'base')
+    runner_cfg['kwargs'] = runner_cfg.get('kwargs', {})
+    cfg['runtime']['runner'] = runner_cfg
     send_info(cfg, func="to_caffe")
-    to_caffe(cfg, args.save_prefix, args.input_size)
+    runner = RUNNER_REGISTRY.get(runner_cfg['type'])(cfg, **runner_cfg['kwargs'])
+    runner.to_caffe(args.save_prefix, args.input_size)
 
 
 def _main(args):

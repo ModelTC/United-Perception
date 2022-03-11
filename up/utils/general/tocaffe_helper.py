@@ -12,7 +12,6 @@ import warnings
 import torch
 
 # Import from pod
-from up.utils.general.cfg_helper import merge_opts_into_cfg
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.saver_helper import Saver
 from up.utils.general.tocaffe_utils import ToCaffe
@@ -138,17 +137,3 @@ class BaseToCaffe(object):
         self._build_model()
         self.run_model()
         return self._convert()
-
-
-def to_caffe(config, save_prefix='model', input_size=None, input_channel=3):
-    opts = config.get('args', {}).get('opts', [])
-    config = merge_opts_into_cfg(opts, config)
-    tocaffe_type = config.pop('tocaffe_type', 'base')
-    tocaffe_ins = TOCAFFE_REGISTRY[tocaffe_type](config,
-                                                 save_prefix,
-                                                 input_size,
-                                                 None,
-                                                 input_channel)
-    caffemodel_name = tocaffe_ins.process()
-
-    return caffemodel_name

@@ -3,8 +3,7 @@ num_classes: &num_classes 19
 to_kestrel:
   toks_type: seg
   plugin: psyche
-  detector: PSPNET 
-  save_to: pspnet
+  save_to: PSPNET 
   version: 1.0.0
   resize_hw: 640x1024
 

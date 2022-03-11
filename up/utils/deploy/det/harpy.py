@@ -13,8 +13,8 @@ try:
 except Exception as err:
     print(err)
 
-from . import parser as up_parser
-from .parser import BaseProcessor
+from up.utils.deploy import parser as up_parser
+from up.utils.deploy.parser import BaseProcessor
 from up.utils.general.registry_factory import MODEL_HELPER_REGISTRY, KS_PARSER_REGISTRY, KS_PROCESSOR_REGISTRY
 
 

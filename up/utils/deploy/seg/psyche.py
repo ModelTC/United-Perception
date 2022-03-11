@@ -6,8 +6,8 @@ import spring.nart.tools.caffe.count as count
 import spring.nart.tools.caffe.utils.graph as graph
 import spring.nart.tools.kestrel.utils.scaffold as scaffold
 
-from up.tasks.det.deploy import parser as up_parser
-from up.tasks.det.deploy.parser import BaseProcessor
+from up.utils.deploy import parser as up_parser
+from up.utils.deploy.parser import BaseProcessor
 from up.utils.general.tocaffe_helper import parse_resize_scale
 from up.utils.general.registry_factory import KS_PARSER_REGISTRY, KS_PROCESSOR_REGISTRY
 

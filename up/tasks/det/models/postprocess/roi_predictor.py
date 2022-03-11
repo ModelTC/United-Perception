@@ -133,7 +133,10 @@ class RoiPredictor(object):
                 scores, order = scores.topk(_pre_nms_top_n, sorted=True)
                 cls_rois = cls_rois[order, :]
                 cls_inds = cls_inds[order]
-                cls_rois = torch.cat([cls_rois, scores[:, None]], dim=1)
+                if return_pos_inds:
+                    cls_rois = torch.cat([cls_rois, scores[:, None], cls_inds[:, None]], dim=1)
+                else:
+                    cls_rois = torch.cat([cls_rois, scores[:, None]], dim=1)
 
                 if self.nms_cfg is not None:
                     cls_rois, keep_idx = nms(cls_rois, self.nms_cfg)
@@ -142,7 +145,11 @@ class RoiPredictor(object):
 
                 ix = cls_rois.new_full((cls_rois.shape[0], 1), b_ix)
                 c = cls_rois.new_full((cls_rois.shape[0], 1), cls + 1)
-                cls_rois = torch.cat([ix, cls_rois, c], dim=1)
+                if return_pos_inds:
+                    cls_rois, cls_inds = torch.split(cls_rois, [5, 1], dim=1)
+                    cls_rois = torch.cat([ix, cls_rois, c, cls_inds], dim=1)
+                else:
+                    cls_rois = torch.cat([ix, cls_rois, c], dim=1)
                 batch_rois.append(cls_rois)
 
         if len(batch_rois) == 0:

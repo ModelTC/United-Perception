@@ -17,8 +17,7 @@ class_names: &class_names [
 
 to_kestrel:
   toks_type: det
-  detector: &detector FASTER-RCNN  # choices [RETINANET, RFCN, FASTER-RCNN]
-  save_to: *detector  # saved file
+  save_to: FASTER-RCNN  # saved file
   default_confidence_thresh: 0.0
   plugin: harpy   # choices = [essos, harpy, sphinx]
   version: 1.0.0
