@@ -10,7 +10,6 @@ import warnings
 
 # Import from third library
 import torch
-import torch.nn as nn
 
 # Import from pod
 from up.utils.general.cfg_helper import merge_opts_into_cfg
@@ -20,60 +19,7 @@ from up.utils.general.tocaffe_utils import ToCaffe
 from up.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY, TOCAFFE_REGISTRY, MODEL_HELPER_REGISTRY
 from .user_analysis_helper import get_task_from_cfg
 
-
-@MODEL_WRAPPER_REGISTRY.register('pod')
-class Wrapper(torch.nn.Module):
-    def __init__(self, detector):
-        super(Wrapper, self).__init__()
-        self.detector = detector
-
-    def forward(self, image, return_meta=False):
-        b, c, height, width = map(int, image.size())
-        input = {
-            'image_info': [[height, width, 1.0, height, width, 0]] * b,
-            'image': image
-        }
-        print(f'before detector forward')
-        output = self.detector(input)
-        print(f'detector output:{output.keys()}')
-        base_anchors = output['base_anchors']
-        blob_names = []
-        blob_datas = []
-        output_names = sorted(output.keys())
-        for name in output_names:
-            if name.find('blobs') >= 0:
-                blob_names.append(name)
-                blob_datas.append(output[name])
-                print(f'blobs:{name}')
-        assert len(blob_datas) > 0, 'no valid output provided, please set "tocaffe: True" in your config'
-        if return_meta:
-            return blob_names, base_anchors
-        else:
-            return blob_datas
-
-
-@MODEL_WRAPPER_REGISTRY.register('cls')
-class CLSWrapper(torch.nn.Module):
-    def __init__(self, detector, add_softmax=False):
-        super(CLSWrapper, self).__init__()
-        self.detector = detector
-        self.add_softmax = add_softmax
-        if self.add_softmax:
-            self.softmax = nn.Softmax(dim=1)
-
-    def forward(self, image):
-        b, c, height, width = map(int, image.size())
-        input = {
-            'image_info': [[height, width, 1.0, height, width, 0]] * b,
-            'image': image
-        }
-        print(f'before detector forward')
-        out = self.detector(input)
-        if self.add_softmax:
-            out = self.softmax(out['logits'])
-        else:
-            out = out['logits']
-        return out
+__all__ = ['ToCaffe']
 
 
 def build_model(cfg):
@@ -97,21 +43,30 @@ def parse_resize_scale(dataset_cfg, task_type='det'):
     dataset_cfg.update(dataset_cfg.get('test', {}))
     alignment = dataset_cfg['dataloader']['kwargs'].get('alignment', 1)
     transforms = dataset_cfg['dataset']['kwargs']['transformer']
+    input_h, input_w = 0, 0
     for tf in transforms:
+        if 'keep_aspect_ratio' in tf['type']:
+            if task_type == 'kp':
+                input_h = int(math.ceil(tf['kwargs']['in_h'] / alignment) * alignment)
+                input_w = int(math.ceil(tf['kwargs']['in_w'] / alignment) * alignment)
         if 'resize' in tf['type']:
             if task_type == 'det':
                 scale = int(math.ceil(max(tf['kwargs']['scales']) / alignment) * alignment)
                 max_size = int(math.ceil(tf['kwargs']['max_size'] / alignment) * alignment)
-                return scale, max_size
+                input_h, input_w = scale, max_size
+            elif task_type == 'seg':
+                input_h = int(math.ceil(tf['kwargs']['size'][0] / alignment) * alignment)
+                input_w = int(math.ceil(tf['kwargs']['size'][1] / alignment) * alignment)
             else:
                 scale = int(math.ceil(tf['kwargs']['size'] / alignment) * alignment)
-                return scale, scale
-    else:
+                input_h = input_w = scale
+    if input_h == 0 and input_w == 0:
         raise ValueError('No resize found')
+    return input_h, input_w
 
 
-@TOCAFFE_REGISTRY.register('pod')
-class PodToCaffe(object):
+@TOCAFFE_REGISTRY.register('base')
+class BaseToCaffe(object):
     def __init__(self, cfg, save_prefix, input_size, model=None, input_channel=3):
         self.cfg = copy.deepcopy(cfg)
         self.save_prefix = save_prefix
@@ -144,22 +99,27 @@ class PodToCaffe(object):
         self.model = self.model.eval().cpu().float()
         image = torch.randn(1, *self.input_size)
         if self.task_type == 'det':
-            self.model = MODEL_WRAPPER_REGISTRY['pod'](self.model)
+            self.model = MODEL_WRAPPER_REGISTRY['det'](self.model)
             output_names, base_anchors = self.model(image, return_meta=True)
-            self.output_names = output_names
+            # dump anchors only for detection
             self.anchor_json = os.path.join(self.save_dir, 'anchors.json')
             with open(self.anchor_json, 'w') as f:
                 json.dump(base_anchors, f, indent=2)
         elif self.task_type == 'cls':
             add_softmax = self.cfg.get('to_kestrel', {}).get('add_softmax', False)
             self.model = MODEL_WRAPPER_REGISTRY['cls'](self.model, add_softmax)
-            self.model(image)
+            output_names, _ = self.model(image)
+        elif self.task_type == 'seg':
+            self.model = MODEL_WRAPPER_REGISTRY['seg'](self.model)
+            output_names, _ = self.model(image, return_meta=True)
+        elif self.task_type == 'kp':
+            self.model = MODEL_WRAPPER_REGISTRY['kp'](self.model)
+            output_names, _ = self.model(image)
+        self.output_names = output_names
 
     def _convert(self):
         import spring.nart.tools.pytorch as pytorch
         input_names = ['data']
-        if self.task_type == 'cls':
-            self.output_names = ['out']
         with pytorch.convert_mode():
             pytorch.convert(
                 self.model, [self.input_size],
@@ -183,7 +143,7 @@ class PodToCaffe(object):
 def to_caffe(config, save_prefix='model', input_size=None, input_channel=3):
     opts = config.get('args', {}).get('opts', [])
     config = merge_opts_into_cfg(opts, config)
-    tocaffe_type = config.pop('tocaffe_type', 'pod')
+    tocaffe_type = config.pop('tocaffe_type', 'base')
     tocaffe_ins = TOCAFFE_REGISTRY[tocaffe_type](config,
                                                  save_prefix,
                                                  input_size,

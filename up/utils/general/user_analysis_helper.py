@@ -118,6 +118,7 @@ def get_task_from_cfg(cfg):
             'lvis': 'det',
             'cls': 'cls',
             'seg': 'seg',
+            'keypoint': 'kp',
             'unknown': 'unknown'
         }
         dataset_type = cfg['dataset'].get('train', {}).get('dataset', {}).get('type', 'unknown')
