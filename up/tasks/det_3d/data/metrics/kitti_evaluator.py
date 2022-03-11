@@ -2,12 +2,14 @@
 import builtins
 import json
 import copy
+import numpy as np
 
 # Import from third library
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import EVALUATOR_REGISTRY
 from up.data.metrics.base_evaluator import Evaluator
 from up.utils.general.petrel_helper import PetrelHelper
+from up.data.metrics import Metric
 
 # fix pycocotools py2-style bug
 builtins.unicode = str
@@ -79,13 +81,20 @@ class KittiEvaluator(Evaluator):
 
     def eval(self, res_file, class_names, kitti_infos, res, **kwargs):
         if 'annos' not in kitti_infos[0].keys():
-            return None, {}
+            return None, Metric
         det_annos = self.load_dts(res_file, res)
         from .kitti_object_eval_python import eval as kitti_eval
         eval_det_annos = copy.deepcopy(det_annos)
         eval_gt_annos = [copy.deepcopy(info['annos']) for info in kitti_infos]
         recall_dict = self.get_metric(eval_det_annos)
         result, recall_dict = kitti_eval.get_official_eval_result(eval_gt_annos, eval_det_annos, class_names)
+        ave_recall = []
+        for k, v in recall_dict.items():
+            if "3d/moderate" in k:
+                ave_recall.append(v)
+        recall_dict["AVE_3d/moderate"] = np.array(ave_recall).mean()
+        recall_dict = Metric(recall_dict)
+        recall_dict.set_cmp_key("AVE_3d/moderate")
         logger.info(json.dumps(result, indent=2))
         return recall_dict
 
