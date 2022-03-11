@@ -4,6 +4,7 @@ import torch
 import json
 import time
 import configparser
+import pickle as pk
 
 from collections import defaultdict
 
@@ -58,12 +59,12 @@ class PetrelHelper(object):
             cur_line = line.decode('utf-8')
             yield cur_line
 
-    def load_data(self, path, ceph_read=True, fs_read=False):
+    def load_data(self, path, ceph_read=True, fs_read=False, mode='r'):
         if 's3://' not in path:
             if not fs_read:
-                return open(path)
+                return open(path, mode)
             else:
-                return open(path).read()
+                return open(path, mode).read()
         else:
             self.check_init()
 
@@ -73,9 +74,17 @@ class PetrelHelper(object):
                 return self.client.get(path)
 
     @staticmethod
-    def load_json(path):
+    def load_pk(path, mode='r'):
         if 's3://' not in path:
-            js = json.load(open(path, 'r'))
+            pk_res = pk.load(open(path, mode))
+        else:
+            pk_res = pk.loads(PetrelHelper._petrel_helper.load_data(path, ceph_read=False))
+        return pk_res
+
+    @staticmethod
+    def load_json(path, mode='r'):
+        if 's3://' not in path:
+            js = json.load(open(path, mode))
         else:
             js = json.loads(PetrelHelper._petrel_helper.load_data(path, ceph_read=False))
         return js

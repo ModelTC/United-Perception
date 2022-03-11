@@ -3,6 +3,7 @@ import os
 import pathlib
 import re
 from collections import OrderedDict
+from up.utils.general.petrel_helper import PetrelHelper
 
 import numpy as np
 from skimage import io
@@ -95,8 +96,10 @@ def get_kitti_image_info(path,
         if calib:
             calib_path = get_calib_path(
                 idx, path, training, relative_path=False)
-            with open(calib_path, 'r') as f:
-                lines = f.readlines()
+            lines = []
+            with PetrelHelper.open(calib_path) as f:
+                for line in f:
+                    lines.append(line)
             P0 = np.array(
                 [float(info) for info in lines[0].split(' ')[1:13]]).reshape(
                     [3, 4])
@@ -305,8 +308,10 @@ def get_label_anno(label_path):
         'location': [],
         'rotation_y': []
     })
-    with open(label_path, 'r') as f:
-        lines = f.readlines()
+    lines = []
+    with PetrelHelper.open(label_path) as f:
+        for line in f:
+            lines.append(line)
     # if len(lines) == 0 or len(lines[0]) < 15:
     #     content = []
     # else:

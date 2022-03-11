@@ -7,6 +7,7 @@ import copy
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import EVALUATOR_REGISTRY
 from up.data.metrics.base_evaluator import Evaluator
+from up.utils.general.petrel_helper import PetrelHelper
 
 # fix pycocotools py2-style bug
 builtins.unicode = str
@@ -38,7 +39,10 @@ class KittiEvaluator(Evaluator):
                     out.extend([res_gpu[-1]])
         else:
             logger.info(f'loading res from {res_file}')
-            out = [json.loads(line) for line in open(res_file, 'r')]
+            out = []
+            with PetrelHelper.open(res_file) as f:
+                for line in f:
+                    out.append(json.loads(line))
         return out
 
     def get_metric(self, ret):

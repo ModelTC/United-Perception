@@ -1,6 +1,5 @@
 import numpy as np
 import copy
-import pickle
 import os
 from up.utils.general.registry_factory import AUGMENTATION_REGISTRY
 from up.data.datasets.transforms import Augmentation
@@ -8,6 +7,7 @@ from up.extensions.python import iou3d_nms_utils
 from up.tasks.det_3d.data.box_utils import boxes3d_kitti_fakelidar_to_lidar, enlarge_box3d, remove_points_in_boxes3d
 from up.tasks.det_3d.data.box_utils import mask_boxes_outside_range_numpy
 from up.tasks.det_3d.data.data_utils import rotate_points_along_z, limit_period, keep_arrays_by_name
+from up.utils.general.petrel_helper import PetrelHelper
 tv = None
 try:
     import cumm.tensorview as tv
@@ -70,9 +70,8 @@ class PointAugSampling(Augmentation):
         for class_name in self.class_names:
             db_infos[class_name] = []
         for db_info_path in db_info_paths:
-            with open(str(db_info_path), 'rb') as f:
-                infos = pickle.load(f)
-                [db_infos[cur_class].extend(infos[cur_class]) for cur_class in self.class_names]
+            infos = PetrelHelper.load_pk(db_info_path, mode='rb')
+            [db_infos[cur_class].extend(infos[cur_class]) for cur_class in self.class_names]
         for func_name, val in db_info_filters.items():
             db_infos = getattr(self, func_name)(db_infos, val)
         return db_infos
@@ -175,8 +174,9 @@ class PointAugSampling(Augmentation):
         obj_points_list = []
         for idx, info in enumerate(total_valid_sampled_dict):
             file_path = os.path.join(self.root_path, info['path'])
-            obj_points = np.fromfile(str(file_path), dtype=np.float32).reshape(
-                [-1, self.num_point_features])
+            f = PetrelHelper._petrel_helper.load_data(file_path, ceph_read=False, fs_read=True, mode='rb')
+            obj_points = np.frombuffer(f, dtype=np.float32).reshape(
+                [-1, self.num_point_features]).copy()
             obj_points[:, :3] += info['box3d_lidar'][:3]
             if self.use_road_plane:
                 # mv height

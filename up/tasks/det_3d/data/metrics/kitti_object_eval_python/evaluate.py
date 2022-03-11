@@ -1,10 +1,13 @@
 from up.tasks.det_3d.data.metrics.kitti_object_eval_python import kitti_common as kitti
 from .eval import get_coco_eval_result, get_official_eval_result
+from up.utils.general.petrel_helper import PetrelHelper
 
 
 def _read_imageset_file(path):
-    with open(path, 'r') as f:
-        lines = f.readlines()
+    lines = []
+    with PetrelHelper.open(path) as f:
+        for line in f:
+            lines.append(line)
     return [int(line) for line in lines]
 
 

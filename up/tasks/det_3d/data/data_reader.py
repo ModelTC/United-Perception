@@ -4,6 +4,7 @@ from skimage import io
 
 from up.utils.general.registry_factory import IMAGE_READER_REGISTRY
 from up.data.image_reader import ImageReader
+from up.utils.general.petrel_helper import PetrelHelper
 
 
 @IMAGE_READER_REGISTRY.register('kitti')
@@ -34,11 +35,10 @@ class KittiReader(ImageReader):
 
     def get_road_plane(self, idx):
         plane_file = os.path.join(self.root_dir, 'planes', '{}.txt'.format(idx))
-        if not os.path.exists(plane_file):
-            return None
-
-        with open(plane_file, 'r') as f:
-            lines = f.readlines()
+        lines = []
+        with PetrelHelper.open(plane_file) as f:
+            for line in f:
+                lines.append(line)
         lines = [float(i) for i in lines[3].split()]
         plane = np.asarray(lines)
 
@@ -67,8 +67,9 @@ class KittiReader(ImageReader):
 
     def get_lidar(self, idx):
         lidar_file = os.path.join(self.root_dir, 'velodyne', '{}.bin'.format(idx))
-        assert os.path.exists(lidar_file)
-        return np.fromfile(str(lidar_file), dtype=np.float32).reshape(-1, 4)
+        f = PetrelHelper._petrel_helper.load_data(lidar_file, ceph_read=False, fs_read=True, mode='rb')
+        res = np.frombuffer(f, np.float32).reshape(-1, 4).copy()
+        return res
 
 
 class Calibration(object):
@@ -176,9 +177,10 @@ class Calibration(object):
         return boxes, boxes_corner
 
     def get_calib_from_file(self, calib_file):
-        with open(calib_file) as f:
-            lines = f.readlines()
-
+        lines = []
+        with PetrelHelper.open(calib_file) as f:
+            for line in f:
+                lines.append(line)
         obj = lines[2].strip().split(' ')[1:]
         P2 = np.array(obj, dtype=np.float32)
         obj = lines[3].strip().split(' ')[1:]

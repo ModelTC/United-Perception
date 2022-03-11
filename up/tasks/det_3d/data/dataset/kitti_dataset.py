@@ -1,7 +1,6 @@
 # Import from third library
 import copy
 import numpy as np
-import pickle
 import torch
 from collections import defaultdict
 from up.tasks.det_3d.data.box_utils import boxes3d_lidar_to_kitti_camera, boxes3d_kitti_camera_to_imageboxes
@@ -9,6 +8,7 @@ from up.utils.general.registry_factory import DATASET_REGISTRY
 from up.tasks.det_3d.data.data_utils import get_pad_params
 from up.data.datasets.base_dataset import BaseDataset
 from up.extensions.python import iou3d_nms_utils
+from up.utils.general.petrel_helper import PetrelHelper
 
 
 @DATASET_REGISTRY.register('kitti')
@@ -35,9 +35,8 @@ class KittiDataset(BaseDataset):
 
     def load_kitti_info(self):
         kitti_infos = []
-        with open(self.meta_file, 'rb') as f:
-            infos = pickle.load(f)
-            kitti_infos.extend(infos)
+        infos = PetrelHelper.load_pk(self.meta_file, mode='rb')
+        kitti_infos.extend(infos)
 
         self.kitti_infos.extend(kitti_infos)
 
