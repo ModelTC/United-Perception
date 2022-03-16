@@ -124,12 +124,13 @@ class BaseToCaffe(object):
         import spring.nart.tools.pytorch as pytorch
         input_names = ['data']
         with pytorch.convert_mode():
-            pytorch.convert(
+            pytorch.convert.convert_v2(
                 self.model, [self.input_size],
                 filename=self.save_prefix,
                 input_names=input_names,
                 output_names=self.output_names,
-                verbose=True
+                verbose=True,
+                use_external_data_format=False,
             )
         logger.info('=============tocaffe done=================')
         caffemodel_name = self.save_prefix + '.caffemodel'

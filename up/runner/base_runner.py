@@ -403,6 +403,100 @@ class BaseRunner(object):
         self.set_cur_eval_iter()
         return metrics
 
+    def latency_test(self, cfg_gdbp, onnx_file):
+        from spring.models.latency import Latency
+
+        hardware_name = cfg_gdbp.get('hardware_name', 'cpu')
+        backend_name = cfg_gdbp.get('backend_name', 'ppl2')
+        data_type = cfg_gdbp.get('data_type', 'fp32')
+        batch_size = cfg_gdbp.get('batch_size', 1)
+        res_json = cfg_gdbp.get('res_json', 'latency_test.json')
+
+        # merge bn
+        logger.info(f'merge bn')
+        model_file = self.merged_bn(onnx_file)
+
+        # latency test
+        logger.info(f'start latency test')
+        latency_client = Latency()
+        ret_val = latency_client.call(
+            hardware_name,
+            backend_name,
+            data_type,
+            batch_size,
+            model_file,
+            graph_name="imagenet_resnet",
+            force_test=False,
+            print_info=False,
+            match_mode=1,
+            match_speed_mode=1,
+            match_speed_async=True
+        )
+        logger.info(f'ret_val:{ret_val}')
+        # save latency test results
+        res_json = open(res_json, 'w')
+        res_json.write(json.dumps(ret_val))
+        res_json.close()
+
+    def merged_bn(self, path_model):
+        import onnx
+        from spring.nart.utils.onnx_utils import OnnxDecoder
+        from spring.nart.passes import DeadCodeElimination, ConvFuser, GemmFuser
+        from spring.nart.core import Model
+        model = onnx.load(path_model)
+        graph = OnnxDecoder().decode(model)
+        graph.update_tensor_shape()
+        graph.update_topology()
+
+        ConvFuser().run(graph)
+        GemmFuser().run(graph)
+        DeadCodeElimination().run(graph)
+        graph.update_topology()
+
+        model = Model.make_model(graph)
+        model = model.dump_to_onnx()
+
+        model_file = path_model.replace('.onnx', '_merged.onnx')
+        onnx.save(model, model_file)
+        return model_file
+
+    def convert_onnx_for_mbs(self, onnx_file):
+        import onnx
+        from onnx import numpy_helper
+
+        def get_shape(node):
+            attrs = {attr.name: attr for attr in node.attribute}
+            shapes = numpy_helper.to_array(attrs['value'].t).reshape(-1).tolist()
+            return shapes
+
+        def make_constant_dims(name, shapes):
+            node = onnx.helper.make_node(
+                'Constant',
+                inputs=[],
+                outputs=[name],
+                value=onnx.helper.make_tensor("val", onnx.TensorProto.INT64, [len(shapes), ], shapes),
+            )
+            return node
+
+        G = onnx.load(onnx_file)
+        consts = {}
+        for idx, node in enumerate(G.graph.node):
+            if node.op_type == 'Constant':
+                consts[node.output[0]] = (idx, node)
+            if node.op_type == 'Reshape':
+                cid, cnode = consts[node.input[1]]
+                ori_shape = get_shape(cnode)
+                new_shape = [-1] + ori_shape[1:]
+
+                logger.info('Reshape [{}] shape from {} to {}'.format(node.name, ori_shape, new_shape))
+                new_cnode = make_constant_dims(node.input[1], new_shape)
+                G.graph.node.remove(cnode)
+                G.graph.node.insert(cid, new_cnode)
+        onnx_save = onnx_file.split('.')[0] + "_fix.onnx"
+        onnx.save(G, onnx_save)
+        logger.info("Saved onnx to {}".format(onnx_save))
+        return onnx_save
+
     @torch.no_grad()
     def to_caffe(self, save_prefix='model', input_size=None, input_channel=3):
         model = self.ema.model if self.ema is not None else self.model
@@ -413,7 +507,14 @@ class BaseRunner(object):
                                                      model,
                                                      input_channel)
         caffemodel_name = tocaffe_ins.process()
-
+        cfg_gdbp = self.config.get('gdbp', None)
+        onnx_file = tocaffe_ins.save_prefix + '.onnx'
+        # convert onnx for multi-batch latency test
+        logger.info('Converting onnx start...')
+        onnx_file_fix = self.convert_onnx_for_mbs(onnx_file)
+        if cfg_gdbp is not None:
+            logger.info(f'gdbp:{onnx_file_fix}')
+            self.latency_test(cfg_gdbp, onnx_file_fix)
         return caffemodel_name
 
     @torch.no_grad()
@@ -435,11 +536,78 @@ class BaseRunner(object):
                                                       serialize,
                                                       input_channel)
         save_to = tokestrel_ins.process()
+        # adela
+        if self.config.get('adela', None):
+            # generate release.json
+            release_name = 'release.json'
+            cmd = 'python -m spring_aux.adela.make_json {} -o {}'.format(save_to, release_name)
+            os.system(cmd)
+            self.to_adela(release_name)
 
     def get_kestrel_parameters(self):
         plugin = self.config['to_kestrel']['plugin']
         parser = KS_PARSER_REGISTRY[plugin](self.config)
         return parser.get_kestrel_parameters()
+
+    def to_adela(self, release_name='release.json'):
+        from spring_aux.adela.adela import Adela
+        import time
+        cfg_adela = self.config.get('adela', None)
+        assert cfg_adela is not None, 'need adela configuration.'
+
+        # build adela
+        adela = Adela(server=cfg_adela['server'])
+        adela.setup()
+
+        pid = cfg_adela['pid']
+        # release
+        release_rep = adela.release_add(pid=pid, fname=release_name)
+        rid = release_rep.id
+        logger.info(f'release id:{rid}')
+
+        # deploy & quantity
+        dep_params = cfg_adela['dep_params']
+        # add quantity dataset
+        if dep_params.get('dataset_added', None):
+            adela.dataset_add(pid, dep_params['dataset_added'])
+            logger.info(f'quantity dataset add.')
+        dep_rep = adela.deployment_add_by_param(pid=pid, rid=rid, info=dep_params)
+        did = dep_rep.id
+        logger.info(f'deploy id:{did}')
+        # wait for deployment response
+        status = adela.deployment(pid, did).status
+        while(status != "SUCCESS"):
+            if status == "FAILURE":
+                logger.warning('deploy failed')
+                exit(0)
+            time.sleep(1)
+            status = adela.deployment(pid, did).status
+
+        # benchmark
+        precision_params = cfg_adela.get('precision_params', None)
+        if precision_params:
+            # add benchmark dataset
+            if precision_params.get('dataset_added', None):
+                adela.dataset_add(pid, precision_params['dataset_added'])
+                logger.info(f'benchmark dataset add.')
+            bid = adela.add_benchmark(pid, did, precision_params).id
+            logger.info(f'benchmark id:{bid}')
+            status = adela.benchmark(pid, did, bid)["status"]
+            while(status != "SUCCESS"):
+                if status == "FAILURE":
+                    logger.warning('benchmark failed')
+                    exit(0)
+                time.sleep(1)
+                status = adela.benchmark(pid, did, bid)["status"]
+
+        # download
+        mid = adela.deployment(pid, did).model_id
+        logger.info(f'model id:{mid}')
+        # publish
+        if mid == -1:
+            mid = adela.model_add(pid, did).id
+        adela.model_download(pid, mid)
+        logger.info(f'adela done')
 
     def batch2device(self, batch):
         model_dtype = torch.float32
