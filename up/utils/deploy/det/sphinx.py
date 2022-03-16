@@ -2,6 +2,7 @@ import os
 import json
 import yaml
 from functools import reduce
+import torch
 
 try:
     import spring.nart.tools.caffe.count as count
@@ -212,7 +213,16 @@ def generate_config(train_cfg):
         assert hasattr(model, mname)
 
     kestrel_net_param = dict()
-    strides = model.neck.get_outstrides()
+    if hasattr(model, 'neck'):
+        strides = model.neck.get_outstrides()
+    else:
+        strides = model.backbone.get_outstrides()
+
+    if torch.is_tensor(strides):
+        strides = strides.tolist()
+    if not hasattr(model, 'post_process') and hasattr(model, 'roi_head'):
+        setattr(model, 'post_process', model.roi_head)
+
     model.post_process.anchor_generator.build_base_anchors(strides)
     kestrel_anchors = model.post_process.anchor_generator.export()
     kestrel_net_param.update(kestrel_anchors)
