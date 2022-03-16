@@ -114,6 +114,10 @@ class BaseToCaffe(object):
         elif self.task_type == 'kp':
             self.model = MODEL_WRAPPER_REGISTRY['kp'](self.model)
             output_names, _ = self.model(image)
+        else:
+            logger.error(f"{self.task_type} is not supported, [det, cls, kp, seg] \
+               is supported, you must set runtime: task_names: cls or others")
+            raise NotImplementedError
         self.output_names = output_names
 
     def _convert(self):
