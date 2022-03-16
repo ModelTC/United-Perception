@@ -11,12 +11,13 @@ __all__ = ['BaseKpPostProcess']
 
 @MODULE_ZOO_REGISTRY.register('kp_post_process')
 class BaseKpPostProcess(nn.Module):
-    def __init__(self, loss, test_with_gaussian_filter):
+    def __init__(self, loss, test_with_gaussian_filter, prefix=None):
         super(BaseKpPostProcess, self).__init__()
         self.test_with_gaussian_filter = test_with_gaussian_filter
         self.loss = build_loss(loss)
         self.do_sig = loss['type'] != 'mse'
         self.tocaffe = False
+        self.prefix = prefix if prefix is not None else self.__class__.__name__
 
     def get_loss(self, input):
         target = input['label']
@@ -24,7 +25,7 @@ class BaseKpPostProcess(nn.Module):
             loss = reduce(lambda x, y: x + y, map(self.loss, input['pred'], target))
         else:
             loss = self.loss(input['pred'], target[0])
-        return {'All.loss': loss}
+        return {self.prefix + '.loss': loss}
 
     def get_output(self, input):
         if isinstance(input['pred'], list):

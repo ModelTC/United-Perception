@@ -23,9 +23,10 @@ class YoloxPostProcess(nn.Module):
                  cfg,
                  norm_on_bbox=False,
                  all_reduce_norm=True,
-                 use_l1=False):
+                 use_l1=False,
+                 prefix=None):
         super(YoloxPostProcess, self).__init__()
-        self.prefix = self.__class__.__name__
+        self.prefix = prefix if prefix is not None else self.__class__.__name__
         self.num_classes = num_classes
         self.tocaffe = False
         self.norm_on_bbox = norm_on_bbox

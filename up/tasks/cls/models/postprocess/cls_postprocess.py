@@ -9,10 +9,11 @@ __all__ = ['BaseClsPostProcess']
 
 @MODULE_ZOO_REGISTRY.register('base_cls_postprocess')
 class BaseClsPostProcess(nn.Module):
-    def __init__(self, cls_loss):
+    def __init__(self, cls_loss, prefix=None):
         super(BaseClsPostProcess, self).__init__()
         self.cls_loss = build_loss(cls_loss)
-        self.prefix = self.__class__.__name__
+
+        self.prefix = prefix if prefix is not None else self.__class__.__name__
 
     def get_acc(self, logits, targets):
         acc = A.accuracy(logits, targets)[0]

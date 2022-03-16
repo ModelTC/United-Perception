@@ -1,7 +1,5 @@
 # Standard Library
 import copy
-
-# Import from third library
 import torch
 import torch.nn as nn
 
@@ -71,7 +69,7 @@ def compute_centerness_targets(reg_targets):
 
 @MODULE_ZOO_REGISTRY.register('fcos_post')
 class FcosPostProcess(nn.Module):
-    def __init__(self, num_classes, dense_points, loc_ranges, cfg, has_mask):
+    def __init__(self, num_classes, dense_points, loc_ranges, cfg, has_mask, prefix=None):
         super(FcosPostProcess, self).__init__()
         self.num_classes = num_classes
         self.dense_points = dense_points
@@ -85,11 +83,11 @@ class FcosPostProcess(nn.Module):
         self.cls_loss = build_loss(cfg['cls_loss'])
         self.loc_loss = build_loss(cfg['loc_loss'])
         self.center_loss = build_loss(cfg['center_loss'])
-        self.prefix = 'FcosNet'
         self.tocaffe = False
         self.cfg = copy.deepcopy(cfg)
         self.has_mask = has_mask
         self.cls_loss_type = self.cls_loss.activation_type
+        self.prefix = prefix if prefix is not None else self.__class__.__name__
 
     @property
     def class_activation(self):

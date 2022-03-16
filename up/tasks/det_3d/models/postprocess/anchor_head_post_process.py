@@ -22,11 +22,12 @@ class AnchorHeadSingle(nn.Module):
             num_dir_bins,
             cfg,
             predict_boxes_when_training=False,
-            use_multihead=False
+            use_multihead=False,
+            prefix=None
     ):
         super(AnchorHeadSingle, self).__init__()
         self.predict_boxes_when_training = predict_boxes_when_training
-        self.prefix = self.__class__.__name__
+        self.prefix = prefix if prefix is not None else self.__class__.__name__
         self.tocaffe = False
 
         self.num_dir_bins = num_dir_bins
