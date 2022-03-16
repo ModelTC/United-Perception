@@ -4,13 +4,29 @@ import random
 import numpy as np
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
-from torchvision.transforms.functional import InterpolationMode
 from PIL import Image
 from up.data.datasets.transforms import Augmentation
 from up.utils.general.registry_factory import AUGMENTATION_REGISTRY, BATCHING_REGISTRY
 from up.tasks.cls.data.rand_augmentation import *
 from up.tasks.cls.data.auto_augmentation import *
 import copy
+
+try:
+    from torchvision.transforms.functional import InterpolationMode
+    _torch_interpolation_to_str = {InterpolationMode.NEAREST: 'nearest',
+                                   InterpolationMode.BILINEAR: 'bilinear',
+                                   InterpolationMode.BICUBIC: 'bicubic',
+                                   InterpolationMode.BOX: 'box',
+                                   InterpolationMode.HAMMING: 'hamming',
+                                   InterpolationMode.LANCZOS: 'lanczos'}
+except: # noqa
+    _torch_interpolation_to_str = {0: 'nearest',
+                                   1: 'lanczos',
+                                   2: 'bilinear',
+                                   3: 'bicubic',
+                                   4: 'box',
+                                   5: 'hamming'}
+_str_to_torch_interpolation = {b: a for a, b in _torch_interpolation_to_str.items()}
 
 
 __all__ = [
@@ -25,15 +41,6 @@ __all__ = [
     'RandAugment',
     'RandAugIncre',
     'AutoAugment']
-_torch_interpolation_to_str = {
-    InterpolationMode.NEAREST: 'nearest',
-    InterpolationMode.BILINEAR: 'bilinear',
-    InterpolationMode.BICUBIC: 'bicubic',
-    InterpolationMode.BOX: 'box',
-    InterpolationMode.HAMMING: 'hamming',
-    InterpolationMode.LANCZOS: 'lanczos',
-}
-_str_to_torch_interpolation = {b: a for a, b in _torch_interpolation_to_str.items()}
 
 
 class TorchAugmentation(Augmentation):
