@@ -1,9 +1,10 @@
+import torch
 import torch.nn as nn
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from up.utils.model.initializer import trunc_normal_
 # from up.utils.model.initializer import init_weights_msra
 
-__all__ = ['BaseClsHead', 'ConvNeXtHead']
+__all__ = ['BaseClsHead', 'ConvNeXtHead', 'ViTHead']
 
 
 @MODULE_ZOO_REGISTRY.register('base_cls_head')
@@ -23,9 +24,11 @@ class BaseClsHead(nn.Module):
     def _init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Linear):
-                n = m.weight.size(1)
-                m.weight.data.normal_(0, 1.0 / float(n))
-                m.bias.data.zero_()
+                # n = m.weight.size(1)
+                # m.weight.data.normal_(0, 1.0 / float(n))
+                # m.bias.data.zero_()
+                trunc_normal_(m.weight, std=.02)
+                nn.init.constant_(m.bias, 0)
 
     def forward_net(self, x):
         if isinstance(x, dict):
@@ -118,6 +121,55 @@ class ConvNeXtHead(nn.Module):
         if isinstance(x, dict):
             x = x['features'][self.input_feature_idx]
         logits = self.classifier(x)
+        return {'logits': logits}
+
+    def forward(self, input):
+        return self.forward_net(input)
+
+
+@MODULE_ZOO_REGISTRY.register('vit_head')
+class ViTHead(nn.Module):
+    def __init__(self, num_classes, in_plane, input_feature_idx=-1, cls_type='token', representation_size=None):
+        super(ViTHead, self).__init__()
+        self.num_classes = num_classes
+        self.in_plane = in_plane
+        self.input_feature_idx = input_feature_idx
+        self.cls_type = cls_type
+        self.representation_size = representation_size
+        # if representation_size is not None
+        # a pre-logits layer is inserted before classification head
+        # it means transformer will be trained from scratch
+        # otherwise the model is finetuned on new task
+        if representation_size is not None:
+            self.pre_logits = nn.Linear(in_plane, representation_size)
+            self.tanh = nn.Tanh()
+            self.classifier = nn.Linear(representation_size, num_classes)
+        else:
+            self.classifier = nn.Linear(in_plane, num_classes)
+        self.prefix = self.__class__.__name__
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                trunc_normal_(m.weight, std=0.02)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
+    def forward_net(self, x):
+        if isinstance(x, dict):
+            x = x['features'][self.input_feature_idx]
+        if self.cls_type == 'token':
+            x = x[1]
+        else:
+            x = x[0]
+            x = torch.mean(x, dim=1, keepdim=False)
+        if self.representation_size is None:
+            # finetune on new task
+            logits = self.classifier(x)
+        else:
+            # train from scratch
+            logits = self.classifier(self.tanh(self.pre_logits(x)))
         return {'logits': logits}
 
     def forward(self, input):

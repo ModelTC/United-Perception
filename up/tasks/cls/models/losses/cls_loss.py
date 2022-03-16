@@ -5,7 +5,7 @@ import math
 from up.utils.general.registry_factory import LOSSES_REGISTRY
 
 
-__all__ = ['LabelSmoothCELoss', 'BCE_LOSS']
+__all__ = ['LabelSmoothCELoss', 'BCE_LOSS', 'CrossEntropyLoss', 'SoftTargetCrossEntropy']
 
 
 @LOSSES_REGISTRY.register('label_smooth_ce')
@@ -61,3 +61,14 @@ class CrossEntropyLoss(_Loss):
     def forward(self, input, label):
         loss = self.ce_loss(input, label)
         return loss * self.loss_weight
+
+
+@LOSSES_REGISTRY.register('stce')
+class SoftTargetCrossEntropy(_Loss):
+
+    def __init__(self):
+        super(SoftTargetCrossEntropy, self).__init__()
+
+    def forward(self, input, label) -> torch.Tensor:
+        loss = torch.sum(-label * F.log_softmax(input, dim=-1), dim=-1)
+        return loss.mean()

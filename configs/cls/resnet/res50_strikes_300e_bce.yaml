@@ -105,10 +105,10 @@ dataset: # Required.
         num_workers: 8
         pin_memory: False
 
-ema:
-    enable: True
-    kwargs:
-        decay: 0.9999
+# ema:
+#     enable: True
+#     kwargs:
+#         decay: 0.9999
 
 trainer: # Required.
   max_epoch: 300
@@ -125,14 +125,15 @@ trainer: # Required.
     warmup_type: linear
     warmup_register_type: no_scale_lr
     warmup_ratio: 0.0002
-    type: CosineAnnealingLR
+    type: CosineLREpochScheduler
     kwargs:
         T_max: 300
-        eta_min: 0.0
-        warmup_iter: 3130
+        eta_min: 0.000001
+        warm_epoch: 5
+
 saver: # Required.
-  save_dir: res50_300e_strikes/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: res50_300e_strikes/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: res50_300e_strikes_epoch/checkpoints/cls_std     # dir to save checkpoints
+  results_dir: res50_300e_strikes_epoch/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 

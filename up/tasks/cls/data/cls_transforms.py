@@ -4,10 +4,12 @@ import random
 import numpy as np
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
+from torchvision.transforms.functional import InterpolationMode
 from PIL import Image
 from up.data.datasets.transforms import Augmentation
-from up.utils.general.registry_factory import AUGMENTATION_REGISTRY
+from up.utils.general.registry_factory import AUGMENTATION_REGISTRY, BATCHING_REGISTRY
 from up.tasks.cls.data.rand_augmentation import *
+from up.tasks.cls.data.auto_augmentation import *
 import copy
 
 
@@ -21,7 +23,17 @@ __all__ = [
     'TorchMixUp',
     'RandomErasing',
     'RandAugment',
-    'RandAugIncre']
+    'RandAugIncre',
+    'AutoAugment']
+_torch_interpolation_to_str = {
+    InterpolationMode.NEAREST: 'nearest',
+    InterpolationMode.BILINEAR: 'bilinear',
+    InterpolationMode.BICUBIC: 'bicubic',
+    InterpolationMode.BOX: 'box',
+    InterpolationMode.HAMMING: 'hamming',
+    InterpolationMode.LANCZOS: 'lanczos',
+}
+_str_to_torch_interpolation = {b: a for a, b in _torch_interpolation_to_str.items()}
 
 
 class TorchAugmentation(Augmentation):
@@ -37,6 +49,8 @@ class TorchAugmentation(Augmentation):
 @AUGMENTATION_REGISTRY.register('torch_random_resized_crop')
 class RandomResizedCrop(TorchAugmentation):
     def __init__(self, size, **kwargs):
+        if 'interpolation' in kwargs:
+            kwargs['interpolation'] = _str_to_torch_interpolation[kwargs['interpolation']]
         self.op = transforms.RandomResizedCrop(size, **kwargs)
 
 
@@ -60,14 +74,22 @@ class PILColorJitter(TorchAugmentation):
 
 @AUGMENTATION_REGISTRY.register('torch_resize')
 class TorchResize(TorchAugmentation):
-    def __init__(self, size):
-        self.op = transforms.Resize(size)
+    def __init__(self, size, **kwargs):
+        if 'interpolation' in kwargs:
+            kwargs['interpolation'] = _str_to_torch_interpolation[kwargs['interpolation']]
+        self.op = transforms.Resize(size, **kwargs)
 
 
 @AUGMENTATION_REGISTRY.register('torch_center_crop')
 class TorchCenterCrop(TorchAugmentation):
     def __init__(self, size, **kwargs):
         self.op = transforms.CenterCrop(size, **kwargs)
+
+
+@AUGMENTATION_REGISTRY.register('torch_auto_augmentation')
+class AutoAugment(TorchAugmentation):
+    def __init__(self, size, **kwargs):
+        self.op = ImageNetPolicy()
 
 
 @AUGMENTATION_REGISTRY.register('torch_random_augmentation')
@@ -172,8 +194,8 @@ class TorchCutMixUp(TorchAugmentation):
         return self.mixup(data)
 
     def rand_bbox(self, size, lam):
-        W = size[0]
-        H = size[1]
+        W = size[1]
+        H = size[2]
         cut_rat = np.sqrt(1. - lam)
         cut_w = np.int(W * cut_rat)
         cut_h = np.int(H * cut_rat)
@@ -222,7 +244,6 @@ class TorchCutMixUp(TorchAugmentation):
         bbx1, bby1, bbx2, bby2 = self.rand_bbox(data['image'].shape, lam)
         data['image'][:, bbx1:bbx2, bby1:bby2] = data_other['image'][:, bbx1:bbx2, bby1:bby2]
         lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1)) / (nh * nw)
-
         label = torch.zeros(self.num_classes)
         label_other = torch.zeros(self.num_classes)
         label[data.gt] = 1
@@ -313,3 +334,106 @@ class RandomErasing(TorchAugmentation):
         fs = self.__class__.__name__ + f'(p={self.probability}, mode={self.mode}'
         fs += f', count=({self.min_count}, {self.max_count}))'
         return fs
+
+
+@BATCHING_REGISTRY.register('batch_mixup')
+class BatchMixup(object):
+    def __init__(self, alpha=1.0, num_classes=1000):
+        self.alpha = alpha
+        self.num_classes = num_classes
+
+    def __call__(self, data):
+        """
+        Args:
+            images: list of tensor
+        """
+        if self.alpha > 0:
+            lam = np.random.beta(self.alpha, self.alpha)
+        else:
+            lam = 1
+        images = data['image']
+        batch_size = images.size()[0]
+        labels = torch.zeros(batch_size, self.num_classes)
+        labels.scatter_(1, data.gt.reshape(-1, 1), 1)
+
+        index = torch.randperm(batch_size)
+        mixed_x = lam * images + (1 - lam) * images[index, :]
+        y_a, y_b = labels, labels[index]
+        mixed_y = lam * y_a + (1 - lam) * y_b
+
+        data['image'] = mixed_x
+        data['gt'] = mixed_y
+        return data
+
+
+@BATCHING_REGISTRY.register('batch_cutmixup')
+class BatchCutMixup(object):
+    def __init__(self, mixup_alpha=1.0, cutmix_alpha=1.0, switch_prob=0.5, num_classes=1000):
+        self.switch_prob = switch_prob
+        self.num_classes = num_classes
+        self.mixup_alpha = mixup_alpha
+        self.cutmix_alpha = cutmix_alpha
+
+    def __call__(self, data):
+        use_cutmix = np.random.rand() < self.switch_prob
+        if use_cutmix:
+            return self.cutmix(data)
+        return self.mixup(data)
+
+    def rand_bbox(self, size, lam):
+        W = size[2]
+        H = size[3]
+        cut_rat = np.sqrt(1. - lam)
+        cut_w = np.int(W * cut_rat)
+        cut_h = np.int(H * cut_rat)
+
+        # uniform
+        cx = np.random.randint(W)
+        cy = np.random.randint(H)
+
+        bbx1 = np.clip(cx - cut_w // 2, 0, W)
+        bby1 = np.clip(cy - cut_h // 2, 0, H)
+        bbx2 = np.clip(cx + cut_w // 2, 0, W)
+        bby2 = np.clip(cy + cut_h // 2, 0, H)
+
+        return bbx1, bby1, bbx2, bby2
+
+    def mixup(self, data):
+        if self.mixup_alpha > 0:
+            lam = np.random.beta(self.mixup_alpha, self.mixup_alpha)
+        else:
+            lam = 1
+        images = data['image']
+        batch_size = images.size()[0]
+        labels = torch.zeros(batch_size, self.num_classes)
+        labels.scatter_(1, data.gt.reshape(-1, 1), 1)
+
+        index = torch.randperm(batch_size)
+        mixed_x = lam * images + (1 - lam) * images[index, :]
+        y_a, y_b = labels, labels[index]
+        mixed_y = lam * y_a + (1 - lam) * y_b
+
+        data['image'] = mixed_x
+        data['gt'] = mixed_y
+        return data
+
+    def cutmix(self, data):
+
+        if self.cutmix_alpha > 0:
+            lam = np.random.beta(self.cutmix_alpha, self.cutmix_alpha)
+        else:
+            lam = 1
+
+        images = data['image']
+        batch_size = images.size()[0]
+        labels = torch.zeros(batch_size, self.num_classes)
+        labels.scatter_(1, data.gt.reshape(-1, 1), 1)
+        index = torch.randperm(batch_size)
+
+        bbx1, bby1, bbx2, bby2 = self.rand_bbox(data['image'].shape, lam)
+        images[:, :, bbx1:bbx2, bby1:bby2] = images[index, :, bbx1:bbx2, bby1:bby2]
+        lam = 1 - ((bbx2 - bbx1) * (bby2 - bby1) / (images.size()[-1] * images.size()[-2]))
+        data.gt = lam * labels + (1 - lam) * labels[index]
+        data.image = data.image
+
+        return data

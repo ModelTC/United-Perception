@@ -3,9 +3,9 @@ num_classes: &num_classes 1000
 cutmix_mixup: &cutmix_mixup
   type: torch_cutmix_mixup
   kwargs:
-    mixup_alpha: 0.1
+    mixup_alpha: 0.2
     cutmix_alpha: 1.0
-    num_classes: 1000
+    num_classes: *num_classes
     extra_input: True
     transform: True
 
@@ -14,6 +14,7 @@ random_resized_crop: &random_resized_crop
  kwargs:
    size: 224
    scale: [0.08, 1]
+   interpolation: bicubic
 
 random_horizontal_flip: &random_horizontal_flip
  type: torch_random_horizontal_flip
@@ -21,9 +22,22 @@ random_horizontal_flip: &random_horizontal_flip
 pil_color_jitter: &pil_color_jitter
  type: torch_color_jitter
  kwargs:
-  brightness: 0.4
-  contrast: 0.4
-  saturation: 0.4
+  brightness: 0.2
+  contrast: 0.2
+  saturation: 0.2
+  hue: 0.1
+
+rand_erase: &rand_erase
+ type: torch_randerase
+ kwargs:
+  probability: 0.25
+
+auto_augment: &auto_augment
+ type: torch_auto_augmentation
+ kwargs:
+   size: 224
+   scale: [0.08, 1]
+
 
 center_crop: &center_crop
   type: torch_center_crop
@@ -34,6 +48,7 @@ torch_size: &torch_resize
   type: torch_resize
   kwargs:
     size: 256
+    interpolation: bicubic
 
 to_tensor: &to_tensor
   type: to_tensor
@@ -43,6 +58,11 @@ normalize: &normalize
  kwargs:
    mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
    std: [0.229, 0.224, 0.225]
+
+# ema:
+#    enable: True
+#    kwargs:
+#     decay: 0.99996
 
 dataset: # Required.
   train:
@@ -55,8 +75,8 @@ dataset: # Required.
           kwargs:
             image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
             color_mode: RGB
-            memcached: false
-        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize, *cutmix_mixup]
+            memcached: True
+        transformer: [*random_resized_crop, *auto_augment, *to_tensor, *normalize, *rand_erase]
     batch_sampler:
         type: base
         kwargs:
@@ -69,6 +89,13 @@ dataset: # Required.
         kwargs:
           num_workers: 12
           pin_memory: True
+          batch_fn:
+            type: batch_cutmixup
+            kwargs:
+              mixup_alpha: 0.8
+              cutmix_alpha: 1.0
+              switch_prob: 0.5
+              num_classes: *num_classes
   test:
     dataset:
       type: cls
@@ -79,12 +106,13 @@ dataset: # Required.
           kwargs:
             image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/val
             color_mode: RGB
-            memcached: false
+            memcached: True
         transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
         evaluator:
           type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
              topk: [1, 5]
+
     batch_sampler:
       type: base
       kwargs:
@@ -95,65 +123,66 @@ dataset: # Required.
     dataloader:
       type: cls_base
       kwargs:
-        num_workers: 8
+        num_workers: 12
         pin_memory: False
 
-ema:
-    enable: True
-    kwargs:
-        decay: 0.9999
-
 trainer: # Required.
-  max_epoch: 100
-  test_freq: 5
-  save_freq: 5
+  max_epoch: 300
+  test_freq: 2
+  save_freq: 2
   only_save_latest: True
-  optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
-    type: LAMB
+  optimizer:
+    type: AdamW
     kwargs:
-      lr: 0.008
-      weight_decay: 0.02
+      lr: 0.001
+      weight_decay: 0.05
+    pconfig:
+      ln_b:
+          weight_decay: 0.0
+      ln_w:
+          weight_decay: 0.0
+      linear_b:
+          weight_decay: 0.0
+      nodecay: ['relative_position_bias_table']
   lr_scheduler:
-    warmup_iter: 3130
+    warmup_iter:  25020
     warmup_type: linear
     warmup_register_type: no_scale_lr
-    warmup_ratio: 0.02
-    type: CosineAnnealingLR
+    warmup_ratio: 0.0001
+    type: CosineLREpochScheduler
     kwargs:
-        T_max: 100
-        eta_min: 0.0
-        warmup_iter: 3130
+        T_max: 300
+        eta_min: 0.00001
+        warm_epoch: 20
+
 saver: # Required.
-  save_dir: res50_100e_strikes_bce/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: res50_100e_strikes_bce/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: swin_tiny_bic_batch_decay/checkpoints/cls_std     # dir to save checkpoints
+  results_dir: swin_tiny_bic_batch_decay/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
-hooks:
-  - type: auto_save_best
-
 net: &subnet
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet50
+    type: swin_tiny
     kwargs:
-      frozen_layers: []
-      out_layers: [4]     # layer1...4, commonly named Conv2...5
-      out_strides: [32]  # tell the strides of output features
-      normalize:
-        type: solo_bn
-      initializer:
-        method: msra
+        drop_path_rate: 0.2
   - name: head
     type: base_cls_head
     kwargs:
        num_classes: *num_classes
-       in_plane: &head_out_channel 2048
+       in_plane: 768
        input_feature_idx: -1
-       representation_size: 768
   - name: post_process
     type: base_cls_postprocess
     kwargs:
        cls_loss:
-         type: bce
+         type: label_smooth_ce
          kwargs:
-           bias: True
+            smooth_ratio: 0.1
+            num_classes: *num_classes
+
+hooks:
+  - type: grad_clipper
+    kwargs:
+        mode: average
+        max_norm: 5.0
