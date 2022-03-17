@@ -6,6 +6,7 @@ import torch.utils.checkpoint as checkpoint
 from torch.nn.init import zeros_
 from up.utils.model.utils import _make_divisible, to4d, to3d, hard_sigmoid, to_2tuple, DropPath
 from up.utils.model.initializer import trunc_normal_, lecun_normal_
+from up.utils.model.normalize import build_norm_layer
 
 
 __all__ = ['MB2_160', 'MB2', 'MB3', 'MB4', 'MB6', 'MB7_new', 'MB7_ckpt', 'MB9', 'MB9_ckpt', 'MB12_ckpt']
@@ -60,7 +61,7 @@ class Mlp(nn.Module):
 class LocalDSM(nn.Module):
     def __init__(self, in_features, out_features, stride=1, mlp_ratio=4, head_dim=32,
                  qkv_bias=True, qk_scale=None, drop=0., drop_path=0., attn_drop=0., seq_l=196,
-                 ds_type='pool'):
+                 ds_type='pool', normalize={'type': 'solo_bn'}):
         super().__init__()
         h = int(seq_l ** 0.5)
         new_h = math.ceil(h / stride)
@@ -79,7 +80,7 @@ class LocalDSM(nn.Module):
         self.downsample = nn.Sequential(
             nn.Conv2d(in_features, in_features, kernel_size=(3, 3), padding=(1, 1),
                       groups=in_features, stride=stride, bias=True),
-            nn.BatchNorm2d(in_features),
+            build_norm_layer(in_features, normalize)[1],
             nn.Conv2d(in_features, out_features, kernel_size=1, bias=True),
         )
 
@@ -93,7 +94,7 @@ class LocalDSM(nn.Module):
 class LocalGlobalDSM(nn.Module):
     def __init__(self, in_features, out_features, stride=1, mlp_ratio=4, head_dim=32,
                  qkv_bias=True, qk_scale=None, drop=0., drop_path=0., attn_drop=0., seq_l=196,
-                 ds_type='pool'):
+                 ds_type='pool', normalize={'type': 'solo_bn'}):
         super().__init__()
         # out_dim = out_features or in_features
         self.num_heads = out_features // head_dim
@@ -121,7 +122,7 @@ class LocalGlobalDSM(nn.Module):
         self.q = nn.Sequential(
             nn.Conv2d(in_features, in_features, kernel_size=(3, 3), padding=(1, 1),
                       groups=in_features, stride=stride, bias=True),
-            nn.BatchNorm2d(in_features),
+            build_norm_layer(in_features, normalize)[1],
             nn.Conv2d(in_features, out_features, kernel_size=1, bias=True),
         )
 
@@ -161,7 +162,7 @@ class LocalGlobalDSM(nn.Module):
 class MBConv3x3(nn.Module):
     def __init__(self, in_features, out_features=None, stride=1,
                  mlp_ratio=4, use_se=True, drop=0., drop_path=0.,
-                 seq_l=196, head_dim=32, init_values=1e-6, **kwargs):
+                 seq_l=196, head_dim=32, init_values=1e-6, normalize={'type': 'solo_bn'}, **kwargs):
         super().__init__()
         out_features = out_features or in_features
         hidden_features = int(in_features * mlp_ratio)
@@ -176,23 +177,23 @@ class MBConv3x3(nn.Module):
         self.b1 = None
         if in_features != hidden_features or stride != 1:
             layers_b1 = []
-            layers_b1.append(nn.BatchNorm2d(in_features))
+            layers_b1.append(build_norm_layer(in_features, normalize)[1])
             layers_b1.append(nn.Conv2d(in_features, hidden_features, kernel_size=(1, 1),
                                        stride=1, padding=(0, 0), bias=False))
-            layers_b1.append(nn.BatchNorm2d(hidden_features))
+            layers_b1.append(build_norm_layer(hidden_features, normalize)[1])
             layers_b1.append(nn.GELU())
             self.b1 = nn.Sequential(*layers_b1)
 
         layers = []
         layers.append(nn.Conv2d(hidden_features, hidden_features, kernel_size=(3, 3), padding=(1, 1),
                                 groups=hidden_features, stride=stride, bias=False))
-        layers.append(nn.BatchNorm2d(hidden_features))
+        layers.append(build_norm_layer(hidden_features, normalize)[1])
         layers.append(nn.GELU())
         if use_se:
             layers.append(SqueezeExcitation(hidden_features))
 
         layers.append(nn.Conv2d(hidden_features, out_features, kernel_size=(1, 1), padding=(0, 0)))
-        layers.append(nn.BatchNorm2d(out_features))
+        layers.append(build_norm_layer(out_features)[1])
         self.b2 = nn.Sequential(*layers)
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         if init_values != -1:
@@ -253,7 +254,7 @@ class Block(nn.Module):
 
     def __init__(self, in_features, out_features, stride=1, mlp_ratio=4, head_dim=32,
                  qkv_bias=True, qk_scale=None, drop=0., drop_path=0., attn_drop=0., seq_l=196,
-                 conv_embedding=1, init_values=1e-6, fp32_attn=False,):
+                 conv_embedding=1, init_values=1e-6, fp32_attn=False, **kwargs):
         super().__init__()
         self.norm1 = nn.LayerNorm(in_features)
         self.stride = stride
@@ -320,8 +321,7 @@ class VisionTransformer(nn.Module):
     def __init__(self, repeats, expansion, channels, strides=[1, 2, 2, 2, 1, 2], num_classes=1000, drop_path_rate=0.,
                  input_size=224, weight_init='', head_dim=32, final_head_dim=1280, final_drop=0.0, init_values=1e-6,
                  conv_embedding=1, block_ops=[MBConv3x3] * 3 + [Block] * 3, checkpoint=0, stem_dim=32,
-                 ds_ops=[LocalDSM] * 3 + [LocalGlobalDSM] * 2, fp32_attn=False, bn_group_size=1, bn_sync_stats=False,
-                 tocvflow=False, use_sync_bn=False, **kwargs):
+                 ds_ops=[LocalDSM] * 3 + [LocalGlobalDSM] * 2, fp32_attn=False, normalize={'type': 'solo_bn'}):
         super().__init__()
         self.num_classes = num_classes
         self.checkpoint = checkpoint
@@ -330,7 +330,7 @@ class VisionTransformer(nn.Module):
         h = w = input_size
         self.stem = nn.Sequential(
             nn.Conv2d(3, stem_dim, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False),
-            nn.BatchNorm2d(stem_dim),
+            build_norm_layer(stem_dim, normalize)[1],
             nn.GELU(),
         )
 
@@ -348,7 +348,11 @@ class VisionTransformer(nn.Module):
 
             if stage != 0:
                 # print(f'stage {stage}, cin {cin}, cout {cout}, s {strides[stage]}')
-                blocks.append(ds_ops[stage - 1](cin, cout, stride=strides[stage], seq_l=seq_l, head_dim=head_dim))
+                blocks.append(ds_ops[stage - 1](cin, cout,
+                                                stride=strides[stage],
+                                                seq_l=seq_l,
+                                                head_dim=head_dim,
+                                                normalize=normalize))
                 h = w = math.ceil(h / strides[stage])
                 seq_l = h * w
                 cin = cout
@@ -360,14 +364,15 @@ class VisionTransformer(nn.Module):
                                        drop_path=dpr.pop(), seq_l=seq_l, head_dim=head_dim,
                                        init_values=init_values,
                                        conv_embedding=conv_embedding,
-                                       fp32_attn=fp32_attn))
+                                       fp32_attn=fp32_attn,
+                                       normalize=normalize))
                 cin = cout
         self.blocks = nn.Sequential(*blocks)
 
         head_dim = final_head_dim
         self.head = nn.Sequential(
             nn.Conv2d(cout, head_dim, kernel_size=(1, 1), stride=(1, 1), padding=(0, 0), bias=False),
-            nn.BatchNorm2d(head_dim),
+            build_norm_layer(head_dim, normalize)[1],
             nn.GELU(),
         )
         self.final_drop = nn.Dropout(final_drop) if final_drop > 0.0 else nn.Identity()
