@@ -405,11 +405,12 @@ class BaseRunner(object):
 
     @torch.no_grad()
     def to_caffe(self, save_prefix='model', input_size=None, input_channel=3):
+        model = self.ema.model if self.ema is not None else self.model
         tocaffe_type = self.config.pop('tocaffe_type', 'base')
         tocaffe_ins = TOCAFFE_REGISTRY[tocaffe_type](self.config,
                                                      save_prefix,
                                                      input_size,
-                                                     None,
+                                                     model,
                                                      input_channel)
         caffemodel_name = tocaffe_ins.process()
 
