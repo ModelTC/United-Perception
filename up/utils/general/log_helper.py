@@ -33,6 +33,7 @@ def basicConfig(*args, **kwargs):
 
 # To prevent duplicate logs, we mask this baseConfig setting
 logging.basicConfig = basicConfig
+logging.getLogger('PIL').setLevel(logging.WARNING)
 
 
 class ColoredFormatter(logging.Formatter):
