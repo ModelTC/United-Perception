@@ -222,6 +222,10 @@ def generate_config(train_cfg):
         strides = strides.tolist()
     if not hasattr(model, 'post_process') and hasattr(model, 'roi_head'):
         setattr(model, 'post_process', model.roi_head)
+    kestrel_param['with_background_rpn'] = False
+    kestrel_param['with_background_head'] = False
+    if model.post_process.cls_loss.activation_type == 'softmax':
+        kestrel_param['with_background_rpn'] = True
 
     model.post_process.anchor_generator.build_base_anchors(strides)
     kestrel_anchors = model.post_process.anchor_generator.export()
@@ -247,6 +251,8 @@ def generate_config(train_cfg):
     kestrel_net_param['rpn_bbox_score_thresh'] = predictor.pre_nms_score_thresh
 
     # bbox_head
+    if model.bbox_head.cls_loss.activation_type == 'softmax':
+        kestrel_param['with_background_head'] = True
     predictor = model.bbox_head.predictor
     kestrel_net_param['det_nms_thresh'] = predictor.nms_cfg['nms_iou_thresh']
     kestrel_net_param['share_location'] = predictor.share_location
