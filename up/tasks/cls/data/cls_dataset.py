@@ -43,9 +43,11 @@ class CustomClsParser(BaseParser):
                 cls_res = {}
                 res = json.loads(line.strip())
                 filename = res['filename']
-                label = res['label']
+                if isinstance(res['label'], list):   # support multilabel cls
+                    cls_res['label'] = [int(i) for i in res['label']]
+                else:
+                    cls_res['label'] = int(res['label'])
                 cls_res['filename'] = filename
-                cls_res['label'] = int(label)
                 cls_res['image_source'] = idx
                 metas.append(cls_res)
         return metas
@@ -63,7 +65,10 @@ class CustomDetParser(BaseParser):
                         continue
                     if "label" in instance:
                         # det cls label begin from 1, cls label begin from 0
-                        label = int(instance["label"] - 1)
+                        if isinstance(instance["label"], list):  # support multilabel cls
+                            label = [int(i) - 1 for i in instance['label']]
+                        else:
+                            label = int(instance["label"] - 1)
                     else:
                         continue
                     if "bbox" in instance:
