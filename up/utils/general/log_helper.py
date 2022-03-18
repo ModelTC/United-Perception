@@ -34,6 +34,9 @@ def basicConfig(*args, **kwargs):
 # To prevent duplicate logs, we mask this baseConfig setting
 logging.basicConfig = basicConfig
 logging.getLogger('PIL').setLevel(logging.WARNING)
+logging.getLogger('numba').setLevel(logging.WARNING)
+logging.getLogger('default').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 class ColoredFormatter(logging.Formatter):
