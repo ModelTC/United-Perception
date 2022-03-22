@@ -1,10 +1,9 @@
-import collections
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 import numpy as np
-from itertools import repeat
+from up.utils.model.utils import to_2tuple, DropPath
 from up.utils.model.initializer import trunc_normal_
 
 __all__ = ['swin_tiny', 'swin_small', 'swin_base_224', 'swin_base_384', 'swin_large_224', 'swin_large_384']
@@ -17,46 +16,6 @@ model_urls = {
     'swin_large_224': 'http://10.5.36.32:16000/swin_large_patch4_window7_224_22kto1k.pth',
     'swin_large_384': 'http://10.5.36.32:16000/swin_large_patch4_window12_384_22kto1k.pth'
 }
-
-
-def _ntuple(n):
-    def parse(x):
-        if isinstance(x, collections.abc.Iterable):
-            return x
-        return tuple(repeat(x, n))
-    return parse
-
-
-to_2tuple = _ntuple(2)
-
-
-def drop_path(x, drop_prob: float = 0., training: bool = False):
-    """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
-    This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
-    the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
-    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for
-    changing the layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use
-    'survival rate' as the argument.
-    """
-    if drop_prob == 0. or not training:
-        return x
-    keep_prob = 1 - drop_prob
-    shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-    random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
-    random_tensor.floor_()  # binarize
-    output = x.div(keep_prob) * random_tensor
-    return output
-
-
-class DropPath(nn.Module):
-    """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
-    """
-    def __init__(self, drop_prob=None):
-        super(DropPath, self).__init__()
-        self.drop_prob = drop_prob
-
-    def forward(self, x):
-        return drop_path(x, self.drop_prob, self.training)
 
 
 class Mlp(nn.Module):
@@ -226,7 +185,6 @@ class SwinTransformerBlock(nn.Module):
 
         if min(self.input_resolution) <= self.window_size:
             # if window size is larger than input resolution, we don't partition windows
-            self.shift_size = 0
             self.window_size = min(self.input_resolution)
         assert 0 <= self.shift_size < self.window_size, "shift_size must in 0-window_size"
 
@@ -251,10 +209,11 @@ class SwinTransformerBlock(nn.Module):
             H, W: Spatial resolution of the input feature.
             mask_matrix: Attention mask for cyclic shift.
         """
-        H, W = self.input_resolution
+        H, W = self.H, self.W
         B, L, C = x.shape
         assert L == H * W, "input feature has wrong size"
-
+        if min(H, W) <= self.window_size:
+            self.shift_size = 0
         shortcut = x
         x = self.norm1(x)
         x = x.view(B, H, W, C)
@@ -686,7 +645,6 @@ class SwinTransformer(nn.Module):
 
                 out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
                 outs.append(out)
-
         return {"features": outs}
 
     def train(self, mode=True):
