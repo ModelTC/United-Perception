@@ -122,7 +122,7 @@ class KpToKestrel(object):
         os.system(cmd)
 
         logger.info('save kestrel model to: {}'.format(self.save_to))
-        return self.save_to
+        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
 
 
 @TOKESTREL_REGISTRY.register('seg')
@@ -172,7 +172,7 @@ class SegToKestrel(object):
         # nnie=nnie)
         ks_processor.process()
         logger.info('save kestrel model to: {}'.format(self.save_to))
-        return self.save_to
+        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
 
 
 @TOKESTREL_REGISTRY.register('det')
@@ -238,7 +238,7 @@ class DetToKestrel(object):
         ks_processor.process()
         # shutil.move(kestrel_model, self.save_to)
         logger.info('save kestrel model to: {}'.format(self.save_to))
-        return self.save_to
+        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
 
 
 @TOKESTREL_REGISTRY.register('cls')

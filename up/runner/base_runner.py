@@ -538,7 +538,8 @@ class BaseRunner(object):
         save_to = tokestrel_ins.process()
         logger.info(f'kestrel_model_path:{save_to}')
         # adela
-        self.to_adela(save_to)
+        if self.config.get('adela', None):
+            self.to_adela(save_to)
 
     def get_kestrel_parameters(self):
         plugin = self.config['to_kestrel']['plugin']

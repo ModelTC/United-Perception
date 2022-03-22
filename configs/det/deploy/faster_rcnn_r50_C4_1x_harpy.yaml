@@ -142,7 +142,7 @@ net:
     kwargs:
       feat_planes: 512    # channels of intermediate conv
       num_classes: 2      # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
-      num_anchors: 5
+      num_anchors: 15
       class_activation: softmax
       num_level: 1
       initializer:
