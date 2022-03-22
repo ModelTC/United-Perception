@@ -158,12 +158,29 @@ class ClsDataset(BaseDataset):
         prediction = self.tensor2numpy(output['preds'])
         label = self.tensor2numpy(output['gt'])
         score = self.tensor2numpy(output['scores'])
+        multicls = False
+        if isinstance(label[0], list):
+            multicls = True
+        if multicls:
+            bs = prediction.shape[0]
+        else:
+            bs = prediction.shape[1]
         out_res = []
-        for _idx in range(prediction.shape[0]):
+        for b_idx in range(bs):
+            if multicls:
+                _prediction = [int(item) for item in prediction[:][b_idx]]
+                _label = [int(item) for item in label[:][b_idx]]
+                _score = []
+                for item in score[:][b_idx]:
+                    _score.append([float('%.8f' % s) for s in item])
+            else:
+                _prediction = int(prediction[b_idx])
+                _label = int(label[b_idx])
+                _score = [float('%.8f' % s) for s in score[b_idx]]
             res = {
-                'prediction': int(prediction[_idx]),
-                'label': int(label[_idx]),
-                'score': [float('%.8f' % s) for s in score[_idx]],
+                'prediction': _prediction,
+                'label': _label,
+                'score': _score,
             }
             out_res.append(res)
         return out_res

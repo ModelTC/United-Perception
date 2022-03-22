@@ -42,19 +42,42 @@ class ImageNetEvaluator(Evaluator):
         res_dict = self.load_res(res_file, res)
         pred = torch.from_numpy(np.array(res_dict['score']))
         label = torch.from_numpy(np.array(res_dict['label']))
-        num = pred.size(0)
-        maxk = max(self.topk)
-        _, pred = pred.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(label.reshape(1, -1).expand_as(pred))
-        res = {}
-        for k in self.topk:
-            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            acc = correct_k.mul_(100.0 / num)
-            res.update({f'top{k}': acc.item()})
-        metric = Metric(res)
-        metric.set_cmp_key(f'top{self.topk[0]}')
-
+        multicls = False
+        if label.shape[1] > 1:
+            multicls = True
+            label = label.t()
+        if multicls:
+            ave_acc = [0. for i in self.topk]
+            for idx in range(len(pred)):
+                num = pred[idx].size(0)
+                maxk = max(self.topk)
+                _, _pred = pred[idx].topk(maxk, 1, True, True)
+                _pred = _pred.t()
+                correct = _pred.eq(label[idx].reshape(1, -1).expand_as(_pred))
+                res = {}
+                for k_idx, k in enumerate(self.topk):
+                    correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
+                    acc = correct_k.mul_(100.0 / num)
+                    ave_acc[k_idx] += acc
+                    res.update({f'attr_{idx + 1}_top{k}': acc.item()})
+            ave_acc /= len(pred)
+            for idx, k in enumerate(self.topk):
+                res[f'ave_top{k}'] = ave_acc[idx]
+            metric = Metric(res)
+            metric.set_cmp_key(f'ave_top{self.topk[0]}')
+        else:
+            num = pred.size(0)
+            maxk = max(self.topk)
+            _, pred = pred.topk(maxk, 1, True, True)
+            pred = pred.t()
+            correct = pred.eq(label.reshape(1, -1).expand_as(pred))
+            res = {}
+            for k in self.topk:
+                correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
+                acc = correct_k.mul_(100.0 / num)
+                res.update({f'top{k}': acc.item()})
+            metric = Metric(res)
+            metric.set_cmp_key(f'top{self.topk[0]}')
         return metric
 
     @staticmethod
