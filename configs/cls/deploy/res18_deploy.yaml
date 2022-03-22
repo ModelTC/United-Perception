@@ -132,7 +132,7 @@ hooks:
 
 net: &subnet
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet50
+    type: resnet18
     kwargs:
       frozen_layers: []
       out_layers: [4]     # layer1...4, commonly named Conv2...5
@@ -145,7 +145,7 @@ net: &subnet
     type: base_cls_head
     kwargs:
        num_classes: *num_classes
-       in_plane: &head_out_channel 2048
+       in_plane: &head_out_channel 512 
        input_feature_idx: -1
   - name: post_process
     type: base_cls_postprocess

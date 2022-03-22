@@ -25,9 +25,11 @@ class AdelaDeploy(Subcommand):
                                 dest='config',
                                 required=True,
                                 help='settings of detection in yaml format')
-        sub_parser.add_argument("--release_json",
-                                default="release.json",
-                                help="release information")
+        sub_parser.add_argument("--ks_model",
+                                dest='ks_model',
+                                type=str,
+                                required=True,
+                                help="kestrel model")
         sub_parser.add_argument('--cfg_type',
                                 dest='cfg_type',
                                 type=str,
@@ -44,15 +46,15 @@ def _main(args):
 
     cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
-        'release_json': args.release_json,
+        'ks_model': args.ks_model,
     }
     cfg['runtime'] = cfg.setdefault('runtime', {})
     runner_cfg = cfg['runtime'].get('runner', {})
     runner_cfg['type'] = runner_cfg.get('type', 'base')
     runner_cfg['kwargs'] = runner_cfg.get('kwargs', {})
-    runner_cfg['release_name'] = args.release_json
+    runner_cfg['ks_model'] = args.ks_model
     cfg['runtime']['runner'] = runner_cfg
     send_info(cfg, func="adela")
     runner = RUNNER_REGISTRY.get(runner_cfg['type'])(cfg, **runner_cfg['kwargs'])
-    runner.to_adela(release_name=runner_cfg['release_name'])
+    runner.to_adela(save_to=runner_cfg['ks_model'])
     # finalize()

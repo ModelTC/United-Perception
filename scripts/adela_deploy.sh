@@ -10,5 +10,5 @@ CPUS_PER_TASK=${CPUS_PER_TASK:-4}
 spring.submit run -n1 -p Test --gpu --job-name=$2 --cpus-per-task=${CPUS_PER_TASK} \
 "python -m up adela_deploy \
   --config=$cfg \
-  --release_json=$2 \
+  --ks_model=$2 \
   2>&1 | tee log.adela_deploy.$T.$(basename $cfg) "

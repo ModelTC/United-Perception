@@ -8,6 +8,7 @@ from up.utils.general.yaml_loader import load_yaml
 from up.utils.env.launch import launch
 from .subcommand import Subcommand
 from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGISTRY
+from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.user_analysis_helper import send_info
 from up.utils.general.global_flag import DIST_BACKEND
 
@@ -107,5 +108,8 @@ def _main(args):
         fork_method = mp.get_start_method(allow_none=True)
         assert fork_method == args.fork_method
         sys.stdout.flush()
-        setup_distributed(args.port, args.launch, args.backend)
+        try:
+            setup_distributed(args.port, args.launch, args.backend)
+        except KeyError:
+            logger.info("Setup distributed env failed.")
         main(args)

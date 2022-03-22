@@ -132,8 +132,8 @@ saver: # Required.
   results_dir: results_dir/res50_sb  # dir to save detection results. i.e., bboxes, masks, keypoints
   # auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
-  pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth
-  resume_model: ./checkpoints/res50_sb/ckpt_latest.pth
+  # pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth
+  # resume_model: ./checkpoints/res50_sb/ckpt_latest.pth
 
 hooks:
   - type: auto_save_best

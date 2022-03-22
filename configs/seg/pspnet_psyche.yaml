@@ -128,7 +128,7 @@ trainer: # Required.
 saver: # Required.
   save_dir: checkpoints/psp_r50_seg    # dir to save checkpoints
   results_dir: results_dir/psp_r50_seg  # dir to save detection results. i.e., bboxes, masks, keypoints
-  pretrain_model: /mnt/lustre/share/HiLight/model_zoo/resnet50-ebb6acbb.pth
+  # pretrain_model: /mnt/lustre/share/HiLight/model_zoo/resnet50-ebb6acbb.pth
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
@@ -151,6 +151,7 @@ net: &subnet
     type: pspnet
     kwargs:
         num_classes: *num_classes
+        sizes: [1]
         normalize:
           type: solo_bn # pt_sync_bn
           # kwargs:
