@@ -304,4 +304,4 @@ class ClsToKestrel(object):
             self.to_nnie(nnie_cfg, self.config, prototxt, caffemodel, self.save_to)
 
         logger.info('Save kestrel model to: {}'.format(self.save_to))
-        return self.save_to
+        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))

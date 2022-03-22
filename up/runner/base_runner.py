@@ -536,32 +536,28 @@ class BaseRunner(object):
                                                       serialize,
                                                       input_channel)
         save_to = tokestrel_ins.process()
+        logger.info(f'kestrel_model_path:{save_to}')
         # adela
-        if self.config.get('adela', None):
-            # generate release.json
-            release_name = 'release.json'
-            cmd = 'python -m spring_aux.adela.make_json {} -o {}'.format(save_to, release_name)
-            os.system(cmd)
-            self.to_adela(release_name)
+        self.to_adela(save_to)
 
     def get_kestrel_parameters(self):
         plugin = self.config['to_kestrel']['plugin']
         parser = KS_PARSER_REGISTRY[plugin](self.config)
         return parser.get_kestrel_parameters()
 
-    def to_adela(self, release_name='release.json'):
+    def to_adela(self, save_to):
         from spring_aux.adela.adela import Adela
         import time
         cfg_adela = self.config.get('adela', None)
         assert cfg_adela is not None, 'need adela configuration.'
 
         # build adela
-        adela = Adela(server=cfg_adela['server'])
+        adela = Adela(server=cfg_adela['server'], auth="~/.adela.config")
         adela.setup()
 
         pid = cfg_adela['pid']
         # release
-        release_rep = adela.release_add(pid=pid, fname=release_name)
+        release_rep = adela.release_add_tar(pid=pid, fname=save_to, train_info="{}")
         rid = release_rep.id
         logger.info(f'release id:{rid}')
 
