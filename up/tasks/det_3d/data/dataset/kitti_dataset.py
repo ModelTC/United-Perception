@@ -148,6 +148,9 @@ class KittiDataset(BaseDataset):
         pred_dict['score'] = pred_scores
         pred_dict['boxes_lidar'] = pred_boxes
 
+        for k, v in pred_dict.items():
+            if type(v) is np.ndarray:
+                pred_dict[k] = v.tolist()
         return pred_dict
 
     def dump(self, output):

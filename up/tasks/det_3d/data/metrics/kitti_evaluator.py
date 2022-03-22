@@ -32,19 +32,18 @@ class KittiEvaluator(Evaluator):
     def load_dts(self, res_file, res):
         out = []
         if res is not None:
-            for res_gpus in zip(*res):
-                for idx in range(len(res_gpus[-1])):
-                    res_bs = [res[idx] for res in res_gpus]
-                    out.extend(res_bs)
-            for res_gpu in res_gpus:
-                if len(res_gpu) > len(res_gpus[-1]):
-                    out.extend([res_gpu[-1]])
+            out = res
         else:
             logger.info(f'loading res from {res_file}')
             out = []
             with PetrelHelper.open(res_file) as f:
                 for line in f:
                     out.append(json.loads(line))
+        out = [x for res_gpus in out for res_bs in res_gpus for x in res_bs]
+        for idx in range(len(out)):
+            for k, v in out[idx].items():
+                if isinstance(v, list):
+                    out[idx][k] = np.array(v)
         return out
 
     def get_metric(self, ret):
@@ -85,7 +84,9 @@ class KittiEvaluator(Evaluator):
         det_annos = self.load_dts(res_file, res)
         from .kitti_object_eval_python import eval as kitti_eval
         eval_det_annos = copy.deepcopy(det_annos)
-        eval_gt_annos = [copy.deepcopy(info['annos']) for info in kitti_infos]
+        eval_det_annos = sorted(eval_det_annos, key=lambda e: e['frame_id'])
+        eval_gt_annos = [copy.deepcopy(info['annos']) for info in sorted(kitti_infos,
+                                                                         key=lambda e:e['point_cloud']['lidar_idx'])]
         recall_dict = self.get_metric(eval_det_annos)
         result, recall_dict = kitti_eval.get_official_eval_result(eval_gt_annos, eval_det_annos, class_names)
         ave_recall = []

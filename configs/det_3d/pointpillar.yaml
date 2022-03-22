@@ -111,12 +111,12 @@ dataset: # Required.
 
 trainer: # Required.
   max_epoch: &max_epoch 80             # total epochs for the training
-  test_freq: 80
+  test_freq: 5
   save_freq: 5
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: AdamW
     kwargs:
-      lr: 0.0009375 # 0.000625
+      lr: 0.00009375
       betas: [0.9, 0.99]
       weight_decay: 0.01
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
@@ -133,6 +133,7 @@ trainer: # Required.
       div_factor: 10
 
 saver: # Required.
+  save_result: True
   save_dir: checkpoints/    # dir to save checkpoints
   results_dir: results_dir/  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True
