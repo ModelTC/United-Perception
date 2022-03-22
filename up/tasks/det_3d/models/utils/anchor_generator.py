@@ -35,7 +35,6 @@ class AnchorGenerator(object):
                 x_stride = (self.anchor_range[3] - self.anchor_range[0]) / (grid_size[0] - 1)
                 y_stride = (self.anchor_range[4] - self.anchor_range[1]) / (grid_size[1] - 1)
                 x_offset, y_offset = 0, 0
-
             x_shifts = torch.arange(
                 self.anchor_range[0] + x_offset, self.anchor_range[3] + 1e-5, step=x_stride, dtype=torch.float32,
             ).cuda()

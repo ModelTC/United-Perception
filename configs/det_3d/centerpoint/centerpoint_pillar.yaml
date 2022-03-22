@@ -66,7 +66,7 @@ dataset: # Required.
         class_names: *class_names
         get_item_list: &get_item_list ['points']
         training: True
-        transformer: [*point_sampling, *point_flip,*point_rotation,*point_scaling, *to_voxel_train] # [*point_flip,*point_rotation,*point_scaling]
+        transformer: [*point_sampling, *point_flip,*point_rotation,*point_scaling, *to_voxel_train]
         image_reader:
           type: kitti
           kwargs:
@@ -133,9 +133,8 @@ trainer: # Required.
       div_factor: 10
 
 saver: # Required.
-  save_result: True
-  save_dir: checkpoints/    # dir to save checkpoints
-  results_dir: results_dir/  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: checkpoints/centerpoint_pillar    # dir to save checkpoints
+  results_dir: results_dir/centerpoint_pillar  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True
 
 hooks:
@@ -164,73 +163,52 @@ net:
 
   - name: roi_head
     prev: backbone
-    type: anchor_head_single
+    type: center_head
     kwargs:
-      num_classes: &num_classes 3
-      base_anchors_file: &base_anchors_file anchors.json
-      code_size: &code_size 7
-      num_dir_bins: &num_dir_bins 2
-      initializer:
-        method: normal
-        std: 0.001
-      init_prior: 0.01
-      class_activation: sigmoid
-
+      class_names: *class_names
+      shared_conv_channel: 64
+      num_hm_conv: 2
+      sep_head_dict:
+          {
+              'center': {'out_channels': 2, 'num_conv': 2},
+              'center_z': {'out_channels': 1, 'num_conv': 2},
+              'dim': {'out_channels': 3, 'num_conv': 2},
+              'rot': {'out_channels': 2, 'num_conv': 2},
+          }
 
   - name: post_process
     prev: roi_head
-    type: anchor_head_post
+    type: center_head_post
     kwargs:
-      num_dir_bins: *num_dir_bins
-      dir_offset: 0.78539
-      dir_limit_offset: 0.0
       cfg:
-        anchor_generator:
-          type: 3d
-          kwargs:
-            anchor_range: *point_cloud_range
-            base_anchors_file : *base_anchors_file
-        box_coder: 
-          type: residual
-          kwargs:
-            code_size: *code_size
-            encode_angle_by_sincos: False
         roi_supervisor:
-          type: axis_aligned
+          type: center_head
           kwargs:
-            base_anchors_file : *base_anchors_file
-            pos_fraction: -1.0
-            sample_size: 512
-            norm_by_num_examples: False
-            match_height: False
-            use_multihead: False
+            feature_map_stride: &feature_map_stride 2
+            num_max_objs: 500
+            gaussian_overlap: 0.1
+            min_radius: 2
+            gaussian_hm: True
         roi_predictor:
-          type: axis_aligned
+          type: center_head
           kwargs:
-            recall_thresh_list: [0.3, 0.5, 0.7]
+            feature_map_stride: *feature_map_stride
             score_thresh: 0.1
             output_raw_score: False
+            post_center_limit_range: [-75.2, -75.2, -2, 75.2, 75.2, 4]
+            max_obj_per_sample: 500
             cfg:
               multi_classes_nms: False
               nms_type: nms_gpu
-              nms_thresh: 0.01
+              nms_thresh: 0.7
               nms_pre_maxsize: 4096
               nms_post_maxsize: 500
-
-        cls_loss:
-          type: sigmoid_focal_loss
+        hm_loss:
+          type: center_focal_loss
           kwargs:
-            num_classes: 4 # 3+1
-            alpha: 0.25
-            gamma: 2.0
+            loss_weight: 1.0
         loc_loss:
-          type: smooth_l1_loss
+          type: l1_loss
           kwargs:
-            sigma: 3.0
-            loss_weight: 2.0
-            code_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-        dir_loss:
-          type: softmax_cross_entropy
-          kwargs:
-            class_dim: 1
-            loss_weight: 0.2
+            loss_weight: 1.0
+            code_weights: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]

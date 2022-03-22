@@ -1,5 +1,6 @@
 # Import from third library
 import torch
+import numpy as np
 
 # Import from local
 from up.models.losses.loss import BaseLoss, _reduce
@@ -9,7 +10,7 @@ from up.utils.general.registry_factory import LOSSES_REGISTRY
 __all__ = ['L1Loss']
 
 
-def l1_loss(input, target, scale_type='linear', reduction='none', normalizer=None):
+def l1_loss(input, target, scale_type='linear', reduction='none', normalizer=None, code_weights=None):
     if scale_type == 'linear':
         input = input
         target = target
@@ -19,6 +20,8 @@ def l1_loss(input, target, scale_type='linear', reduction='none', normalizer=Non
     else:
         raise NotImplementedError
     loss = torch.abs(input - target)
+    if code_weights is not None:
+        loss = loss * code_weights.view(1, 1, -1)
     loss = _reduce(loss, reduction=reduction, normalizer=normalizer)
     return loss
 
@@ -29,7 +32,8 @@ class L1Loss(BaseLoss):
                  name='l1_loss',
                  reduction='mean',
                  loss_weight=1.0,
-                 scale_type='linear'):
+                 scale_type='linear',
+                 code_weights=None):
         r"""
         Arguments:
             - name (:obj:`str`): name of the loss function
@@ -43,6 +47,10 @@ class L1Loss(BaseLoss):
                           loss_weight=loss_weight)
         self.scale_type = scale_type
         self.key_fields = []
+        self.code_weights = code_weights
+        if self.code_weights is not None:
+            self.code_weights = np.array(self.code_weights, dtype=np.float32)
+            self.code_weights = torch.from_numpy(self.code_weights).cuda()
 
     def forward(self, input, target, reduction, normalizer=None):
         """
@@ -52,5 +60,5 @@ class L1Loss(BaseLoss):
         """
         assert input.shape == target.shape
         loss = l1_loss(input, target, scale_type=self.scale_type, reduction=reduction,
-                       normalizer=normalizer)
+                       normalizer=normalizer, code_weights=self.code_weights)
         return loss

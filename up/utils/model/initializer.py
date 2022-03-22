@@ -13,6 +13,7 @@ __all__ = [
     'init_weights_normal',
     'init_weights_xavier',
     'init_weights_msra',
+    'init_bias_constant',
     'init_bias_focal',
     'initialize',
     'initialize_from_cfg']
@@ -55,6 +56,14 @@ def init_weights_msra(module):
             nn.init.kaiming_normal_(m.weight.data, a=1)
             if m.bias is not None:
                 m.bias.data.zero_()
+
+
+@INITIALIZER_REGISTRY.register("constant_bias")
+def init_bias_constant(module, val=0):
+    for m in module.modules():
+        if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear) or isinstance(
+                m, nn.ConvTranspose2d):
+            nn.init.constant_(m.bias.data, val)
 
 
 @INITIALIZER_REGISTRY.register("focal")
