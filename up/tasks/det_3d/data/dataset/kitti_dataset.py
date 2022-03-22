@@ -35,8 +35,11 @@ class KittiDataset(BaseDataset):
 
     def load_kitti_info(self):
         kitti_infos = []
-        infos = PetrelHelper.load_pk(self.meta_file, mode='rb')
-        kitti_infos.extend(infos)
+        if not isinstance(self.meta_file, list):
+            self.meta_file = [self.meta_file]
+        for i, meta_file in enumerate(self.meta_file):
+            infos = PetrelHelper.load_pk(meta_file, mode='rb')
+            kitti_infos.extend(infos)
 
         self.kitti_infos.extend(kitti_infos)
 
