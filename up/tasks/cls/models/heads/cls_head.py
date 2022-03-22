@@ -15,7 +15,14 @@ class BaseClsHead(nn.Module):
         self.num_classes = num_classes
         self.in_plane = in_plane
         self.input_feature_idx = input_feature_idx
-        self.classifier = nn.Linear(self.in_plane, self.num_classes)
+        self.multicls = False
+        if isinstance(self.num_classes, list) or isinstance(self.num_classes, tuple):
+            self.classifier = nn.ModuleList()
+            for cls in self.num_classes:
+                self.classifier.append(nn.Linear(self.in_plane, cls))
+            self.multicls = True
+        else:
+            self.classifier = nn.Linear(self.in_plane, self.num_classes)
         self.drop = nn.Dropout(p=dropout) if dropout else None
 
         self.prefix = self.__class__.__name__
@@ -37,7 +44,10 @@ class BaseClsHead(nn.Module):
         x = x.view(x.size(0), -1)
         if self.drop is not None:
             x = self.drop(x)
-        logits = self.classifier(x)
+        if self.multicls:
+            logits = [self.classifier[idx](x) for idx, _ in enumerate(self.num_classes)]
+        else:
+            logits = self.classifier(x)
         return {'logits': logits}
 
     def forward(self, input):

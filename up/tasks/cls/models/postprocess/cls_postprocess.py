@@ -11,26 +11,56 @@ __all__ = ['BaseClsPostProcess']
 class BaseClsPostProcess(nn.Module):
     def __init__(self, cls_loss, prefix=None):
         super(BaseClsPostProcess, self).__init__()
-        self.cls_loss = build_loss(cls_loss)
+        if isinstance(cls_loss, list):
+            self.cls_loss = nn.ModuleList()
+            for _loss in self.cls_loss:
+                self.cls_loss.append(build_loss(_loss))
+        else:
+            self.cls_loss = build_loss(cls_loss)
 
         self.prefix = prefix if prefix is not None else self.__class__.__name__
 
     def get_acc(self, logits, targets):
-        acc = A.accuracy(logits, targets)[0]
+        if isinstance(logits, list):
+            acc_sum = 0
+            for idx in range(len(logits)):
+                acc_sum += A.accuracy(logits[idx], targets[:][idx])[0]
+            acc = acc_sum / len(logits)
+        else:
+            acc = A.accuracy(logits, targets)[0]
         return acc
 
     def get_loss(self, logits, targets):
         loss_info = {}
-        loss = self.cls_loss(logits, targets)
+        if isinstance(logits, list):
+            loss = 0
+            for idx, logit in enumerate(logits):
+                if isinstance(self.cls_loss, nn.ModuleList):
+                    assert len(logits) == len(self.cls_loss)
+                    loss += self.cls_loss[idx](logit, targets[:][idx])
+                else:
+                    loss += self.cls_loss(logit, targets[:][idx])
+        else:
+            loss = self.cls_loss(logits, targets)
         loss_info[f"{self.prefix}.loss"] = loss
         loss_info[f"{self.prefix}.accuracy"] = self.get_acc(logits, targets)
         return loss_info
 
     def get_test_output(self, logits):
-        scores = F.softmax(logits, dim=1)
-        # compute prediction
-        _, preds = logits.data.topk(k=1, dim=1)
-        preds = preds.view(-1)
+        if isinstance(logits, list):
+            scores = []
+            preds = []
+            for logit in logits:
+                scores.append(F.softmax(logit, dim=1))
+                # compute prediction
+                _, pred = logit.data.topk(k=1, dim=1)
+                pred = pred.view(-1)
+                preds.append(pred)
+        else:
+            scores = F.softmax(logits, dim=1)
+            # compute prediction
+            _, preds = logits.data.topk(k=1, dim=1)
+            preds = preds.view(-1)
         return {"preds": preds, "scores": scores}
 
     def forward(self, input):
