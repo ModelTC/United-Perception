@@ -487,10 +487,14 @@ class AutoSaveBest(Hook):
         if not isinstance(metrics, Metric):
             logger.info("auto save best checkpoint only support Metric !!!")
             return
+        if isinstance(metrics.v, list):
+            value = sum(metrics.v) / len(metrics.v)
+        else:
+            value = metrics.v
         # save best ckpt
-        if metrics.v > self.best_metric_val:
-            self._save_best('best', metrics.v)
-            self.best_metric_val = metrics.v
+        if value > self.best_metric_val:
+            self._save_best('best', value)
+            self.best_metric_val = value
             self.best_epoch = self.runner_ref().cur_epoch()
         logger.info(f'best epoch: {self.best_epoch}; best val: {self.best_metric_val}')
 

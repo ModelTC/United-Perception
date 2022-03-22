@@ -28,6 +28,8 @@ class ClassDataLoader(DataLoader):
         images = torch.stack([_.image for _ in batch])
         if type(batch[0].gt) == int:
             gts = torch.from_numpy(np.array([_.gt for _ in batch]))
+        elif type(batch[0].gt) == list:
+            gts = torch.stack([torch.from_numpy(np.array(_.gt)) for _ in batch])
         elif batch[0].gt.dim() > 0:
             gts = torch.stack([_.gt for _ in batch])
 

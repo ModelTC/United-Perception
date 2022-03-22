@@ -13,7 +13,7 @@ class BaseClsPostProcess(nn.Module):
         super(BaseClsPostProcess, self).__init__()
         if isinstance(cls_loss, list):
             self.cls_loss = nn.ModuleList()
-            for _loss in self.cls_loss:
+            for _loss in cls_loss:
                 self.cls_loss.append(build_loss(_loss))
         else:
             self.cls_loss = build_loss(cls_loss)
@@ -37,6 +37,7 @@ class BaseClsPostProcess(nn.Module):
             for idx, logit in enumerate(logits):
                 if isinstance(self.cls_loss, nn.ModuleList):
                     assert len(logits) == len(self.cls_loss)
+
                     loss += self.cls_loss[idx](logit, targets[:][idx])
                 else:
                     loss += self.cls_loss(logit, targets[:][idx])
