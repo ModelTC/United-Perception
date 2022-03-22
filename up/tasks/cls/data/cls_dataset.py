@@ -1,5 +1,6 @@
+from audioop import mul
 import json
-
+import numpy as np
 from up.data.datasets.base_dataset import BaseDataset
 from up.utils.general.registry_factory import DATASET_REGISTRY
 from easydict import EasyDict
@@ -158,19 +159,21 @@ class ClsDataset(BaseDataset):
         label = self.tensor2numpy(output['gt'])
         score = self.tensor2numpy(output['scores'])
         multicls = False
-        if isinstance(label[0], list):
+        if isinstance(prediction, list):
             multicls = True
+            prediction = np.array(prediction)
+            score = np.array(score)
         if multicls:
-            bs = prediction.shape[0]
+            bs = prediction[0].shape[0]
         else:
-            bs = prediction.shape[1]
+            bs = prediction.shape[0]
         out_res = []
         for b_idx in range(bs):
             if multicls:
-                _prediction = [int(item) for item in prediction[:][b_idx]]
-                _label = [int(item) for item in label[:][b_idx]]
+                _prediction = [int(item) for item in prediction[:, b_idx]]
+                _label = [int(item) for item in label[b_idx][:]]
                 _score = []
-                for item in score[:][b_idx]:
+                for item in score[:, b_idx]:
                     _score.append([float('%.8f' % s) for s in item])
             else:
                 _prediction = int(prediction[b_idx])

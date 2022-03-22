@@ -45,24 +45,32 @@ class ImageNetEvaluator(Evaluator):
         multicls = False
         if label.shape[1] > 1:
             multicls = True
-            label = label.t()
+            # label = label.t()
         if multicls:
             ave_acc = [0. for i in self.topk]
             for idx in range(len(pred)):
                 num = pred[idx].size(0)
                 maxk = max(self.topk)
                 _, _pred = pred[idx].topk(maxk, 1, True, True)
-                _pred = _pred.t()
+                _pred = _pred.t()  # 5 * 2
                 correct = _pred.eq(label[idx].reshape(1, -1).expand_as(_pred))
                 res = {}
                 for k_idx, k in enumerate(self.topk):
-                    correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-                    acc = correct_k.mul_(100.0 / num)
+                    correct_k = correct[:k].reshape(k, -1).float().sum(0)
+                    acc = correct_k.mul_(100.0)
                     ave_acc[k_idx] += acc
-                    res.update({f'attr_{idx + 1}_top{k}': acc.item()})
-            ave_acc /= len(pred)
+            ave_acc_all = [acc.mean() / len(pred) for acc in ave_acc]
+            ave_acc_all = [acc.numpy().tolist() for acc in ave_acc_all]
+            ave_acc = [acc / len(pred) for acc in ave_acc]
+            ave_acc = [acc.numpy().tolist() for acc in ave_acc]
+            for head_num in range(label.shape[1]):
+                res[f'head{head_num}'] = {}
+                for k in range(len(self.topk)):
+                    topk_id = self.topk[k]
+                    res[f'head{head_num}'].update({f'top{topk_id}': ave_acc[k][head_num]})
+
             for idx, k in enumerate(self.topk):
-                res[f'ave_top{k}'] = ave_acc[idx]
+                res[f'ave_top{k}'] = ave_acc_all[idx]
             metric = Metric(res)
             metric.set_cmp_key(f'ave_top{self.topk[0]}')
         else:

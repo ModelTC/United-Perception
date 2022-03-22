@@ -399,6 +399,9 @@ class BaseRunner(object):
         else:
             metrics = Metric({})
         barrier()
+        for k in list(metrics.keys()):
+            if isinstance(metrics[k], dict):
+                metrics.pop(k)
         self._hooks('after_eval', metrics)
         self.set_cur_eval_iter()
         return metrics
