@@ -486,12 +486,18 @@ class BaseRunner(object):
             if node.op_type == 'Reshape':
                 cid, cnode = consts[node.input[1]]
                 ori_shape = get_shape(cnode)
-                new_shape = [-1] + ori_shape[1:]
+                if len(ori_shape) == 2 and -1 in ori_shape[1:]:
+                    logger.info('Replace Reshape [{}] to Flatten'.format(node.name))
+                    flatten_node = onnx.helper.make_node("Flatten", inputs=[node.input[0]], outputs=node.output, axis=1)
+                    G.graph.node.remove(node)
+                    G.graph.node.insert(idx, flatten_node)
+                else:
+                    new_shape = [-1] + ori_shape[1:]
+                    logger.info('Reshape [{}] shape from {} to {}'.format(node.name, ori_shape, new_shape))
+                    new_cnode = make_constant_dims(node.input[1], new_shape)
+                    G.graph.node.remove(cnode)
+                    G.graph.node.insert(cid, new_cnode)
 
-                logger.info('Reshape [{}] shape from {} to {}'.format(node.name, ori_shape, new_shape))
-                new_cnode = make_constant_dims(node.input[1], new_shape)
-                G.graph.node.remove(cnode)
-                G.graph.node.insert(cid, new_cnode)
         onnx_save = onnx_file.split('.')[0] + "_fix.onnx"
         onnx.save(G, onnx_save)
         logger.info("Saved onnx to {}".format(onnx_save))
