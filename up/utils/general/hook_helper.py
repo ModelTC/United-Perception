@@ -279,7 +279,11 @@ class TrainEvalLogger(Hook):
             epoch = runner.cur_epoch()
             for k, v in metrics.items():
                 if not isinstance(v, list):
-                    self.summary_writer.add_scalar('metrics/' + k, v, epoch)
+                    if isinstance(v, dict):
+                        for i_k, i_v in v.items():
+                            self.summary_writer.add_scalar('metrics/' + k + '_' + i_k, i_v, epoch)
+                    else:
+                        self.summary_writer.add_scalar('metrics/' + k, v, epoch)
                     try:
                         self.summary_writer.flush()
                     except:  # noqa
