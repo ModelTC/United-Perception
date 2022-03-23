@@ -132,8 +132,9 @@ class ClsDataset(BaseDataset):
             xmin, ymin, xmax, ymax = meta['bbox'][:4]
             xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
             crop = True
-        if self.image_type == 'pil' and is_numpy_image(img):
-            img = Image.fromarray(img)
+        if self.image_type == 'pil':
+            if is_numpy_image(img):
+                img = Image.fromarray(img)
             if crop:
                 img = img.crop((xmin, ymin, xmax, ymax))
         else:
