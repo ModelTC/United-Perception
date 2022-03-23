@@ -160,15 +160,15 @@ class ClsDataset(BaseDataset):
         score = self.tensor2numpy(output['scores'])
         multicls = False
         if isinstance(prediction, list):
+            # for multicls
+            # prediction n * single cls
+            # label [1, 2, 3.. n]
+            # score n* single cls
             multicls = True
             prediction = np.array(prediction)
             score = np.array(score)
-        if multicls:
-            bs = prediction[0].shape[0]
-        else:
-            bs = prediction.shape[0]
         out_res = []
-        for b_idx in range(bs):
+        for b_idx in range(label.shape[0]):
             if multicls:
                 _prediction = [int(item) for item in prediction[:, b_idx]]
                 _label = [int(item) for item in label[b_idx][:]]

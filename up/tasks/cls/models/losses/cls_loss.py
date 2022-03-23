@@ -66,9 +66,10 @@ class CrossEntropyLoss(_Loss):
 @LOSSES_REGISTRY.register('stce')
 class SoftTargetCrossEntropy(_Loss):
 
-    def __init__(self):
+    def __init__(self, loss_weight=1.0):
         super(SoftTargetCrossEntropy, self).__init__()
+        self.loss_weight = loss_weight
 
     def forward(self, input, label) -> torch.Tensor:
         loss = torch.sum(-label * F.log_softmax(input, dim=-1), dim=-1)
-        return loss.mean()
+        return loss.mean() * self.loss_weight
