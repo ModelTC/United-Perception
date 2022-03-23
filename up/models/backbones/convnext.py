@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from up.utils.model.utils import DropPath
 from up.utils.model.initializer import trunc_normal_
+from up.utils.model.normalize import LayerNorm
 
 __all__ = ['convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large', 'convnext_xlarge']
 
@@ -85,7 +85,8 @@ class ConvNeXt(nn.Module):
 
     def __init__(self, in_chans=3, num_classes=1000,
                  depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], drop_path_rate=0.,
-                 layer_scale_init_value=1e-6, act_func=None
+                 layer_scale_init_value=1e-6, act_func=None,
+                 out_layers=[0, 1, 2, 3], out_strides=[4, 8, 16, 32]
                  ):
         super().__init__()
 
@@ -115,6 +116,10 @@ class ConvNeXt(nn.Module):
 
         self.norm = nn.LayerNorm(dims[-1], eps=1e-6)  # final norm layer
         self.apply(self._init_weights)
+        self.out_planes = dims
+        self.out_strides = out_strides
+        self.out_layers = out_layers
+        assert len(self.out_layers) == len(out_strides)
 
     def _init_weights(self, m):
         if isinstance(m, (nn.Conv2d)):
@@ -123,42 +128,32 @@ class ConvNeXt(nn.Module):
 
     def forward_features(self, x):
         x = x['image']
+        outs = []
         for i in range(4):
             x = self.downsample_layers[i](x)
             x = self.stages[i](x)
-        return self.norm(x.mean([-2, -1]))  # global average pooling, (N, C, H, W) -> (N, C)
+            outs.append(x)
+        outs = [outs[i] for i in self.out_layers]
+        return outs
+
+    def get_outplanes(self):
+        """
+        get dimension of the output tensor
+        """
+        return self.out_planes
+
+    def get_outstrides(self):
+        """
+        Returns:
+
+            - out (:obj:`int`): number of channels of output
+        """
+
+        return torch.tensor(self.out_strides, dtype=torch.int)
 
     def forward(self, x):
-        features = [self.forward_features(x)]
-        return {'features': features, 'strides': [32]}
-
-
-class LayerNorm(nn.Module):
-    r""" LayerNorm that supports two data formats: channels_last (default) or channels_first.
-    The ordering of the dimensions in the inputs. channels_last corresponds to inputs with
-    shape (batch_size, height, width, channels) while channels_first corresponds to inputs
-    with shape (batch_size, channels, height, width).
-    """
-
-    def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
-        super().__init__()
-        self.weight = nn.Parameter(torch.ones(normalized_shape))
-        self.bias = nn.Parameter(torch.zeros(normalized_shape))
-        self.eps = eps
-        self.data_format = data_format
-        if self.data_format not in ["channels_last", "channels_first"]:
-            raise NotImplementedError
-        self.normalized_shape = (normalized_shape,)
-
-    def forward(self, x):
-        if self.data_format == "channels_last":
-            return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
-        elif self.data_format == "channels_first":
-            u = x.mean(1, keepdim=True)
-            s = (x - u).pow(2).mean(1, keepdim=True)
-            x = (x - u) / torch.sqrt(s + self.eps)
-            x = self.weight[:, None, None] * x + self.bias[:, None, None]
-            return x
+        features = self.forward_features(x)
+        return {'features': features, 'strides': self.get_outplanes()}
 
 
 def convnext_tiny(pretrained=False, **kwargs):
