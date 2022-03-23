@@ -1,15 +1,11 @@
 num_classes: &num_classes 1000
 
-to_kestrel:
-  toks_type: cls
-  plugin: classifier
-  save_to: Res18
-  add_softmax: False
-  pixel_means: [123.675, 116.28, 103.53]
-  pixel_stds: [58.395, 57.12, 57.375]
-  is_rgb: True
-  save_all_label: True
-  type: 'UNKNOWN'
+gdbp:
+  hardware_name: cpu
+  backend_name: ppl2
+  data_type: fp32
+  batch_size: 32
+  res_json: res18_latency.json
 
 random_resized_crop: &random_resized_crop
  type: torch_random_resized_crop
@@ -132,7 +128,7 @@ hooks:
 
 net: &subnet
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet18
+    type: resnet50
     kwargs:
       frozen_layers: []
       out_layers: [4]     # layer1...4, commonly named Conv2...5
@@ -145,7 +141,7 @@ net: &subnet
     type: base_cls_head
     kwargs:
        num_classes: *num_classes
-       in_plane: &head_out_channel 512 
+       in_plane: &head_out_channel 2048
        input_feature_idx: -1
   - name: post_process
     type: base_cls_postprocess

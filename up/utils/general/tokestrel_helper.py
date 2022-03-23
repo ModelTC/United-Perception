@@ -264,7 +264,7 @@ class ClsToKestrel(object):
         with open('parameters.json', 'w') as f:
             json.dump(params, f, indent=2)
         tar_cmd = 'tar cvf {} engine.bin engine.bin.json meta.json meta.conf parameters.json category_param.json' \
-            .format(model_name, + '_nnie.tar')
+            .format(model_name + '_nnie.tar')
         os.system(tar_cmd)
         logger.info("generate {model_name + '_nnie.tar'} done!")
 

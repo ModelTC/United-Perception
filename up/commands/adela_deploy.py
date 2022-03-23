@@ -3,9 +3,8 @@ from __future__ import division
 # Standard Library
 import os
 
-# Import from pod
-# from pod.utils.dist_helper import finalize, setup_distributed
-from up.utils.general.yaml_loader import load_yaml  # IncludeLoader
+# Import from up
+from up.utils.general.yaml_loader import load_yaml
 from up.utils.general.user_analysis_helper import send_info
 
 # Import from local
@@ -15,7 +14,7 @@ from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGIST
 __all__ = ['AdelaDeploy']
 
 
-@SUBCOMMAND_REGISTRY.register('AdelaDeploy')
+@SUBCOMMAND_REGISTRY.register('adela_deploy')
 class AdelaDeploy(Subcommand):
     def add_subparser(self, name, parser):
         sub_parser = parser.add_parser(name,
@@ -29,7 +28,8 @@ class AdelaDeploy(Subcommand):
                                 dest='ks_model',
                                 type=str,
                                 required=True,
-                                help="kestrel model")
+                                default="kestrel_model/kestrel_model_1.0.0.tar",
+                                help="kestrel model path")
         sub_parser.add_argument('--cfg_type',
                                 dest='cfg_type',
                                 type=str,
@@ -43,8 +43,6 @@ class AdelaDeploy(Subcommand):
 def _main(args):
     assert (os.path.exists(args.config)), args.config
     cfg = load_yaml(args.config, args.cfg_type)
-
-    cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
         'ks_model': args.ks_model,
     }
@@ -57,4 +55,3 @@ def _main(args):
     send_info(cfg, func="adela")
     runner = RUNNER_REGISTRY.get(runner_cfg['type'])(cfg, **runner_cfg['kwargs'])
     runner.to_adela(save_to=runner_cfg['ks_model'])
-    # finalize()

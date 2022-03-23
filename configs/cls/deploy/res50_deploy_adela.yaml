@@ -3,13 +3,29 @@ num_classes: &num_classes 1000
 to_kestrel:
   toks_type: cls
   plugin: classifier
-  save_to: Res18
+  save_to: Res50
   add_softmax: False
   pixel_means: [123.675, 116.28, 103.53]
   pixel_stds: [58.395, 57.12, 57.375]
   is_rgb: True
   save_all_label: True
   type: 'UNKNOWN'
+
+adela:
+  pid: 12
+  server: 'adela.sensetime.com'
+  dep_params:
+    # dataset_added: quantity_dataset.json  # 需要添加的量化数据集配置
+    platform: &platform 'cuda11.0-trt7.1-fp32-T4'
+    max_batch_size: &max_batch_size 32
+    quantify: False
+    quantify_dataset_name: 'imagenet_quant_100'
+  precision_params:
+    # dataset_added: benchmark_dataset.json
+    platform: *platform # "cuda10.0-trt7.0-int8-T4"
+    max_batch_size: *max_batch_size
+    type: 0 # 0: precsion, 1: performance
+    dataset_name: "imagenet_val" 
 
 random_resized_crop: &random_resized_crop
  type: torch_random_resized_crop
@@ -132,7 +148,7 @@ hooks:
 
 net: &subnet
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet18
+    type: resnet50
     kwargs:
       frozen_layers: []
       out_layers: [4]     # layer1...4, commonly named Conv2...5
@@ -145,7 +161,7 @@ net: &subnet
     type: base_cls_head
     kwargs:
        num_classes: *num_classes
-       in_plane: &head_out_channel 512 
+       in_plane: &head_out_channel 2048
        input_feature_idx: -1
   - name: post_process
     type: base_cls_postprocess

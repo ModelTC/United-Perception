@@ -62,13 +62,13 @@ def split_net(net, anchor_num, cls_channel_num, bbox_head_type, sample_num, seri
     det_info['fpn_number'] = 0
     input_roi_names = list()
     for node in net_graph.root:
-        if node.content.type == 'DummyData':
-            input_roi_names.append(node.content.top[0])
-            det_net_root.append(node.succ[0])
+        rpn_info['data'] = node.content.bottom[0]
+
+    for node in net_graph.nodes():
+        if node.content.type == 'ROIAlignPooling':
+            input_roi_names.append(node.content.bottom[1])
+            det_net_root.append(node)
             det_info['fpn_number'] += 1
-            net.layer.remove(node.content)
-        else:
-            rpn_info['data'] = node.content.bottom[0]
 
     # contruct det net
     det_net = caffe_pb2.NetParameter()

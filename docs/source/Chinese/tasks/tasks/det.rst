@@ -163,13 +163,13 @@ compose_loc_loss:
   .. code-block:: yaml
 
     to_kestrel:
-      detector: FASTER-RCNN  # choices [RETINANET, RFCN, FASTER-RCNN]
+      toks_type: det
       save_to: kestrel_model  # saved file
       default_confidence_thresh: 0.3
       plugin: harpy   # choices = [essos, harpy, sphinx]
       version: 1.0.0
       resize_hw: 640x1024
-      kestrel_config:   # 可选
+      kestrel_config:
         -
           # harpy
           confidence_thresh: 0.3
@@ -179,3 +179,7 @@ compose_loc_loss:
           label: face
           filter_h: 0
           filter_w: 0
+
+.. note::
+    * 如果设置kestrel_config，需要手动设置所有待检测类别的 id（除 background 外），仅设置一种或若干种类别会导致错误，并且设置的id要与数据集中的label id对应
+    * confidence_thresh（harpy）与 thresh（essos）均需设置

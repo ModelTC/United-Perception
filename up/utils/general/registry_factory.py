@@ -88,6 +88,10 @@ TOCAFFE_REGISTRY = Registry()
 KS_PROCESSOR_REGISTRY = Registry()
 KS_PARSER_REGISTRY = Registry()
 TOKESTREL_REGISTRY = Registry()
+TOADELA_REGISTRY = Registry()
+
+# latency
+LATENCY_REGISTRY = Registry()
 
 # distill
 MIMIC_REGISTRY = Registry()

@@ -56,19 +56,19 @@ def split_net(net, anchor_num, cls_channel_num, bbox_head_type):
     # parse raw net input: 2 dummy input and 1 rpn input
     det_net_root = []  # save two det net Convolution root layer
     for node in net_graph.root:
-        if node.content.type == 'DummyData':
+        rpn_info['data'] = node.content.bottom[0]
+
+    for node in net_graph.nodes():
+        if node.content.type == 'ROIAlignPooling':
             det_info['roi'] = roi_blob_name
-            node.succ[0].content.bottom.remove(node.content.top[0])
-            node.succ[0].content.bottom.append(roi_blob_name)
+            node.content.bottom.pop()
+            node.content.bottom.append(roi_blob_name)
             if 'RFCN' in bbox_head_type:
-                for brother in node.succ[0].prev:
+                for brother in node.prev:
                     if brother.content.type != 'DummyData':
                         det_net_root.append(brother)
             else:
-                det_net_root.append(node.succ[0])
-            net.layer.remove(node.content)
-        else:
-            rpn_info['data'] = node.content.bottom[0]
+                det_net_root.append(node)
 
     # construct det net
     det_net = caffe_pb2.NetParameter()

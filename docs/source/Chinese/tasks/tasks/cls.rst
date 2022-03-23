@@ -89,13 +89,12 @@ Cutmix + Mixup:
 
     to_kestrel:
       toks_type: cls   # 通过设置toks_type
-      model_name: Res50
-      add_softmax: False
+      plugin: classifier
       pixel_means: [123.675, 116.28, 103.53]
       pixel_stds: [58.395, 57.12, 57.375]
       is_rgb: True
       save_all_label: True
-      type: 'UNKNOWN'
+      type: 'UNKNOWN
 
 
 高精度baseline
