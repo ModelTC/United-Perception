@@ -100,7 +100,7 @@ def _describe(model, lines=None, spaces=0):
             continue
         if not p.requires_grad:
             name = _bold(name)
-        line = "{head}- {name}".format(head=head, name=name)
+        line = "{head}- {name}: {dtype}".format(head=head, name=name, dtype=p.dtype)
         lines.append(line)
 
     for name, m in model.named_children():

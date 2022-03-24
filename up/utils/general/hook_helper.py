@@ -19,6 +19,10 @@ from ..env.dist_helper import allreduce
 from ..env.dist_helper import env
 from .log_helper import MetricLogger, SmoothedValue
 from .log_helper import default_logger as logger
+from .global_flag import (
+    DIST_BACKEND,
+    FP16_FLAG
+)
 
 
 __all__ = [
@@ -422,6 +426,17 @@ class GradClipper(Hook):
         self.last_iter += 1
 
     def after_backward(self, cur_iter, loss):
+        # the grad in mixed precision is scaled, need unscale first
+        if FP16_FLAG.fp16:
+            optimizer = self.runner_ref().get_optimizer()
+            if DIST_BACKEND.backend == 'dist':
+                self.runner_ref().scaler.unscale_(optimizer)
+            elif DIST_BACKEND.backend == 'linklink':
+                if self.mode in [self._AVG, self._MAVG]:
+                    raise ValueError('linklink fp16 only support grad cliping with pre_defined value!')
+                optimizer.clip_grad_norm_(self.max_norm, self.norm_type)
+                return
+
         model = self.runner_ref().get_model()
         parameters = [p for p in model.parameters() if p.requires_grad and p.grad is not None]
         if self.mode in [self._AVG, self._MAVG]:
