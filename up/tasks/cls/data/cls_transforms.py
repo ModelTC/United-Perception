@@ -4,7 +4,6 @@ import random
 import numpy as np
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
-from PIL import Image
 from up.data.datasets.transforms import Augmentation
 from up.utils.general.registry_factory import AUGMENTATION_REGISTRY, BATCHING_REGISTRY
 from up.tasks.cls.data.rand_augmentation import *
@@ -241,7 +240,7 @@ class BatchMixup(object):
 
 
 @BATCHING_REGISTRY.register('batch_cutmix')
-class BatchMixup(object):
+class BatchCutMix(object):
     def __init__(self, alpha=1.0, num_classes=1000):
         self.alpha = alpha
         self.num_classes = num_classes
@@ -267,4 +266,3 @@ class BatchCutMixup(object):
         if use_cutmix:
             return cutmix(data, self.cutmix_alpha, self.num_classes)
         return mixup(data, self.mixup_alpha, self.num_classes)
-

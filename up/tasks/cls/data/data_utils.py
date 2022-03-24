@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+
 def rand_bbox(size, lam):
 
     W = size[2]
@@ -31,7 +32,7 @@ def mixup(data, alpha, num_classes):
     index = torch.randperm(batch_size)
     mixed_x = lam * images + (1 - lam) * images[index, :]
 
-    if len(data['gt'].shape)> 1:
+    if len(data['gt'].shape) > 1:
         num_head = data['gt'].shape[1]
         labels = torch.zeros(batch_size, num_head, num_classes)
         labels.scatter_(2, data.gt.reshape(-1, num_head, 1), 1)
@@ -57,7 +58,7 @@ def cutmix(data, alpha, num_classes):
     images = data['image']
     batch_size = images.size()[0]
     index = torch.randperm(batch_size)
-    if len(data['gt'].shape)> 1:
+    if len(data['gt'].shape) > 1:
         num_head = data['gt'].shape[1]
         labels = torch.zeros(batch_size, num_head, num_classes)
         labels.scatter_(2, data.gt.reshape(-1, num_head, 1), 1)
