@@ -86,7 +86,7 @@ class ImageNetEvaluator(Evaluator):
         res_dict = self.load_res(res_file, res)
         pred = torch.from_numpy(np.array(res_dict['score']))
         label = torch.from_numpy(np.array(res_dict['label']))
-        if label.shape[1] > 1:
+        if len(label.shape) > 1:
             metric = self.multicls_eval(pred, label)
         else:
             metric = self.single_eval(pred, label)
