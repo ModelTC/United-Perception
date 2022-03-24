@@ -1,14 +1,5 @@
 num_classes: &num_classes 1000
 
-cutmix_mixup: &cutmix_mixup
-  type: torch_cutmix_mixup
-  kwargs:
-    mixup_alpha: 0.8
-    cutmix_alpha: 1.0
-    num_classes: *num_classes
-    extra_input: True
-    transform: True
-
 random_resized_crop: &random_resized_crop
  type: torch_random_resized_crop
  kwargs:
@@ -74,7 +65,7 @@ dataset: # Required.
             image_dir: /mnt/lustre/share/images/train
             color_mode: RGB
             memcached: True
-        transformer: [*random_resized_crop, *random_horizontal_flip, *random_augmentation, *to_tensor, *normalize, *rand_erase, *cutmix_mixup]
+        transformer: [*random_resized_crop, *random_horizontal_flip, *random_augmentation, *to_tensor, *normalize, *rand_erase]
     batch_sampler:
         type: base
         kwargs:
@@ -87,6 +78,13 @@ dataset: # Required.
         kwargs:
           num_workers: 8
           pin_memory: True
+          batch_fn:
+            type: batch_cutmixup
+            kwargs:
+              mixup_alpha: 0.8
+              cutmix_alpha: 1.0
+              switch_prob: 0.5
+              num_classes: *num_classes
   test:
     dataset:
       type: cls
