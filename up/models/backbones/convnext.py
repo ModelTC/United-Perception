@@ -114,7 +114,6 @@ class ConvNeXt(nn.Module):
             self.stages.append(stage)
             cur += depths[i]
 
-        self.norm = nn.LayerNorm(dims[-1], eps=1e-6)  # final norm layer
         self.apply(self._init_weights)
         self.out_planes = dims
         self.out_strides = out_strides
