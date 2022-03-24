@@ -8,7 +8,7 @@ __all__ = ['BaseClsHead', 'ConvNeXtHead', 'ViTHead']
 
 @MODULE_ZOO_REGISTRY.register('base_cls_head')
 class BaseClsHead(nn.Module):
-    def __init__(self, num_classes, in_plane, input_feature_idx=-1, dropout=None, use_pool=True):
+    def __init__(self, num_classes, in_plane, input_feature_idx=-1, use_pool=True, dropout=None):
         super(BaseClsHead, self).__init__()
         self.num_classes = num_classes
         self.in_plane = in_plane
