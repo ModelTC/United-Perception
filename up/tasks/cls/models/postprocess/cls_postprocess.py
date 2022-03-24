@@ -30,11 +30,11 @@ class BaseClsPostProcess(nn.Module):
             for idx, logit in enumerate(logits):
                 if isinstance(self.cls_loss, nn.ModuleList):
                     assert len(logits) == len(self.cls_loss)
-                    loss = self.cls_loss[idx](logit, targets[:][idx])
+                    loss = self.cls_loss[idx](logit, targets[:, idx])
                 else:
-                    loss = self.cls_loss(logit, targets[:][idx])
+                    loss = self.cls_loss(logit, targets[:, idx])
                 loss_info[f"{self.prefix}_head_{idx}.loss"] = loss
-                loss_info[f"{self.prefix}_head_{idx}.accuracy"] = self.get_acc(logit, targets[:][idx])
+                loss_info[f"{self.prefix}_head_{idx}.accuracy"] = self.get_acc(logit, targets[:, idx])
         else:
             loss = self.cls_loss(logits, targets)
             loss_info[f"{self.prefix}.loss"] = loss
