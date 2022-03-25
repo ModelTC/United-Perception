@@ -90,7 +90,8 @@ KS_PARSER_REGISTRY = Registry()
 TOKESTREL_REGISTRY = Registry()
 
 # distill
-DISTILL_REGISTRY = Registry()
+MIMIC_REGISTRY = Registry()
+MIMIC_LOSS_REGISTRY = Registry()
 
 # box_coder
 BOX_CODER_REGISTRY = Registry()

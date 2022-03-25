@@ -250,11 +250,21 @@ net:
               nms_iou_thresh: 0.5
             bbox_score_thresh: 0.0
             top_n: 100
+  - name: neck_adapt
+    prev: neck
+    type: ADAP
+    kwargs:
+      outplanes: 256
+      out_layers: [0,1,2,3,4]
+      kernel_size: 3
+      with_relu: False
+      do_init_weights: False
+      out_name: 'adapt_neck_features'
 
 
 teacher:
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet50
+    type: resnet152
     kwargs:
       frozen_layers: [0,1]     # layer0...1 is fixed
       out_layers: [1,2,3,4]     # layer1...4, commonly named Conv2...5
@@ -388,7 +398,7 @@ teacher:
                 allow_low_quality_match: False  # positive if a anchor has highest iou with any gt
                 low_quality_thresh: 0.5
             sampler:
-              type: naive_a100
+              type: naive
               kwargs:
                 batch_size: 512
                 positive_percent: 0.25
@@ -404,14 +414,25 @@ teacher:
             top_n: 100
 
 mimic:
-  mimic_name: res50_to_res50
-  mimic_type: l2
+  mimic_ins_type: FRS
   loss_weight: 1.0
+  warm_up_iters: 500
+  cfgs:
+    neck_loss:
+      type: l2_loss
+      kwargs:
+        feat_norm: False
+        loss_weight: 0.002
+    rpn_loss:
+      type: bce_loss
+      kwargs:
+        T: 1.0
+        loss_weight: 0.1
   teacher:
     mimic_name: ['neck.p2_conv', 'neck.p3_conv', 'neck.p4_conv', 'neck.p5_conv', 'neck.p6_pool']
-    teacher_weight: checkpoints/fpn50/ckpt_e12.pth
+    teacher_weight: checkpoints/fpn152/ckpt_e12.pth
   student:
-    mimic_name: ['neck.p2_conv', 'neck.p3_conv', 'neck.p4_conv', 'neck.p5_conv', 'neck.p6_pool']
+    mimic_name: ['neck_adapt.conv.0.0', 'neck_adapt.conv.1.0', 'neck_adapt.conv.2.0', 'neck_adapt.conv.3.0', 'neck_adapt.conv.4.0']
 
 runtime:
   runner:

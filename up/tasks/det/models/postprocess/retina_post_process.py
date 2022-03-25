@@ -138,11 +138,14 @@ class BaseDetPostProcess(nn.Module):
                 mlvl_preds = self.apply_activation(mlvl_preds, remove_background_channel_if_any=True)
                 results = self.train_predictor.predict(mlvl_anchors, mlvl_preds, image_info)
                 output.update(results)
+                if 'RPN' in self.prefix:
+                    output.update({'rpn_dt_bboxes': output['dt_bboxes']})
         else:
             mlvl_preds = self.apply_activation(mlvl_preds, remove_background_channel_if_any=True)
             results = self.test_predictor.predict(mlvl_anchors, mlvl_preds, image_info)
             output.update(results)
-
+            if 'RPN' in self.prefix:
+                output.update({'rpn_dt_bboxes': output['dt_bboxes']})
         return output
 
     def get_loss(self, targets, mlvl_preds, mlvl_shapes=None):
