@@ -687,7 +687,7 @@ class SwinTransformer(nn.Module):
                 out = x_out.view(-1, H, W, self.num_features[i]).permute(0, 3, 1, 2).contiguous()
                 outs.append(out)
 
-        return {"features": outs}
+        return {"features": outs, 'strides': self.get_outstrides()}
 
     def train(self, mode=True):
         """Convert the model into training mode while keep layers freezed."""

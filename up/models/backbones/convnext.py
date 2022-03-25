@@ -152,7 +152,7 @@ class ConvNeXt(nn.Module):
 
     def forward(self, x):
         features = self.forward_features(x)
-        return {'features': features, 'strides': self.get_outplanes()}
+        return {'features': features, 'strides': self.get_outstrides()}
 
 
 def convnext_tiny(pretrained=False, **kwargs):
