@@ -16,12 +16,5 @@ UP (united-perception)是一套基于Distributed PyTorch实现的通用感知任
    :maxdepth: 1
    :caption: Table of Contents
 
-   installation/index
-   get_started/index
-   tutorials/index
-   tasks/index
-   benchmark/index
-   usefultools/index
-   explanation/index
-   faq/index
-   changelog/index
+   Chinese/index
+   English/index
