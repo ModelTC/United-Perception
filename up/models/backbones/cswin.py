@@ -76,7 +76,7 @@ class LePEAttention(nn.Module):
         elif self.idx == 1:
             W_sp, H_sp = W, self.split_size
         else:
-            print("ERROR MODE", idx)
+            print("ERROR MODE", self.idx)
             exit(0)
         self.H_sp = H_sp
         self.W_sp = W_sp
@@ -219,7 +219,8 @@ class CSWinTransformer(nn.Module):
     def __init__(self, img_size=224, patch_size=16, in_chans=3, num_classes=1000, embed_dim=96, depth=[2, 2, 6, 2],
                  split_size=[3, 5, 7], out_indices=(0, 1, 2, 3),
                  num_heads=12, mlp_ratio=4., qkv_bias=True, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
-                 drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm, use_chk=False, out_strides=[4, 8, 16, 32]):
+                 drop_path_rate=0., hybrid_backbone=None, norm_layer=nn.LayerNorm, use_chk=False,
+                 out_strides=[4, 8, 16, 32]):
         super().__init__()
         self.use_chk = use_chk
         self.num_classes = num_classes
@@ -275,7 +276,6 @@ class CSWinTransformer(nn.Module):
                 drop_path=dpr[np.sum(depth[:-1]) + i], norm_layer=norm_layer, last_stage=True)
                 for i in range(depth[-1])])
         self.out_planes.append(curr_dim)
-        
         for i_layer in self.out_indices:
             layer = norm_layer(self.out_planes[i_layer])
             layer_name = f'norm{i_layer}'
@@ -305,9 +305,7 @@ class CSWinTransformer(nn.Module):
     def forward_features(self, x):
         x = self.stage1_conv(x)
         Wh, Ww = x.size(2), x.size(3)
-        # x = x.permute(0, 2, 3, 1).contiguous()
-        # x = x.view(-1, self.img_size // 4 * self.img_size // 4, self.embed_dim)
-        x = Rearrange('b c h w -> b (h w) c', h = self.img_size//4, w = self.img_size//4)(x)
+        x = Rearrange('b c h w -> b (h w) c', h=self.img_size // 4, w=self.img_size // 4)(x)
         x = self.stage1_norm(x)
         outs = []
         out_idx = 0
