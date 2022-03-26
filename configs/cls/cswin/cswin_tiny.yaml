@@ -5,29 +5,21 @@ random_resized_crop: &random_resized_crop
  kwargs:
    size: 224
    scale: [0.08, 1]
+   interpolation: bicubic
 
 random_horizontal_flip: &random_horizontal_flip
  type: torch_random_horizontal_flip
-
-pil_color_jitter: &pil_color_jitter
- type: torch_color_jitter
- kwargs:
-  brightness: 0.2
-  contrast: 0.2
-  saturation: 0.2
-  hue: 0.1
 
 rand_erase: &rand_erase
  type: torch_randerase
  kwargs:
   probability: 0.25
 
-random_augmentation: &random_augmentation
-  type: torch_random_augmentationIncre
-  kwargs:
-    n: 2  # number of augmentation operations
-    m: 9  # magnitude of each operation
-    magnitude_std: 0.5  # standard deviation of magnitude
+auto_augment: &auto_augment
+ type: torch_auto_augmentation
+ kwargs:
+   size: 224
+   scale: [0.08, 1]
 
 center_crop: &center_crop
   type: torch_center_crop
@@ -38,6 +30,7 @@ torch_size: &torch_resize
   type: torch_resize
   kwargs:
     size: 256
+    interpolation: bicubic
 
 to_tensor: &to_tensor
   type: to_tensor
@@ -65,14 +58,14 @@ dataset: # Required.
             image_dir: /mnt/lustre/share/images/train
             color_mode: RGB
             memcached: True
-        transformer: [*random_resized_crop, *random_horizontal_flip, *random_augmentation, *to_tensor, *normalize, *rand_erase]
+        transformer: [*random_resized_crop, *auto_augment, *to_tensor, *normalize, *rand_erase]
     batch_sampler:
         type: base
         kwargs:
           sampler:
             type: dist
             kwargs: {}
-          batch_size: 128
+          batch_size: 64
     dataloader:
         type: cls_base
         kwargs:
@@ -123,23 +116,32 @@ trainer: # Required.
   optimizer:
     type: AdamW
     kwargs:
-      lr: 0.002
+      lr: 0.001
       weight_decay: 0.05
+    pconfig:
+        ln_b:
+            weight_decay: 0.0
+        ln_w:
+            weight_decay: 0.0
+        linear_b:
+            weight_decay: 0.0
+
   lr_scheduler:
-    warmup_iter: 25040
+    warmup_iter: 25020
     warmup_type: linear
     warmup_register_type: no_scale_lr
-    warmup_ratio: 0.001
-    type: CosineAnnealingLR
+    warmup_ratio: 0.0001
+    type: CosineLREpochScheduler
     kwargs:
         T_max: 300
-        eta_min: 0.000001
-        warmup_iter: 0
+        eta_min: 0.00001
+        warm_epoch: 20
 
 saver: # Required.
   save_dir: cswin_tiny/checkpoints/cls_std     # dir to save checkpoints
   results_dir: cswin_tiny/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  # resume_model: /mnt/lustre/baishihao/UP/cswin/cswin_tiny.pth
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:
@@ -151,7 +153,7 @@ net: &subnet
     kwargs:
         drop_path_rate: 0.2
   - name: head
-    type: convnext_head
+    type: base_cls_head
     kwargs:
        num_classes: *num_classes
        in_plane: 512
