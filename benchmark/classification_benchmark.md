@@ -14,8 +14,8 @@
 | [regnetx400](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/regnet/reg_x400.yaml)       | coslr   | 5.158     | 0.388    | False | 224        | 1024 | 100   | 224       | [71.92](http://spring.sensetime.com/dropadmin/$/Tfi7x.pth) |
 | [regnety200](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/regnet/reg_y200.yaml)       | coslr   | 3.163     | 0.194    | False | 224        | 1024 | 100   | 224       | [69.96](http://spring.sensetime.com/dropadmin/$/6pJ98.pth) |
 | [regnety400](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/regnet/reg_y400.yaml)       | coslr   | 4.344     | 0.391    | False | 224        | 1024 | 100   | 224       | [73.41](http://spring.sensetime.com/dropadmin/$/UkYVg.pth) |
-| [convnext_tiny](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/convnext/convnext_t.yaml)    | coslr   | 28.6      | 4.5      | True  | 224        | 4096 | 300   | 224       | [81.22](http://spring.sensetime.com/dropadmin/$/9OG32.pth) |
-| [convnext_small](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/convnext/convnext_s.yaml)   | coslr   | 50        | 8.7      | True  | 224        | 4096 | 300   | 224       | [82.74](http://spring.sensetime.com/dropadmin/$/TnSaP.pth) |
+| [convnext_tiny](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/convnext/convnext_t.yaml)    | coslr   | 28.6      | 4.5      | True  | 224        | 4096 | 300   | 224       | [81.56](http://spring.sensetime.com/dropadmin/$/PJ2IK.pth) |
+| [convnext_small](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/convnext/convnext_s.yaml)   | coslr   | 50        | 8.7      | True  | 224        | 4096 | 300   | 224       | [82.85](http://spring.sensetime.com/dropadmin/$/hZViP.pth) |
 | [swin_tiny](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/swin/swin_transformer_tiny.yaml)   | cosEpochlr   | 29        | 4.5      | False  | 224        | 1024 | 300   | 224       | [81.17](http://spring.sensetime.com/dropadmin/$/JvUYr.pth) |
 | [swin_small](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/swin/swin_transformer_small.yaml)   | cosEpochlr   | 50        | 8.7      | False  | 224        | 1024 | 300   | 224       | [83.18](http://spring.sensetime.com/dropadmin/$/bB3wr.pth) |
 | [swin_base224](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/swin/swin_transformer_base_224.yaml)   | cosEpochlr   | 88        | 15.4      | False  | 224        | 1024 | 300   | 224       | [83.42](http://spring.sensetime.com/dropadmin/$/uWcSZ.pth) |
@@ -23,9 +23,6 @@
 | [swin_large224](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/swin/swin_transformer_large_224.yaml)   | cosEpochlr   | 197        | 34.5      | False  | 224        | 1024 | 300   | 224       | [86.25](http://spring.sensetime.com/dropadmin/$/wwuVS.pth) |
 | [swin_large384](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/swin/swin_transformer_large_384.yaml)   | cosEpochlr   | 197        | 103.9      | False  | 384        | 1024 | 300   | 384       | [86.98](http://spring.sensetime.com/dropadmin/$/uTygC.pth) |
 
-
-| [convnext_tiny](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/convnext/convnext_t.yaml)    | coslr   | 28.6      | 4.5      | True  | 224        | 4096 | 300   | 224       | [81.56](http://spring.sensetime.com/dropadmin/$/PJ2IK.pth) |
-| [convnext_small](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/convnext/convnext_s.yaml)   | coslr   | 50        | 8.7      | True  | 224        | 4096 | 300   | 224       | [82.85](http://spring.sensetime.com/dropadmin/$/hZViP.pth) |
 ## 高精度baseLine
 
 | model                                | setting | Params(M) | FLOPS(G) | ema   | train size | bs   | epoch | test size | top-1 |
