@@ -10,12 +10,13 @@ class L2Loss(nn.Module):
     """
     L2 Loss
     """
-    def __init__(self, feat_norm=True, loss_weight=1.0):
+    def __init__(self, feat_norm=False, batch_mean=False, loss_weight=1.0):
         super().__init__()
         self.loss_weight = loss_weight
         self.feat_norm = feat_norm
+        self.batch_mean = batch_mean
 
-    def forward(self, s_features, t_features, masks=None, normalize=None):
+    def forward(self, s_features, t_features, masks=None):
         assert isinstance(s_features, list) and isinstance(t_features, list), 'features must be list!'
         if masks is not None:
             assert isinstance(masks, list) and len(masks) == len(s_features), 'masks must be consistent with features!'
@@ -28,11 +29,8 @@ class L2Loss(nn.Module):
                 t = self.normalize_feature(t)
                 masks[idx] = masks[idx].view(s.size(0), -1)
             loss = torch.sum(torch.pow(torch.add(s, -1, t), 2) * masks[idx])
-            if normalize is not None:
-                if isinstance(normalize, list):
-                    loss = loss / normalize[idx]
-                else:
-                    loss = loss / normalize
+            if self.batch_mean:
+                loss = loss / s.size(0)
             elif masks[idx].sum() != 0:
                 loss = loss / masks[idx].sum()
             total_loss += loss

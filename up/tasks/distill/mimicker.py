@@ -5,7 +5,7 @@ from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import MIMIC_REGISTRY, MIMIC_LOSS_REGISTRY
 
 
-__all__ = ["Mimicker", "Feature_Mimicker", "Sample_Feature_Mimicker", "FRS_Mimicker", "DeFeat_Mimicker"]
+__all__ = ["Mimicker", "Base_Mimicker", "Sample_Feature_Mimicker", "FRS_Mimicker", "DeFeat_Mimicker"]
 
 
 class Mimicker(object):
@@ -45,11 +45,17 @@ class Mimicker(object):
         self.build_losses()
 
     def _register_losses(self, loss_name, default_configs):
-        loss_type = default_configs['type']
-        loss_kwargs = default_configs.get('kwargs', {})
+        default_type = default_configs['type']
+        default_kwargs = default_configs.get('kwargs', {})
         if loss_name in self.configs:
-            loss_type = self.configs[loss_name].get('type', loss_type)
-            loss_kwargs.update(self.configs[loss_name].get('kwargs', {}))
+            loss_type = self.configs[loss_name].get('type', default_type)
+            if loss_type == default_type:
+                loss_kwargs = default_kwargs.update(self.configs[loss_name].get('kwargs', {}))
+            else:
+                loss_kwargs = self.configs[loss_name].get('kwargs', {})
+        else:
+            loss_type = default_type
+            loss_kwargs = default_kwargs
         setattr(self, loss_name, MIMIC_LOSS_REGISTRY[loss_type](**loss_kwargs))
 
     def build_losses(self):
@@ -124,17 +130,17 @@ class Mimicker(object):
         self._register_forward_hooks()
 
 
-@MIMIC_REGISTRY.register('Feature')
-class Feature_Mimicker(Mimicker):
+@MIMIC_REGISTRY.register('base')
+class Base_Mimicker(Mimicker):
     def __init__(self, teacher_model=None, student_model=None, teacher_names=None,
                  teacher_mimic_names=None, student_mimic_names=None,
                  loss_weight=1.0, warm_up_iters=-1, configs=None):
-        super(Feature_Mimicker, self).__init__(teacher_model, student_model, teacher_names,
-                                               teacher_mimic_names, student_mimic_names,
-                                               loss_weight, warm_up_iters, configs)
+        super(Base_Mimicker, self).__init__(teacher_model, student_model, teacher_names,
+                                            teacher_mimic_names, student_mimic_names,
+                                            loss_weight, warm_up_iters, configs)
 
     def build_losses(self):
-        self._register_losses('feature_loss', {'type': 'l2_loss', 'kwargs': {}})
+        self._register_losses('loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': True, 'batch_mean': True}})
 
     def mimic(self, **kwargs):
         s_output = kwargs['s_output']
@@ -144,9 +150,8 @@ class Feature_Mimicker(Mimicker):
             feature_s = [self.s_output_maps[_name] for _name in self.student_mimic_names]
             feature_t = [self.t_output_maps[tdx][_name] for _name in self.teacher_mimic_names[tdx]]
 
-            normalizer = [s.size(0) for s in feature_s]
-            neck_loss = self.feature_loss(feature_s, feature_t, normalize=normalizer) / len(feature_s)
-            mimic_losses.update({self.teacher_names[tdx] + '.neck_loss': neck_loss})
+            loss = self.loss(feature_s, feature_t) / len(feature_s)
+            mimic_losses.update({self.teacher_names[tdx] + '.loss': loss})
         mimic_losses = self.loss_post_process(mimic_losses, s_output['cur_iter'])
         self.clear()
         return mimic_losses
@@ -166,7 +171,7 @@ class Sample_Feature_Mimicker(Mimicker):
                                                       loss_weight, warm_up_iters, configs)
 
     def build_losses(self):
-        self._register_losses('feature_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False}})
+        self._register_losses('feature_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
 
     def mimic(self, **kwargs):
         s_output = kwargs['s_output']
@@ -212,8 +217,8 @@ class FRS_Mimicker(Mimicker):
                                            loss_weight, warm_up_iters, configs)
 
     def build_losses(self):
-        self._register_losses('neck_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False}})
-        self._register_losses('rpn_loss', {'type': 'bce_loss', 'kwargs': {}})
+        self._register_losses('neck_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+        self._register_losses('rpn_loss', {'type': 'bce_loss', 'kwargs': {'T': 1.0, 'batch_mean': False}})
 
     def mimic(self, **kwargs):
         s_output = kwargs['s_output']
@@ -261,11 +266,11 @@ class DeFeat_Mimicker(Mimicker):
                                               loss_weight, warm_up_iters, configs)
 
     def build_losses(self):
-        self._register_losses('backbone_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False}})
-        self._register_losses('neck_fg_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False}})
-        self._register_losses('neck_bg_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False}})
-        self._register_losses('head_fg_loss', {'type': 'kd_loss', 'kwargs': {}})
-        self._register_losses('head_bg_loss', {'type': 'kd_loss', 'kwargs': {}})
+        self._register_losses('backbone_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+        self._register_losses('neck_fg_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+        self._register_losses('neck_bg_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+        self._register_losses('head_fg_loss', {'type': 'kd_loss', 'kwargs': {'T': 1.0}})
+        self._register_losses('head_bg_loss', {'type': 'kd_loss', 'kwargs': {'T': 1.0}})
 
     def mimic(self, **kwargs):
         s_output = kwargs['s_output']

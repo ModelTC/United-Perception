@@ -422,11 +422,13 @@ mimic:
       type: l2_loss
       kwargs:
         feat_norm: False
+        batch_mean: False
         loss_weight: 0.002
     rpn_loss:
       type: bce_loss
       kwargs:
         T: 1.0
+        batch_mean: False
         loss_weight: 0.1
   teacher:
     mimic_name: ['neck.p2_conv', 'neck.p3_conv', 'neck.p4_conv', 'neck.p5_conv', 'neck.p6_pool']

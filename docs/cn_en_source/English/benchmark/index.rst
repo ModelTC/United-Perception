@@ -30,3 +30,8 @@ Multitask
 ---------
 
 v0.1.0 baseline `multitask v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/multitask_benchmark.md>`_
+
+Distillation
+------------
+
+v0.1.0 baseline `distillation v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/mimic/benchmark/distillation.md>`_

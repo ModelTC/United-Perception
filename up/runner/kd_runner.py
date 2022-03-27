@@ -105,7 +105,7 @@ class KDRunner(BaseRunner):
     def build_mimic(self):
         self.mimic_jobs = {}
         for key in self.mimic_configs.keys():
-            mimic_ins_type = self.mimic_configs[key].get('mimic_ins_type', 'Feature')
+            mimic_ins_type = self.mimic_configs[key].get('mimic_ins_type', 'base')
             mimic_ins = MIMIC_REGISTRY[mimic_ins_type]
             teacher_models = [self.teacher_models[tmk] for tmk in self.mimic_configs[key]['t_names']]
             teacher_mimic_names = [self.teacher_configs[tmk]['mimic_name'] for tmk in self.mimic_configs[key]['t_names']]  # noqa

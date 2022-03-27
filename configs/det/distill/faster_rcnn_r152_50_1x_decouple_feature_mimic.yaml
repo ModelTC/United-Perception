@@ -83,7 +83,7 @@ trainer: # Required.
       momentum: 0.9
       weight_decay: 0.0001
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
-    warmup_iter: 500         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_iter: 2000         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
     type: MultiStepLR
     kwargs:
       milestones: [8,11]     # epochs to decay lr
@@ -425,7 +425,7 @@ teacher:
 mimic:
   mimic_ins_type: DeFeat
   loss_weight: 1.0
-  warm_up_iters: 500
+  warm_up_iters: 2000
   cfgs:
     rpn_fpn_levels: [0, 1, 2, 3, 4]
     rpn_fpn_strides: [4, 8, 16, 32, 64]
@@ -438,27 +438,32 @@ mimic:
       type: l2_loss
       kwargs:
         feat_norm: False
+        batch_mean: False
         loss_weight: 1.0
     neck_fg_loss:
       type: l2_loss
       kwargs:
         feat_norm: False
+        batch_mean: False
         loss_weight: 4.0
     neck_bg_loss:
       type: l2_loss
       kwargs:
         feat_norm: False
+        batch_mean: False
         loss_weight: 16.0
     head_fg_loss:
       type: kd_loss
       kwargs:
         T: 3.0
-        loss_weight: 0.05
+        # loss_weight: 0.05
+        loss_weight: 0.0
     head_bg_loss:
       type: kd_loss
       kwargs:
         T: 1.0
-        loss_weight: 2.0
+        # loss_weight: 2.0
+        loss_weight: 0.0
   teacher:
     mimic_name: ['backbone.layer2.3', 'backbone.layer3.5', 'backbone.layer4.2', 'neck.p2_conv', 'neck.p3_conv', 'neck.p4_conv', 'neck.p5_conv', 'neck.p6_pool']
     teacher_weight: checkpoints/fpn152/ckpt_e12.pth

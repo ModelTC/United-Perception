@@ -404,14 +404,15 @@ teacher:
             top_n: 100
 
 mimic:
-  # mimic_ins_type: Feature   # by default
+  # mimic_ins_type: base   # by default
   loss_weight: 1.0
   warm_up_iters: -1
   cfgs:
-    feature_loss:
+    loss:
       type: l2_loss
       kwargs:
         feat_norm: True
+        batch_mean: True
         loss_weight: 1.0
   teacher:
     mimic_name: ['neck.p2_conv', 'neck.p3_conv', 'neck.p4_conv', 'neck.p5_conv', 'neck.p6_pool']

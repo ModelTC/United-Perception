@@ -31,12 +31,13 @@ class BCELoss(nn.Module):
     """
     BCE Loss
     """
-    def __init__(self, T=1.0, loss_weight=1.0):
+    def __init__(self, T=1.0, batch_mean=False, loss_weight=1.0):
         super().__init__()
         self.loss_weight = loss_weight
         self.T = T
+        self.batch_mean = batch_mean
 
-    def forward(self, pred_s, pred_t, masks=None, normalize=None):
+    def forward(self, pred_s, pred_t, masks=None):
         assert isinstance(pred_s, list) and isinstance(pred_t, list), 'preds must be list!'
         if masks is not None:
             assert isinstance(masks, list) and len(masks) == len(pred_s), 'masks must be consistent with preds!'
@@ -46,11 +47,8 @@ class BCELoss(nn.Module):
         total_loss = 0
         for idx, (s, t) in enumerate(zip(pred_s, pred_t)):
             loss = torch.sum(F.binary_cross_entropy(s, t, reduction='none') * masks[idx])
-            if normalize is not None:
-                if isinstance(normalize, list):
-                    loss = loss / normalize[idx]
-                else:
-                    loss = loss / normalize
+            if self.batch_mean:
+                loss = loss / s.size(0)
             elif masks[idx].sum() != 0:
                 loss = loss / masks[idx].sum()
             total_loss += loss
