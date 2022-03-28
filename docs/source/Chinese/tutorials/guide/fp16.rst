@@ -1,5 +1,5 @@
 FP16模式配置
-===========
+============
 
 * 精度：使用fp16在mask-rcnn，keypoint-rcnn，retinanet，faster-rcnn等可以取得fp32同等精度。
 * 速度：仅在V100上有加速效果, R50-C4-Faster-RCNN 加速比 1.87 ( vs fp32)。

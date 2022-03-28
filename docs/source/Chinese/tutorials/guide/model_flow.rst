@@ -106,7 +106,7 @@
   * :meth:`~up.tasks.det.models.heads.bbox_head.bbox_head.BboxNet.__init__` 当模块有前驱时，第一个参数为前趋模块输出channel数
   * :meth:`~up.tasks.det.models.heads.bbox_head.bbox_head.BboxNet.forward` input为backbone或者neck的输出，该方法的输出一般为
 
-  .. coda-block:: python
+  .. code-block:: python
 
    {
      # ... 前面所有模块的输出

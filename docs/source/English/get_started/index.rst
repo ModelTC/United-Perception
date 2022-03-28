@@ -1,15 +1,15 @@
 Get Started
 ===========
 
-* :ref:`GSTrainAnchor`
-* :ref:`EvalAnchor`
-* :ref:`DemoAnchor`
-* :ref:`DeployAnchor`
+* :ref:`GSTrainAnchorEn`
+* :ref:`EvalAnchorEn`
+* :ref:`DemoAnchorEn`
+* :ref:`DeployAnchorEn`
 
 
 Guiding users to produce models in a short time and master the using of UP.
 
-.. _GSTrainAnchor:
+.. _GSTrainAnchorEn:
 
 Train
 -----
@@ -83,7 +83,7 @@ Step3: the setting of FP16 and others.
         type: base # Default is base, or register the runner according to the requirement such as quant.
 
 
-.. _EvalAnchor: 
+.. _EvalAnchorEn: 
 
 Evaluate
 --------
@@ -106,7 +106,7 @@ The evaluation script merges tesing into training where tesing can be started by
     # ./eval.sh <PARTITION> <num_gpu> <config>
     ./eval.sh ToolChain 1 configs/det/yolox/yolox_tiny.yaml
 
-.. _DemoAnchor:
+.. _DemoAnchorEn:
 
 Demo
 ----
@@ -145,7 +145,7 @@ Step2: inference.
     ./inference.sh ToolChain 1 configs/det/yolox/yolox_tiny.yaml
 
 
-.. _DeployAnchor:
+.. _DeployAnchorEn:
 
 Deploy
 -------
@@ -191,7 +191,7 @@ Deploy
   .. note::
 
     * 'to_kestrel' needs adding the corresponding parameters in configs;
-    * The parameters of specific sub-task which need to be added can refer to :ref:`tasks`. 
+    * The parameters of specific sub-task which need to be added can refer to :ref:`tasksEn`. 
 
 Deploy instance:
 

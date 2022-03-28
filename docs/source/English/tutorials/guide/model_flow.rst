@@ -1,15 +1,15 @@
 Model flow
 ==========
 
-* :ref:`BackboneNeckAnchor`
-* :ref:`HeadAnchor`
+* :ref:`BackboneNeckAnchorEn`
+* :ref:`HeadAnchorEn`
 
 Models are built by multiple sub-modules. The sub-modules are independent with each other and the communications between them are realized by the set inferfaces.
 The type of inputs and outputs between modules is 'dictionary'.
 
 Every model structure can be abstracted as 'feature extracting' + 'task branch', where 'feature extracting' contains backbone and neck, and 'task branch' has different structures according to the tasks.
 
-.. _BackboneNeckAnchor:
+.. _BackboneNeckAnchorEn:
 
 **BackBone & Neck**
 ~~~~~~~~~~~~~~~~~~~
@@ -95,9 +95,10 @@ Then we realize :meth:`forward` and :meth:`get_outplanes`
     The backbone can be called in '__init__.py', and will be automatically registered to 'MODULE_ZOO_REGISTRY'.
     The neck for detection and segmentation needs being registered to 'MODULE_ZOO_REGISTRY'by '@MODULE_ZOO_REGISTRY.register("bias")'.
 
-.. _HeadAnchor:
+.. _HeadAnchorEn:
 
 **Head**
+~~~~~~~~
 
 1. Head module inherits class:`torch.nn.Module`, and mainly tackles the data output from Backbone and Neck. It needs the following interfaces.
 
