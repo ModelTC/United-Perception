@@ -39,6 +39,7 @@ class SmoothL1Loss(BaseLoss):
                           loss_weight=loss_weight)
         self.sigma = sigma
         self.key_fields = []
+        self.code_weights = None
         if code_weights is not None:
             self.code_weights = np.array(code_weights, dtype=np.float32)
             self.code_weights = torch.from_numpy(self.code_weights).cuda()
