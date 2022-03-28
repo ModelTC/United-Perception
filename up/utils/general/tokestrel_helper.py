@@ -290,7 +290,9 @@ class ClsToKestrel(object):
 
         cmd = 'python -m spring.nart.tools.kestrel.classifier {} {} -v {} -c {} -n {} -p {}'.format(
             prototxt, caffemodel, version, to_kestrel_yml, self.save_to, self.save_to)
-        mv_cmd = 'mv model* temp_to_kestrel.yml -t ./to_kestrel/'
+        if not os.path.exists('./to_kestrel'):
+            os.system('mkdir to_kestrel')
+        mv_cmd = 'mv temp_to_kestrel.yml ./to_kestrel/'
 
         logger.info('Converting Model to Kestrel...')
         os.system(cmd)
