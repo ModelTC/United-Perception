@@ -41,6 +41,7 @@ class ImageNetEvaluator(Evaluator):
     def get_pred_correct(self, pred, label):
         num = pred.size(0)
         maxk = max(self.topk)
+        maxk = min(maxk, pred.size(1))
         _, pred = pred.topk(maxk, 1, True, True)
         pred = pred.t()
         correct = pred.eq(label.reshape(1, -1).expand_as(pred))
@@ -58,37 +59,44 @@ class ImageNetEvaluator(Evaluator):
         return metric
 
     def multicls_eval(self, preds, labels):
-        ave_acc = [0. for i in self.topk]
         attr_num = len(preds)
         res = {}
+        labels = labels.t()
+        attr = []
         for idx in range(attr_num):
             correct, num = self.get_pred_correct(preds[idx], labels[idx])
-            for k_idx, k in enumerate(self.topk):
-                correct_k = correct[:k].reshape(k, -1).float().sum(0)
-                acc = correct_k.mul_(100.0)
-                ave_acc[k_idx] += acc
-        ave_acc_all = [acc.mean() / attr_num for acc in ave_acc]
-        ave_acc_all = [acc.numpy().tolist() for acc in ave_acc_all]
-        ave_acc = [acc / attr_num for acc in ave_acc]
-        ave_acc = [acc.numpy().tolist() for acc in ave_acc]
-        for head_num in range(labels.shape[1]):
-            res[f'head{head_num}'] = {}
-            for k in range(len(self.topk)):
-                topk_id = self.topk[k]
-                res[f'head{head_num}'].update({f'top{topk_id}': ave_acc[k][head_num]})
+            temp = {}
+            for k in self.topk:
+                n_k = min(preds[idx].size(1), k)
+                correct_k = correct[:n_k].reshape(-1).float().sum(0, keepdim=True)
+                acc = correct_k.mul_(100.0 / num)
+                temp[f'top{k}'] = acc.item()
+            attr.append(temp)
+        for head_num in range(len(attr)):
+            res[f'head{head_num}'] = attr[head_num]
         for idx, k in enumerate(self.topk):
-            res[f'ave_top{k}'] = ave_acc_all[idx]
+            res[f'ave_top{k}'] = 0
+            for head_num in range(len(attr)):
+                res[f'ave_top{k}'] += res[f'head{head_num}'][f'top{k}']
+            res[f'ave_top{k}'] /= len(attr)
         metric = Metric(res)
         metric.set_cmp_key(f'ave_top{self.topk[0]}')
         return metric
 
     def eval(self, res_file, res=None):
         res_dict = self.load_res(res_file, res)
-        pred = torch.from_numpy(np.array(res_dict['score']))
         label = torch.from_numpy(np.array(res_dict['label']))
         if len(label.shape) > 1:
+            preds = []
+            for attr_idx in range(label.shape[1]):
+                temp = []
+                for b_idx in range(label.shape[0]):
+                    temp.append(res_dict['score'][b_idx][attr_idx])
+                preds.append(temp)
+            pred = [torch.from_numpy(np.array(score)) for score in preds]
             metric = self.multicls_eval(pred, label)
         else:
+            pred = torch.from_numpy(np.array(res_dict['score']))
             metric = self.single_eval(pred, label)
         return metric
 
