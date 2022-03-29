@@ -1,0 +1,162 @@
+num_classes: &num_classes 19
+
+seg_rand_resize: &seg_rand_resize
+  type: seg_rand_resize
+  kwargs:
+     scale: [0.5, 2.0]
+
+seg_resize: &seg_resize
+  type: seg_resize
+  kwargs:
+     size: [2048, 1024]
+
+seg_crop_train: &seg_crop_train
+  type: seg_crop
+  kwargs:
+    size: [1024, 1024]
+    crop_type: rand
+
+seg_flip: &flip
+  type: seg_random_flip
+
+seg_rand_brightness: &seg_rand_brightness
+  type: seg_rand_brightness
+
+seg_crop_test: &seg_crop_test
+  type: seg_crop
+  kwargs:
+    size: [769, 769]
+    crop_type: center
+
+to_tensor: &to_tensor
+  type: custom_to_tensor
+
+normalize: &normalize
+ type: normalize
+ kwargs:
+   mean: [123.675, 116.28, 103.53] # ImageNet pretrained statics
+   std: [58.395, 57.12, 57.375]
+
+dataset: # Required.
+  train:
+    dataset:
+      type: seg
+      kwargs:
+        meta_file: /mnt/lustre/share/HiLight/dataset/cityscapes/fine_train.txt
+        image_reader:
+           type: fs_opencv
+           kwargs:
+             image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
+             color_mode: RGB
+        seg_label_reader:
+           type: fs_opencv
+           kwargs:
+             image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
+             color_mode: GRAY
+        transformer: [*seg_rand_resize, *flip, *seg_crop_train, *seg_rand_brightness, *to_tensor, *normalize]
+        num_classes: *num_classes
+        ignore_label: 255
+    batch_sampler:
+        type: base
+        kwargs:
+          sampler:
+            type: dist
+            kwargs: {}
+          batch_size: 2
+    dataloader:
+        type: seg_base
+        kwargs:
+          num_workers: 4
+          pin_memory: True
+  test:
+    dataset:
+      type: seg
+      kwargs:
+        meta_file: /mnt/lustre/share/HiLight/dataset/cityscapes/fine_val.txt
+        image_reader:
+           type: fs_opencv
+           kwargs:
+             image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
+             color_mode: RGB
+        seg_label_reader:
+           type: fs_opencv
+           kwargs:
+             image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
+             color_mode: GRAY
+        transformer: [*seg_resize, *to_tensor, *normalize]
+        num_classes: *num_classes
+        ignore_label: 255
+        evaluator:
+          type: seg               # choices = {'COCO', 'VOC', 'MR'}
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 1
+    dataloader:
+      type: seg_base
+      kwargs:
+        num_workers: 2
+        pin_memory: False
+
+ema:
+  enable: True
+  ema_type: exp
+  kwargs:
+    decay: 0.9998
+
+trainer: # Required.
+  max_epoch: &max_epoch 180
+  test_freq: 5
+  save_freq: 5
+  only_save_latest: True
+  optimizer:
+    type: SGD
+    kwargs:
+      lr: 0.000625
+      momentum: 0.9
+      weight_decay: 0.0005
+  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
+    warmup_iter: 500          # 1000 iterations of warmup
+    warmup_type: linear
+    warmup_ratio: 0.25
+    type: polylr
+    kwargs:
+      power: 0.9
+      max_epoch: *max_epoch
+
+saver: # Required.
+  save_dir: checkpoints/hrnet18_s_v1_1024x1024_ema    # dir to save checkpoints
+  results_dir: results_dir/hrnet_s_v1_1024x1024_ema  # dir to save detection results. i.e., bboxes, masks, keypoints
+  # pretrain_model: /mnt/lustre/share/HiLight/model_zoo/resnet50-ebb6acbb.pth
+  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+                     # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+
+hooks:
+  - type: auto_save_best
+
+net:
+  - name: encoder              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+    type: hrnet18_small_v1
+    kwargs:
+      normalize:
+        type: sync_bn
+        kwargs:
+          group_size: 8
+  - name: decoder
+    prev: encoder
+    type: hr_seg_head
+    kwargs:
+        num_classes: *num_classes
+        normalize:
+          type: sync_bn
+          kwargs:
+            group_size: 8
+        loss:
+          type: seg_ohem
+          kwargs:
+             thresh: 0.9
+             min_kept: 100000
+             ignore_index: 255

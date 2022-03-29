@@ -9,7 +9,7 @@ __all__ = ["CriterionOhem", "CriterionBiSegNet", "CriterionICNet", "SegCrossEntr
 
 @LOSSES_REGISTRY.register('seg_ohem')
 class CriterionOhem(nn.Module):
-    def __init__(self, aux_weight, thresh=0.7, min_kept=100000, ignore_index=255):
+    def __init__(self, aux_weight=0, thresh=0.7, min_kept=100000, ignore_index=255):
         super(CriterionOhem, self).__init__()
         self._aux_weight = aux_weight
         self._criterion1 = OhemCrossEntropy2dTensor(ignore_index, thresh, min_kept)

@@ -252,3 +252,22 @@ class RandomGaussianBlur(Augmentation):
             data['image'] = cv2.GaussianBlur(data['image'], (gauss_size, gauss_size), 0)
 
         return data
+
+
+@AUGMENTATION_REGISTRY.register('seg_rand_brightness')
+class Random_Brightness(Augmentation):
+    def __init__(self, shift_value=10):
+        super().__init__()
+        self.shift_value = shift_value
+
+    def augment(self, data):
+        if random.random() < 0.5:
+            return data
+        image = data['image']
+        image = image.astype(np.float32)
+        shift = random.randint(-self.shift_value, self.shift_value)
+        image[:, :, :] += shift
+        image = np.around(image)
+        image = np.clip(image, 0, 255).astype(np.uint8)
+        data['image'] = image
+        return data
