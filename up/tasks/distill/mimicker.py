@@ -50,7 +50,8 @@ class Mimicker(object):
         if loss_name in self.configs:
             loss_type = self.configs[loss_name].get('type', default_type)
             if loss_type == default_type:
-                loss_kwargs = default_kwargs.update(self.configs[loss_name].get('kwargs', {}))
+                default_kwargs.update(self.configs[loss_name].get('kwargs', {}))
+                loss_kwargs = default_kwargs
             else:
                 loss_kwargs = self.configs[loss_name].get('kwargs', {})
         else:

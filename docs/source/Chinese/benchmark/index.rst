@@ -34,4 +34,4 @@ v0.1.0 基准 `multitask v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-
 Distillation
 ------------
 
-v0.1.0 基准 `distillation v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/mimic/benchmark/distillation.md>`_
+v0.1.0 基准 `distillation v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/distillation.md>`_
