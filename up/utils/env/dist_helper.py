@@ -507,12 +507,15 @@ def gather_pk(data, dst=0, group=None):
 
 
 def finalize():
-    if DIST_BACKEND.backend == 'dist':
-        dist.destroy_process_group()
-    elif DIST_BACKEND.backend == 'linklink':
-        link.finalize()
-    else:
-        raise NotImplementedError
+    try:
+        if DIST_BACKEND.backend == 'dist':
+            dist.destroy_process_group()
+        elif DIST_BACKEND.backend == 'linklink':
+            link.finalize()
+        else:
+            raise NotImplementedError
+    except: # noqa
+        pass
 
 
 def pyobj2tensor(pyobj, device="cuda"):

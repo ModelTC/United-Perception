@@ -13,7 +13,7 @@ from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, INFERENCER_RE
 from up.utils.general.user_analysis_helper import send_info
 from up.utils.general.global_flag import DIST_BACKEND
 from up.utils.env.launch import launch
-from up.utils.env.dist_helper import setup_distributed, env, finalize
+from up.utils.env.dist_helper import setup_distributed, finalize
 from up.utils.general.log_helper import default_logger as logger
 
 __all__ = ['Inference']
@@ -111,8 +111,7 @@ def main(args):
     cfg['runtime']['inferencer'] = infer_cfg
     inferencer = INFERENCER_REGISTRY.get(infer_cfg['type'])(cfg, **infer_cfg['kwargs'])
     inferencer.predict()
-    if env.world_size > 1:
-        finalize()
+    finalize()
 
 
 def _main(args):

@@ -3,7 +3,7 @@ from __future__ import division
 import argparse
 import sys
 import torch.multiprocessing as mp
-from up.utils.env.dist_helper import setup_distributed, env, finalize
+from up.utils.env.dist_helper import setup_distributed, finalize
 from up.utils.general.yaml_loader import load_yaml
 from up.utils.env.launch import launch
 from .subcommand import Subcommand
@@ -97,8 +97,7 @@ def main(args):
     send_info(cfg, func="to_caffe")
     runner = RUNNER_REGISTRY.get(runner_cfg['type'])(cfg, **runner_cfg['kwargs'])
     runner.to_caffe(args.save_prefix, args.input_size)
-    if env.world_size > 1:
-        finalize()
+    finalize()
 
 
 def _main(args):
