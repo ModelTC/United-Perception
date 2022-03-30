@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.utils.checkpoint as checkpoint
 import numpy as np
 from up.utils.model.utils import DropPath
 from up.utils.model.initializer import trunc_normal_
-from einops.layers.torch import Rearrange
 
 
 class Mlp(nn.Module):
@@ -121,7 +121,6 @@ class CSWinBlock(nn.Module):
 
         if self.patches_resolution == split_size:
             last_stage = True
-            print('last_stage', last_stage)
         if last_stage:
             self.branch_num = 1
         else:
@@ -158,15 +157,27 @@ class CSWinBlock(nn.Module):
         B, L, C = x.shape
         assert L == H * W, "flatten img_tokens has wrong size"
         img = self.norm1(x)
+        pad_l = pad_t = 0
+        img = img.view(B, H, W, C)
+        pad_r = (self.split_size - W % self.split_size) % self.split_size
+        pad_b = (self.split_size - H % self.split_size) % self.split_size
+        img = F.pad(img, (0, 0, pad_l, pad_r, pad_t, pad_b))
+        _, Hp, Wp, _ = img.shape
+        img = img.view(B, Hp * Wp, -1)
+
         qkv = self.qkv(img).reshape(B, -1, 3, C).permute(2, 0, 1, 3)
 
         if self.branch_num == 2:
-            x1 = self.attns[0](qkv[:, :, :, :C // 2], H, W)
-            x2 = self.attns[1](qkv[:, :, :, C // 2:], H, W)
+            x1 = self.attns[0](qkv[:, :, :, :C // 2], Hp, Wp)
+            x2 = self.attns[1](qkv[:, :, :, C // 2:], Hp, Wp)
             attened_x = torch.cat([x1, x2], dim=2)
         else:
-            attened_x = self.attns[0](qkv, H, W)
+            attened_x = self.attns[0](qkv, Hp, Wp)
         attened_x = self.proj(attened_x)
+        attened_x
+        if pad_r > 0 or pad_b > 0:
+            attened_x = attened_x.view(B, Hp, Wp, -1)[:, :H, :W, :].contiguous()
+            attened_x = attened_x.view(B, H * W, -1)
         x = x + self.drop_path(attened_x)
         x = x + self.drop_path(self.mlp(self.norm2(x)))
 
@@ -200,9 +211,9 @@ class Merge_Block(nn.Module):
         self.conv = nn.Conv2d(dim, dim_out, 3, 2, 1)
         self.norm = norm_layer(dim_out)
 
-    def forward(self, x):
+    def forward(self, x, H, W):
         B, new_HW, C = x.shape
-        H = W = int(np.sqrt(new_HW))
+        assert new_HW == H * W, "flatten img_tokens has wrong size"
         x = x.transpose(-2, -1).contiguous().view(B, C, H, W)
         x = self.conv(x)
         B, C = x.shape[:2]
@@ -304,22 +315,23 @@ class CSWinTransformer(nn.Module):
 
     def forward_features(self, x):
         x = self.stage1_conv(x)
-        Wh, Ww = x.size(2), x.size(3)
-        x = Rearrange('b c h w -> b (h w) c', h=self.img_size // 4, w=self.img_size // 4)(x)
+        bs, Wh, Ww = x.size(0), x.size(2), x.size(3)
+        x = x.permute(0, 2, 3, 1)
+        x = x.reshape(bs, Wh * Ww, -1)
         x = self.stage1_norm(x)
         outs = []
         out_idx = 0
         for pre, blocks in zip([None, self.merge1, self.merge2, self.merge3],
                                [self.stage1, self.stage2, self.stage3, self.stage4]):
             if pre:
-                x = pre(x)
-                Wh = Wh // 2
-                Ww = Ww // 2
+                x = pre(x, Wh, Ww)
+                Wh = (Wh + 1) // 2
+                Ww = (Ww + 1) // 2
             for blk in blocks:
                 if self.use_chk:
-                    x = checkpoint.checkpoint(blk, x, Wh, Wh)
+                    x = checkpoint.checkpoint(blk, x, Wh, Ww)
                 else:
-                    x = blk(x, Wh, Wh)
+                    x = blk(x, Wh, Ww)
             if out_idx in self.out_indices:
                 norm_layer = getattr(self, f'norm{out_idx}')
                 x_out = norm_layer(x)
