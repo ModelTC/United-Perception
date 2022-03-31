@@ -139,7 +139,11 @@ class RoiPredictor(object):
                     cls_rois = torch.cat([cls_rois, scores[:, None]], dim=1)
 
                 if self.nms_cfg is not None:
-                    cls_rois, keep_idx = nms(cls_rois, self.nms_cfg)
+                    if return_pos_inds:
+                        _, keep_idx = nms(cls_rois[:, :5], self.nms_cfg)
+                        cls_rois = cls_rois[keep_idx]
+                    else:
+                        cls_rois, keep_idx = nms(cls_rois, self.nms_cfg)
                 if post_nms_top_n > 0:
                     cls_rois = cls_rois[:post_nms_top_n]
 
@@ -170,7 +174,7 @@ class RoiPredictorMultiCls(RoiPredictor):
         super().__init__(pre_nms_score_thresh, pre_nms_top_n, post_nms_top_n, roi_min_size, merger, nms, clip_box)
         self.INF = 4096
 
-    def single_level_predict(self, anchors, preds, image_info):
+    def single_level_predict(self, anchors, preds, image_info, num_points, return_pos_inds=None):
         """
         Arguments:
             - anchors (FloatTensor, fp32): [K, 4]
@@ -200,10 +204,12 @@ class RoiPredictorMultiCls(RoiPredictor):
         for b_ix in range(B):
             # clip rois and filter rois which are too small
             image_rois = rois[b_ix]
+            image_inds = torch.arange(K, dtype=torch.int64, device=image_rois.device)
             if self.clip_box:
                 image_rois = clip_bbox(image_rois, image_info[b_ix])
             image_rois, filter_inds = filter_by_size(image_rois, roi_min_size)
             image_cls_pred = cls_pred[b_ix][filter_inds]
+            image_inds = image_inds[filter_inds]
             if image_rois.numel() == 0:
                 continue  # noqa E701
 
@@ -222,6 +228,7 @@ class RoiPredictorMultiCls(RoiPredictor):
             anchor_idxs = topk_idxs // C
             classes_idxs = ((topk_idxs % C) + 1).float().view(-1, 1)
             cls_rois = image_rois[anchor_idxs]
+            cls_inds = image_inds[anchor_idxs]
             scores = scores.view(-1, 1)
 
             if self.nms_cfg is not None:
@@ -230,12 +237,19 @@ class RoiPredictorMultiCls(RoiPredictor):
                 cls_rois = cls_rois[keep_idx]
                 scores = scores[keep_idx]
                 classes_idxs = classes_idxs[keep_idx]
+                cls_inds = cls_inds[keep_idx]
             ix = cls_rois.new_full((cls_rois.shape[0], 1), b_ix)
-            cls_rois = torch.cat([ix, cls_rois, scores, classes_idxs], dim=1)
+            if return_pos_inds:
+                cls_rois = torch.cat([ix, cls_rois, scores, classes_idxs, cls_inds[:, None]], dim=1)
+            else:
+                cls_rois = torch.cat([ix, cls_rois, scores, classes_idxs], dim=1)
             batch_rois.append(cls_rois)
         if len(batch_rois) == 0:
-            return anchors.new_zeros((1, 7))
-        return torch.cat(batch_rois, dim=0)
+            return anchors.new_zeros((1, 8)) if return_pos_inds else anchors.new_zeros((1, 7))
+        results = torch.cat(batch_rois, dim=0)
+        if return_pos_inds:
+            results[:, 7].add_(num_points)
+        return results
 
 
 @ROI_MERGER_REGISTRY.register('rpn')
@@ -274,7 +288,7 @@ class RpnMerger(object):
             if len(merged_rois) > 0:
                 merged_rois = torch.cat(merged_rois, dim=0)
             else:
-                merged_rois = mlvl_rois.new_zeros((1, 7))
+                merged_rois = mlvl_rois.new_zeros((1, mlvl_rois.shape[1]))
             return merged_rois
 
 
@@ -329,7 +343,7 @@ class RetinaMerger(object):
         if len(merged_rois) > 0:
             merged_rois = torch.cat(merged_rois, dim=0)
         else:
-            merged_rois = mlvl_rois.new_zeros((1, 7))
+            merged_rois = mlvl_rois.new_zeros((1, mlvl_rois.shape[1]))
         return merged_rois
 
 
@@ -377,7 +391,7 @@ class RetinaMergerMultiCls(RetinaMerger):
         if len(merged_rois) > 0:
             merged_rois = torch.cat(merged_rois, dim=0)
         else:
-            merged_rois = mlvl_rois.new_zeros((1, 7))
+            merged_rois = mlvl_rois.new_zeros((1, mlvl_rois.shape[1]))
         return merged_rois
 
 
