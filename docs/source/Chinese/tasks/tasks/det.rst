@@ -125,6 +125,41 @@ compose_loc_loss:
 
 转换kestrel模型时，需要使用ToKestrel，具体配置如下:
 
+1. 在配置文件中 dataset.train 下设置 class_names 字段， 以 COCO 为例：
+  .. code-block:: yaml
+
+    class_names: &class_names [
+    "__background__", "person", "bicycle", "car", "motorcycle", "airplane",
+    "bus", "train", "truck", "boat", "traffic light", "fire hydrant",
+    "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse",
+    "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack",
+    "umbrella", "handbag", "tie", "suitcase", "frisbee", "skis", "snowboard",
+    "sports ball", "kite", "baseball bat", "baseball glove", "skateboard",
+    "surfboard", "tennis racket", "bottle", "wine glass", "cup", "fork",
+    "knife", "spoon", "bowl", "banana", "apple", "sandwich", "orange",
+    "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair",
+    "couch", "potted plant", "bed", "dining table", "toilet", "tv", "laptop",
+    "mouse", "remote", "keyboard", "cell phone", "microwave", "oven",
+    "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
+    "teddy bear", "hair drier", "toothbrush"
+    ]
+
+    dataset:
+      train:
+        dataset:
+          type: coco
+          kwargs:
+            meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
+            class_names: *class_names
+            image_reader:
+              type: fs_opencv
+              kwargs:
+                image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+                color_mode: RGB
+            transformer: [*flip, *train_resize, *to_tensor, *normalize]
+
+2. 添加 to_kestrel 字段：
+
   .. code-block:: yaml
 
     to_kestrel:
