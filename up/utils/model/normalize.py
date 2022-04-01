@@ -23,7 +23,8 @@ _norm_cfg = {
     'taskbn': ('bn', TaskBatchNorm2d),
     'link_sync_bn': ('bn', GroupSyncBatchNorm),
     'sync_bn': ('bn', GroupSyncBatchNorm),
-    'task_sync_bn': ('bn', SyncTaskBatchNorm2d)
+    'task_sync_bn': ('bn', SyncTaskBatchNorm2d),
+    'ln': ('ln', torch.nn.LayerNorm)
 }
 
 try:
@@ -48,6 +49,8 @@ def is_bn(m):
     if isinstance(m, TaskBatchNorm2d):
         return True
     if isinstance(m, SyncTaskBatchNorm2d):
+        return True
+    if isinstance(m, torch.nn.LayerNorm):
         return True
     return False
 

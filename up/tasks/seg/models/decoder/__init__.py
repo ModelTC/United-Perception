@@ -6,3 +6,4 @@ from .pspnet import *  # noqa
 from .biseg import *  # noqa
 from .icnet import *  # noqa
 from .semantic_fpn import *  # noqa
+from .segformer_decoder import * # noqa

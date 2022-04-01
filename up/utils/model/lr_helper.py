@@ -67,9 +67,12 @@ class _CosineLREpochScheduler(CosineAnnealingLR):
 
 @LR_REGISTRY.register('polylr')
 class PolyLR(torch.optim.lr_scheduler._LRScheduler):
-    def __init__(self, max_epoch=-1, power=1., min_lr=0., **kwargs):
+    def __init__(self, max_epoch=-1, max_iter=-1, power=1., min_lr=0., **kwargs):
         self.power = power
-        self.max_epoch = max_epoch * kwargs['data_size']
+        if max_iter == -1:
+            self.max_epoch = max_epoch * kwargs['data_size']
+        else:
+            self.max_epoch = max_iter
         self.min_lr = min_lr
         kwargs.pop('data_size')
         super(PolyLR, self).__init__(**kwargs)

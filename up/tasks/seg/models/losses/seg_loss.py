@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from up.utils.general.registry_factory import LOSSES_REGISTRY
 from up.utils.general.log_helper import default_logger as logger
 
-__all__ = ["CriterionOhem", "CriterionBiSegNet", "CriterionICNet"]
+__all__ = ["CriterionOhem", "CriterionBiSegNet", "CriterionICNet", "SegCrossEntropyLoss"]
 
 
 @LOSSES_REGISTRY.register('seg_ohem')
@@ -145,3 +145,83 @@ class CriterionBiSegNet(nn.Module):
         loss3 = self.criterion1(scale_pred, target)
 
         return loss1 + loss2 + loss3
+
+
+@LOSSES_REGISTRY.register('seg_ce')
+class SegCrossEntropyLoss(nn.Module):
+    def __init__(self,
+                 reduction='mean',
+                 class_weight=None,
+                 loss_weight=1.0):
+        super(SegCrossEntropyLoss, self).__init__()
+        self.reduction = reduction
+        self.loss_weight = loss_weight
+        self.class_weight = class_weight
+        self.cls_criterion = cross_entropy
+
+    def forward(self,
+                cls_score,
+                label,
+                weight=None,
+                avg_factor=None,
+                reduction_override=None,
+                **kwargs):
+        """Forward function."""
+        assert reduction_override in (None, 'none', 'mean', 'sum')
+        reduction = (
+            reduction_override if reduction_override else self.reduction)
+        if self.class_weight is not None:
+            class_weight = cls_score.new_tensor(self.class_weight)
+        else:
+            class_weight = None
+        loss_cls = self.loss_weight * self.cls_criterion(
+            cls_score,
+            label,
+            weight,
+            class_weight=class_weight,
+            reduction=reduction,
+            avg_factor=avg_factor,
+            **kwargs)
+        return loss_cls
+
+
+def cross_entropy(pred,
+                  label,
+                  weight=None,
+                  class_weight=None,
+                  reduction='mean',
+                  avg_factor=None,
+                  ignore_index=-100):
+    """The wrapper function for :func:`F.cross_entropy`"""
+    # class_weight is a manual rescaling weight given to each class.
+    # If given, has to be a Tensor of size C element-wise losses
+    loss = F.cross_entropy(
+        pred,
+        label,
+        weight=class_weight,
+        reduction='none',
+        ignore_index=ignore_index)
+
+    # apply weights and do the reduction
+    if weight is not None:
+        weight = weight.float()
+        assert weight.dim() == loss.dim()
+        if weight.dim() > 1:
+            assert weight.size(1) == 1 or weight.size(1) == loss.size(1)
+        loss = loss * weight
+    if avg_factor is None:
+        reduction_enum = F._Reduction.get_enum(reduction)
+        if reduction_enum == 0:
+            loss = loss
+        elif reduction_enum == 1:
+            loss = loss.mean()
+        elif reduction_enum == 2:
+            loss = loss.sum()
+    else:
+        # if reduction is mean, then average the loss by avg_factor
+        if reduction == 'mean':
+            loss = loss.sum() / avg_factor
+        elif reduction != 'none':
+            raise ValueError('avg_factor can not be used with reduction="sum"')
+
+    return loss
