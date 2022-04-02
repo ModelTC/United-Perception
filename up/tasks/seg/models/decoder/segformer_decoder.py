@@ -23,7 +23,6 @@ class SegFormerHead(nn.Module):
                  norm_cfg=None,
                  align_corners=False,
                  loss=None,
-                 ignore_index=255,
                  interpolate_mode='bilinear'):
         super(SegFormerHead, self).__init__()
         self.prefix = self.__class__.__name__
@@ -33,7 +32,6 @@ class SegFormerHead(nn.Module):
         self.num_classes = num_classes
         self.dropout_ratio = dropout_ratio
         self.norm_cfg = norm_cfg
-        self.ignore_index = ignore_index
         self.loss = build_loss(loss)
         self.align_corners = align_corners
 
@@ -90,16 +88,7 @@ class SegFormerHead(nn.Module):
         out = F.interpolate(out, size=size, mode='bilinear', align_corners=self.align_corners)
 
         if self.training:
-            loss = self.losses(out, inputs['gt_semantic_seg'])
+            loss = self.loss(out, inputs['gt_semantic_seg'])
             return {f"{self.prefix}.loss": loss, "blob_pred": out}
         else:
             return {"blob_pred": out}
-
-    def losses(self, seg_logit, seg_label):
-        seg_weight = None
-        loss = self.loss(
-            seg_logit,
-            seg_label.long(),
-            weight=seg_weight,
-            ignore_index=self.ignore_index)
-        return loss
