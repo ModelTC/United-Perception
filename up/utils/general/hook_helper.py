@@ -92,6 +92,12 @@ class Hook(object):
         """
         pass
 
+    def before_allreduce(self, cur_iter):
+        pass
+
+    def after_allreduce(self, cur_iter):
+        pass
+
     def after_update(self, cur_iter):
         """ Make sense after updating params
         Arguments:
@@ -163,7 +169,18 @@ class TrainEvalLogger(Hook):
         self.t_after_data = time.time()
 
     def after_forward(self, cur_iter, output):
+        self.t_after_forward = time.time()
         self.output = output
+
+    def after_backward(self, cur_iter, loss):
+        self.t_after_backward = time.time()
+
+    def before_allreduce(self, cur_iter):
+        # pass
+        self.t_before_allreduce = time.time()
+
+    def after_allreduce(self, cur_iter):
+        self.t_after_allreduce = time.time()
 
     @classmethod
     def allreduce(cls, output):
@@ -212,7 +229,10 @@ class TrainEvalLogger(Hook):
         self.train_timers.update(
             cur_iter,
             data_time=self.t_after_data - self.t_before_data,
-            batch_time=time.time() - self.t_before_data)
+            batch_time=time.time() - self.t_before_data,
+            forward_time=self.t_after_forward - self.t_after_data,
+            backward_time=self.t_after_backward - self.t_after_forward,
+            allreduce_time=self.t_after_allreduce - self.t_before_allreduce)
 
         eta_seconds = self.train_timers.batch_time.global_avg * (runner.get_total_iter() - cur_iter)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))

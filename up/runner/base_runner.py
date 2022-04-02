@@ -841,8 +841,10 @@ class BaseRunner(object):
                 self.optimizer.backward(loss)
             else:
                 loss.backward()
+            self._hooks('before_allreduce', self.cur_iter)
             reduce_gradients(self.model, not self.args['asynchronize'],
                              self.args.get('allow_dead_parameter', False))
+            self._hooks('after_allreduce', self.cur_iter)
         else:
             raise NotImplementedError
         self._hooks('after_backward', self.cur_iter, loss)
