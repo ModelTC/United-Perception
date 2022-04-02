@@ -32,6 +32,12 @@
 | UNet (1024) light-seg   | unet                | no  | -         | 8   | 240   | [2048, 1024]      | 53.37                          | -        |
 | [UNet (1024)](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/seg/unet.yaml)             | unet                | no  | -         | 8   | 240   | [2048, 1024]      | 67.4                           | [ckpt](http://spring.sensetime.com/dropadmin/$/Qe7l7.pth) |
 | [UNet (1024)](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/seg/unet_ema.yaml)             | unet                | yes | -         | 8   | 240   | [2048, 1024]      | 68.0                           | [ckpt](http://spring.sensetime.com/dropadmin/$/tsISR.pth) |
+| [Segfomer_b0](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/seg/segformer/segformer_b0.yaml)             | mit-b0                | no | -         | 8   | 160k(iter)   | [2048, 1024]      | 75.28                           | [ckpt]() |
+| [Segfomer_b1](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/seg/segformer/segformer_b1.yaml)             | mit-b1                | no | -         | 8   | 160k(iter)   | [2048, 1024]      | 77.55                           | [ckpt]() |
+| [Segfomer_b2](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/seg/segformer/segformer_b2.yaml)             | mit-b2                | no | -         | 8   | 160k(iter)   | [2048, 1024]      | 80.38                           | [ckpt]() |
+| [Segfomer_b3](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/seg/segformer/segformer_b3.yaml)             | mit-b3                | no | -         | 8   | 160k(iter)   | [2048, 1024]      | 81.36                           | [ckpt]() |
+| [Segfomer_b4](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/seg/segformer/segformer_b4.yaml)             | mit-b4                | no | -         | 8   | 160k(iter)   | [2048, 1024]      | 81.49                           | [ckpt]() |
+| [Segfomer_b5](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/seg/segformer/segformer_b5.yaml)             | mit-b5                | no | -         | 8   | 160k(iter)   | [2048, 1024]      | 81.52                           | [ckpt]() |
 
 
 

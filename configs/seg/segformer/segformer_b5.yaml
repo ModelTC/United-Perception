@@ -19,12 +19,6 @@ seg_crop_train: &seg_crop_train
 seg_flip: &flip
   type: seg_random_flip
 
-seg_crop_test: &seg_crop_test
-  type: seg_crop
-  kwargs:
-    size: [512, 512]
-    crop_type: center
-
 color_jitter: &color_jitter
   type: color_jitter_mmseg
   kwargs:
