@@ -1,4 +1,4 @@
-from .base_runner import BaseRunner
+from up.runner.base_runner import BaseRunner
 from up.utils.general.registry_factory import MODEL_HELPER_REGISTRY, RUNNER_REGISTRY
 from up.utils.env.gene_env import get_env_info
 from up.utils.env.dist_helper import env

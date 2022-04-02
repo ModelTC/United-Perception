@@ -2,7 +2,7 @@ import torch
 import torch.optim
 import numpy as np
 from up.utils.env.gene_env import to_device
-from .base_runner import BaseRunner
+from up.runner.base_runner import BaseRunner
 from up.utils.general.registry_factory import RUNNER_REGISTRY
 
 

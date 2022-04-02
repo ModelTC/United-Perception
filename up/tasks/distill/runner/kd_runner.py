@@ -1,5 +1,5 @@
 import torch
-from .base_runner import BaseRunner
+from up.runner.base_runner import BaseRunner
 from up.utils.general.registry_factory import MODEL_HELPER_REGISTRY, RUNNER_REGISTRY, MIMIC_REGISTRY
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.env.gene_env import print_network
