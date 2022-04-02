@@ -17,12 +17,15 @@ class RandomColorJitterMMSeg(Augmentation):
                  brightness_delta=32,
                  contrast_range=(0.5, 1.5),
                  saturation_range=(0.5, 1.5),
-                 hue_delta=18):
+                 hue_delta=18,
+                 color_type='BGR'):
         super(RandomColorJitterMMSeg, self).__init__()
         self.brightness_delta = brightness_delta
         self.contrast_lower, self.contrast_upper = contrast_range
         self.saturation_lower, self.saturation_upper = saturation_range
         self.hue_delta = hue_delta
+        self.color2hsv = getattr(cv2, 'COLOR_{}2HSV'.format(color_type))
+        self.hsv2color = getattr(cv2, 'COLOR_HSV2{}'.format(color_type))
 
     def convert(self, img, alpha=1, beta=0):
         """Multiple with alpha and add beat with clip."""
@@ -50,22 +53,22 @@ class RandomColorJitterMMSeg(Augmentation):
     def saturation(self, img):
         """Saturation distortion."""
         if random.randint(0, 2):
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            img = cv2.cvtColor(img, self.color2hsv)
             img[:, :, 1] = self.convert(
                 img[:, :, 1],
                 alpha=random.uniform(self.saturation_lower,
                                      self.saturation_upper))
-            img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+            img = cv2.cvtColor(img, self.hsv2color)
         return img
 
     def hue(self, img):
         """Hue distortion."""
         if random.randint(0, 2):
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            img = cv2.cvtColor(img, self.color2hsv)
             img[:, :,
                 0] = (img[:, :, 0].astype(int)
                       + random.randint(-self.hue_delta, self.hue_delta)) % 180
-            img = cv2.cvtColor(img, cv2.COLOR_HSV2BGR)
+            img = cv2.cvtColor(img, self.hsv2color)
         return img
 
     def augment(self, data):
