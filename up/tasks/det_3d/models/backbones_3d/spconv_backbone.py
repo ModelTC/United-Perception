@@ -6,11 +6,18 @@ from up.tasks.det_3d.models.backbones_3d.vfe.mean_vfe import build_vfe
 from up.tasks.det_3d.models.backbones_3d.map_to_bev import build_map_to_bev
 from typing import Set
 try:
-    import spconv.pytorch as spconv
-except BaseException:
-    import spconv as spconv
-except Exception:
-    pass
+    try:
+        import spconv.pytorch as spconv
+        from spconv.pytorch import SparseModule
+    except BaseException:
+        import spconv as spconv
+        from spconv import SparseModule
+except Exception:  # ugly code, fake spconv module to avoid error
+    print("If you need spconv, you should install spconv !!!. Or just ignore this error")
+    spconv = None
+    SparseModule = nn.Module
+
+__all__ = ["VoxelResBackBone8x", "VoxelBackBone8x"]
 
 
 def post_act_block(in_channels, out_channels, kernel_size, indice_key=None, stride=1, padding=0,
@@ -34,7 +41,7 @@ def post_act_block(in_channels, out_channels, kernel_size, indice_key=None, stri
     return m
 
 
-class SparseBasicBlock(spconv.SparseModule):
+class SparseBasicBlock(SparseModule):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, norm_fn=None, downsample=None, indice_key=None):
