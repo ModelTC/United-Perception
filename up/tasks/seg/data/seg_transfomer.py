@@ -4,9 +4,112 @@ import collections
 import numbers
 import random
 import math
+import copy
 
 from up.data.datasets.transforms import Augmentation
 from up.utils.general.registry_factory import AUGMENTATION_REGISTRY
+
+
+@AUGMENTATION_REGISTRY.register('color_jitter_mmseg')
+class RandomColorJitterMMSeg(Augmentation):
+
+    def __init__(self,
+                 brightness_delta=32,
+                 contrast_range=(0.5, 1.5),
+                 saturation_range=(0.5, 1.5),
+                 hue_delta=18,
+                 color_type='BGR'):
+        super(RandomColorJitterMMSeg, self).__init__()
+        self.brightness_delta = brightness_delta
+        self.contrast_lower, self.contrast_upper = contrast_range
+        self.saturation_lower, self.saturation_upper = saturation_range
+        self.hue_delta = hue_delta
+        self.color2hsv = getattr(cv2, 'COLOR_{}2HSV'.format(color_type))
+        self.hsv2color = getattr(cv2, 'COLOR_HSV2{}'.format(color_type))
+
+    def convert(self, img, alpha=1, beta=0):
+        """Multiple with alpha and add beat with clip."""
+        img = img.astype(np.float32) * alpha + beta
+        img = np.clip(img, 0, 255)
+        return img.astype(np.uint8)
+
+    def brightness(self, img):
+        """Brightness distortion."""
+        if random.randint(0, 2):
+            return self.convert(
+                img,
+                beta=random.uniform(-self.brightness_delta,
+                                    self.brightness_delta))
+        return img
+
+    def contrast(self, img):
+        """Contrast distortion."""
+        if random.randint(0, 2):
+            return self.convert(
+                img,
+                alpha=random.uniform(self.contrast_lower, self.contrast_upper))
+        return img
+
+    def saturation(self, img):
+        """Saturation distortion."""
+        if random.randint(0, 2):
+            img = cv2.cvtColor(img, self.color2hsv)
+            img[:, :, 1] = self.convert(
+                img[:, :, 1],
+                alpha=random.uniform(self.saturation_lower,
+                                     self.saturation_upper))
+            img = cv2.cvtColor(img, self.hsv2color)
+        return img
+
+    def hue(self, img):
+        """Hue distortion."""
+        if random.randint(0, 2):
+            img = cv2.cvtColor(img, self.color2hsv)
+            img[:, :,
+                0] = (img[:, :, 0].astype(int)
+                      + random.randint(-self.hue_delta, self.hue_delta)) % 180
+            img = cv2.cvtColor(img, self.hsv2color)
+        return img
+
+    def augment(self, data):
+        """
+        Arguments:
+            img (np.array): Input image.
+        Returns:
+            img (np.array): Color jittered image.
+        """
+        output = copy.copy(data)
+        img = data.image
+        assert isinstance(img, np.ndarray)
+        img = np.uint8(img)
+
+        # random brightness
+        img = self.brightness(img)
+        # mode == 0 --> do random contrast first
+        # mode == 1 --> do random contrast last
+        mode = random.randint(0, 2)
+        if mode == 1:
+            img = self.contrast(img)
+
+        # random saturation
+        img = self.saturation(img)
+        # random hue
+        img = self.hue(img)
+        # random contrast
+        if mode == 0:
+            img = self.contrast(img)
+
+        img = np.asanyarray(img)
+        output.image = img
+        return output
+
+    def __repr__(self):
+        format_string = self.__class__.__name__ + '('
+        format_string += 'brightness={0}'.format(self.brightness_delta)
+        format_string += ', contrast=({0},{1})'.format(self.contrast_lower, self.contrast_upper)
+        format_string += ', saturation=({0},{1})'.format(self.saturation_lower, self.saturation_upper)
+        format_string += ', hue={0})'.format(self.hue_delta)
+        return format_string
 
 
 @AUGMENTATION_REGISTRY.register('seg_resize')
@@ -151,4 +254,23 @@ class RandomGaussianBlur(Augmentation):
             # do the gaussian blur
             data['image'] = cv2.GaussianBlur(data['image'], (gauss_size, gauss_size), 0)
 
+        return data
+
+
+@AUGMENTATION_REGISTRY.register('seg_rand_brightness')
+class Random_Brightness(Augmentation):
+    def __init__(self, shift_value=10):
+        super().__init__()
+        self.shift_value = shift_value
+
+    def augment(self, data):
+        if random.random() < 0.5:
+            return data
+        image = data['image']
+        image = image.astype(np.float32)
+        shift = random.randint(-self.shift_value, self.shift_value)
+        image[:, :, :] += shift
+        image = np.around(image)
+        image = np.clip(image, 0, 255).astype(np.uint8)
+        data['image'] = image
         return data

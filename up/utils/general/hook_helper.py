@@ -92,6 +92,12 @@ class Hook(object):
         """
         pass
 
+    def before_allreduce(self, cur_iter):
+        pass
+
+    def after_allreduce(self, cur_iter):
+        pass
+
     def after_update(self, cur_iter):
         """ Make sense after updating params
         Arguments:
@@ -155,6 +161,8 @@ class TrainEvalLogger(Hook):
             self.summary_writer = get_summary_writer_class(summary_writer)(os.path.join(runner.work_dir, logdir))
         self.train_timers = MetricLogger(delimiter=" ")
         self.eval_timers = MetricLogger(delimiter=" ")
+        self.t_before_allreduce = 0
+        self.t_after_allreduce = 0
 
     def before_data(self, cur_iter):
         self.t_before_data = time.time()
@@ -163,7 +171,18 @@ class TrainEvalLogger(Hook):
         self.t_after_data = time.time()
 
     def after_forward(self, cur_iter, output):
+        self.t_after_forward = time.time()
         self.output = output
+
+    def after_backward(self, cur_iter, loss):
+        self.t_after_backward = time.time()
+
+    def before_allreduce(self, cur_iter):
+        # pass
+        self.t_before_allreduce = time.time()
+
+    def after_allreduce(self, cur_iter):
+        self.t_after_allreduce = time.time()
 
     @classmethod
     def allreduce(cls, output):
@@ -212,7 +231,10 @@ class TrainEvalLogger(Hook):
         self.train_timers.update(
             cur_iter,
             data_time=self.t_after_data - self.t_before_data,
-            batch_time=time.time() - self.t_before_data)
+            batch_time=time.time() - self.t_before_data,
+            forward_time=self.t_after_forward - self.t_after_data,
+            backward_time=self.t_after_backward - self.t_after_forward,
+            allreduce_time=self.t_after_allreduce - self.t_before_allreduce)
 
         eta_seconds = self.train_timers.batch_time.global_avg * (runner.get_total_iter() - cur_iter)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
@@ -283,7 +305,11 @@ class TrainEvalLogger(Hook):
             epoch = runner.cur_epoch()
             for k, v in metrics.items():
                 if not isinstance(v, list):
-                    self.summary_writer.add_scalar('metrics/' + k, v, epoch)
+                    if isinstance(v, dict):
+                        for i_k, i_v in v.items():
+                            self.summary_writer.add_scalar('metrics/' + k + '_' + i_k, i_v, epoch)
+                    else:
+                        self.summary_writer.add_scalar('metrics/' + k, v, epoch)
                     try:
                         self.summary_writer.flush()
                     except:  # noqa
@@ -487,10 +513,14 @@ class AutoSaveBest(Hook):
         if not isinstance(metrics, Metric):
             logger.info("auto save best checkpoint only support Metric !!!")
             return
+        if isinstance(metrics.v, list):
+            value = sum(metrics.v) / len(metrics.v)
+        else:
+            value = metrics.v
         # save best ckpt
-        if metrics.v > self.best_metric_val:
-            self._save_best('best', metrics.v)
-            self.best_metric_val = metrics.v
+        if value > self.best_metric_val:
+            self._save_best('best', value)
+            self.best_metric_val = value
             self.best_epoch = self.runner_ref().cur_epoch()
         logger.info(f'best epoch: {self.best_epoch}; best val: {self.best_metric_val}')
 

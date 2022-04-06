@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from up.utils.model.utils import DropPath
 from up.utils.model.initializer import trunc_normal_
+from up.utils.model.normalize import LayerNorm
 
 __all__ = ['convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large', 'convnext_xlarge']
 
@@ -27,37 +28,6 @@ def build_activation_layer(act_func):
         return nn.SELU()
     elif act_func == 'leaky_relu':
         return nn.LeakyReLU()
-
-
-class DropPath(nn.Module):
-    """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
-    """
-
-    def __init__(self, drop_prob=None):
-        super(DropPath, self).__init__()
-        self.drop_prob = drop_prob
-
-    def drop_path(self, x, drop_prob: float = 0., training: bool = False):
-        """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
-
-        This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
-        the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
-        See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for
-        changing the layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use
-        'survival rate' as the argument.
-
-        """
-        if drop_prob == 0. or not training:
-            return x
-        keep_prob = 1 - drop_prob
-        shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
-        random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
-        random_tensor.floor_()  # binarize
-        output = x.div(keep_prob) * random_tensor
-        return output
-
-    def forward(self, x):
-        return self.drop_path(x, self.drop_prob, self.training)
 
 
 class Block(nn.Module):
@@ -115,7 +85,8 @@ class ConvNeXt(nn.Module):
 
     def __init__(self, in_chans=3, num_classes=1000,
                  depths=[3, 3, 9, 3], dims=[96, 192, 384, 768], drop_path_rate=0.,
-                 layer_scale_init_value=1e-6, act_func=None
+                 layer_scale_init_value=1e-6, act_func=None,
+                 out_layers=[0, 1, 2, 3], out_strides=[4, 8, 16, 32]
                  ):
         super().__init__()
 
@@ -143,8 +114,11 @@ class ConvNeXt(nn.Module):
             self.stages.append(stage)
             cur += depths[i]
 
-        self.norm = nn.LayerNorm(dims[-1], eps=1e-6)  # final norm layer
         self.apply(self._init_weights)
+        self.out_planes = dims
+        self.out_strides = out_strides
+        self.out_layers = out_layers
+        assert len(self.out_layers) == len(out_strides)
 
     def _init_weights(self, m):
         if isinstance(m, (nn.Conv2d)):
@@ -153,42 +127,32 @@ class ConvNeXt(nn.Module):
 
     def forward_features(self, x):
         x = x['image']
+        outs = []
         for i in range(4):
             x = self.downsample_layers[i](x)
             x = self.stages[i](x)
-        return self.norm(x.mean([-2, -1]))  # global average pooling, (N, C, H, W) -> (N, C)
+            outs.append(x)
+        outs = [outs[i] for i in self.out_layers]
+        return outs
+
+    def get_outplanes(self):
+        """
+        get dimension of the output tensor
+        """
+        return self.out_planes
+
+    def get_outstrides(self):
+        """
+        Returns:
+
+            - out (:obj:`int`): number of channels of output
+        """
+
+        return torch.tensor(self.out_strides, dtype=torch.int)
 
     def forward(self, x):
-        features = [self.forward_features(x)]
-        return {'features': features, 'strides': [32]}
-
-
-class LayerNorm(nn.Module):
-    r""" LayerNorm that supports two data formats: channels_last (default) or channels_first.
-    The ordering of the dimensions in the inputs. channels_last corresponds to inputs with
-    shape (batch_size, height, width, channels) while channels_first corresponds to inputs
-    with shape (batch_size, channels, height, width).
-    """
-
-    def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
-        super().__init__()
-        self.weight = nn.Parameter(torch.ones(normalized_shape))
-        self.bias = nn.Parameter(torch.zeros(normalized_shape))
-        self.eps = eps
-        self.data_format = data_format
-        if self.data_format not in ["channels_last", "channels_first"]:
-            raise NotImplementedError
-        self.normalized_shape = (normalized_shape,)
-
-    def forward(self, x):
-        if self.data_format == "channels_last":
-            return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
-        elif self.data_format == "channels_first":
-            u = x.mean(1, keepdim=True)
-            s = (x - u).pow(2).mean(1, keepdim=True)
-            x = (x - u) / torch.sqrt(s + self.eps)
-            x = self.weight[:, None, None] * x + self.bias[:, None, None]
-            return x
+        features = self.forward_features(x)
+        return {'features': features, 'strides': self.get_outstrides()}
 
 
 def convnext_tiny(pretrained=False, **kwargs):

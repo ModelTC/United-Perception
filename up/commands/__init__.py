@@ -4,5 +4,5 @@ from .eval import Eval # noqa
 from .quant_deploy import QuantDeploy # noqa
 from .to_caffe import ToCaffe # noqa
 from .to_kestrel import ToKestrel # noqa
-from .to_adela import ToAdela # noqa
 from .flops import Flops # noqa
+from .adela_deploy import AdelaDeploy # noqa

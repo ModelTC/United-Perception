@@ -1,5 +1,5 @@
 import json
-
+import numpy as np
 from up.data.datasets.base_dataset import BaseDataset
 from up.utils.general.registry_factory import DATASET_REGISTRY
 from easydict import EasyDict
@@ -43,9 +43,11 @@ class CustomClsParser(BaseParser):
                 cls_res = {}
                 res = json.loads(line.strip())
                 filename = res['filename']
-                label = res['label']
+                if isinstance(res['label'], list):   # support multilabel cls
+                    cls_res['label'] = [int(i) for i in res['label']]
+                else:
+                    cls_res['label'] = int(res['label'])
                 cls_res['filename'] = filename
-                cls_res['label'] = int(label)
                 cls_res['image_source'] = idx
                 metas.append(cls_res)
         return metas
@@ -63,7 +65,10 @@ class CustomDetParser(BaseParser):
                         continue
                     if "label" in instance:
                         # det cls label begin from 1, cls label begin from 0
-                        label = int(instance["label"] - 1)
+                        if isinstance(instance["label"], list):  # support multilabel cls
+                            label = [int(i) - 1 for i in instance['label']]
+                        else:
+                            label = int(instance["label"] - 1)
                     else:
                         continue
                     if "bbox" in instance:
@@ -127,8 +132,9 @@ class ClsDataset(BaseDataset):
             xmin, ymin, xmax, ymax = meta['bbox'][:4]
             xmin, ymin, xmax, ymax = int(xmin), int(ymin), int(xmax), int(ymax)
             crop = True
-        if self.image_type == 'pil' and is_numpy_image(img):
-            img = Image.fromarray(img)
+        if self.image_type == 'pil':
+            if is_numpy_image(img):
+                img = Image.fromarray(img)
             if crop:
                 img = img.crop((xmin, ymin, xmax, ymax))
         else:
@@ -151,13 +157,34 @@ class ClsDataset(BaseDataset):
     def dump(self, output):
         prediction = self.tensor2numpy(output['preds'])
         label = self.tensor2numpy(output['gt'])
-        score = self.tensor2numpy(output['scores'])
+        multicls = False
+        scores = output['scores']
+        if isinstance(prediction, list):
+            # for multicls
+            # prediction n * single cls
+            # label [1, 2, 3.. n]
+            # score n* single cls
+            multicls = True
+            prediction = np.array(prediction)
+            score = [self.tensor2numpy(i) for i in scores]
+        else:
+            score = self.tensor2numpy(output['scores'])
         out_res = []
-        for _idx in range(prediction.shape[0]):
+        for b_idx in range(label.shape[0]):
+            if multicls:
+                _prediction = [int(item) for item in prediction[:, b_idx]]
+                _label = [int(item) for item in label[b_idx][:]]
+                _score = []
+                for idx, item in enumerate(score):
+                    _score.append([float('%.8f' % s) for s in item[b_idx]])
+            else:
+                _prediction = int(prediction[b_idx])
+                _label = int(label[b_idx])
+                _score = [float('%.8f' % s) for s in score[b_idx]]
             res = {
-                'prediction': int(prediction[_idx]),
-                'label': int(label[_idx]),
-                'score': [float('%.8f' % s) for s in score[_idx]],
+                'prediction': _prediction,
+                'label': _label,
+                'score': _score,
             }
             out_res.append(res)
         return out_res

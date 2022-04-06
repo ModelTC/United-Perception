@@ -28,9 +28,9 @@ class BaseDetPostProcess(nn.Module):
         0 is always for the background class.
     """
 
-    def __init__(self, num_classes, cfg):
+    def __init__(self, num_classes, cfg, prefix=None):
         super(BaseDetPostProcess, self).__init__()
-        self.prefix = self.__class__.__name__
+        self.prefix = prefix if prefix is not None else self.__class__.__name__
         self.tocaffe = False
 
         self.num_classes = num_classes
@@ -138,11 +138,14 @@ class BaseDetPostProcess(nn.Module):
                 mlvl_preds = self.apply_activation(mlvl_preds, remove_background_channel_if_any=True)
                 results = self.train_predictor.predict(mlvl_anchors, mlvl_preds, image_info)
                 output.update(results)
+                if 'RPN' in self.prefix:
+                    output.update({'rpn_dt_bboxes': output['dt_bboxes']})
         else:
             mlvl_preds = self.apply_activation(mlvl_preds, remove_background_channel_if_any=True)
             results = self.test_predictor.predict(mlvl_anchors, mlvl_preds, image_info)
             output.update(results)
-
+            if 'RPN' in self.prefix:
+                output.update({'rpn_dt_bboxes': output['dt_bboxes']})
         return output
 
     def get_loss(self, targets, mlvl_preds, mlvl_shapes=None):
@@ -233,8 +236,8 @@ class IOUPostProcess(BaseDetPostProcess):
         0 is always for the background class.
     """
 
-    def __init__(self, num_classes, cfg):
-        super(IOUPostProcess, self).__init__(num_classes, cfg)
+    def __init__(self, num_classes, cfg, prefix=None):
+        super(IOUPostProcess, self).__init__(num_classes, cfg, prefix)
         self.iou_branch_loss = build_loss(cfg['iou_branch_loss'])
 
     def apply_activation(self, mlvl_preds, remove_background_channel_if_any):
@@ -325,8 +328,8 @@ class RPNPostProcess(BaseDetPostProcess):
     used with :class:`~pod.models.heads.bbox_head.bbox_head.BboxNet`
     """
 
-    def __init__(self, num_classes, cfg):
-        super(RPNPostProcess, self).__init__(num_classes, cfg)
+    def __init__(self, num_classes, cfg, prefix=None):
+        super(RPNPostProcess, self).__init__(num_classes, cfg, prefix)
 
     def get_loss(self, targets, mlvl_preds, mlvl_shapes=None):
         cls_target, loc_target, cls_mask, loc_mask = targets

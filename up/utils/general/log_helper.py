@@ -33,6 +33,10 @@ def basicConfig(*args, **kwargs):
 
 # To prevent duplicate logs, we mask this baseConfig setting
 logging.basicConfig = basicConfig
+logging.getLogger('PIL').setLevel(logging.WARNING)
+logging.getLogger('numba').setLevel(logging.WARNING)
+logging.getLogger('default').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 class ColoredFormatter(logging.Formatter):
@@ -143,8 +147,9 @@ class MetricLogger(object):
                 self.start_iter = cur_iter
             if self.cur_iter <= self.start_iter + self.skip_iter - 1:
                 for name, meter in self.meters.items():
-                    meter.count -= 1
-                    meter.total -= meter.deque.pop()
+                    if len(meter.deque) != 0:
+                        meter.count -= 1
+                        meter.total -= meter.deque.pop()
             else:
                 self.first_K_iter_flag = False
 
@@ -156,8 +161,19 @@ class MetricLogger(object):
             self.meters[k] += v
 
     def __str__(self):
-        str_list = ['{}:{}'.format(k, v) for k, v in self.meters.items()]
-        return self.delimiter.join(sorted(str_list))
+        # str_list = ['{}:{}'.format(k, v) for k, v in self.meters.items()]
+        batch_time_str = []
+        other_time_str = []
+        for name, meter in self.meters.items():
+            if name.endswith("_time"):
+                if name == "batch_time":
+                    batch_time_str.append("{}:{:.4f}({:.4f})".format(name, meter.avg, meter.global_avg))
+                else:
+                    other_time_str.append("{}:{:.4f}({:.4f}) ".format(name, meter.avg, meter.global_avg))
+        # return self.delimiter.join(sorted(str_list))
+        batch_time_str = "".join(batch_time_str)
+        other_time_str = "{" + "".join(other_time_str).strip() + "}"
+        return self.delimiter.join([batch_time_str, other_time_str])
 
 
 meters = MetricLogger(delimiter=" ")

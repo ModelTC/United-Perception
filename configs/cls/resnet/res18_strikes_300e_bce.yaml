@@ -1,14 +1,5 @@
 num_classes: &num_classes 1000
 
-cutmix_mixup: &cutmix_mixup
-  type: torch_cutmix_mixup
-  kwargs:
-    mixup_alpha: 0.1
-    cutmix_alpha: 1.0
-    num_classes: 1000
-    extra_input: True
-    transform: True
-
 random_resized_crop: &random_resized_crop
  type: torch_random_resized_crop
  kwargs:
@@ -56,7 +47,7 @@ dataset: # Required.
             image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
             color_mode: RGB
             memcached: false
-        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize, *cutmix_mixup]
+        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize]
     batch_sampler:
         type: base
         kwargs:
@@ -69,6 +60,13 @@ dataset: # Required.
         kwargs:
           num_workers: 12
           pin_memory: True
+          batch_fn:
+            type: batch_cutmixup
+            kwargs:
+              mixup_alpha: 0.1
+              cutmix_alpha: 1.0
+              switch_prob: 0.5
+              num_classes: *num_classes
   test:
     dataset:
       type: cls

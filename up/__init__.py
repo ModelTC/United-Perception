@@ -1,4 +1,5 @@
 # flake8: noqa F401
+import onnx
 import os
 import sys
 import importlib

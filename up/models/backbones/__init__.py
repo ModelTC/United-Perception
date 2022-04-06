@@ -27,6 +27,35 @@ from .resnet_D import (resnet101_D,  # noqa
                        resnet50_D,
                        resnet_custom_D)
 
+from .vision_transformer import (  # noqa
+    vit_base_patch32_224, vit_base_patch16_224, vit_large_patch16_224, vit_huge_patch14_224,
+    deit_tiny_patch16_224, deit_small_patch16_224, deit_base_patch16_224
+)
+
+from .swin_transformer import (swin_tiny,  # noqa: F401
+                               swin_small,
+                               swin_base_224,
+                               swin_base_384,
+                               swin_large_224,
+                               swin_large_384)
+
+from .cswin import (CSWin_64_12211_tiny_224,  # noqa: F401
+                    CSWin_64_24322_small_224,
+                    CSWin_96_24322_base_224,
+                    CSWin_144_24322_large_224,
+                    CSWin_96_24322_base_384,
+                    CSWin_144_24322_large_384)
+
+from .mb import (MB2_160,  # noqa: F401
+                 MB2,
+                 MB3,
+                 MB4,
+                 MB6,
+                 MB7_new,
+                 MB7_ckpt,
+                 MB9,
+                 MB9_ckpt,
+                 MB12_ckpt)
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 imported_vars = list(globals().items())

@@ -1,58 +1,17 @@
-from easydict import EasyDict
-from .distiller import FeatureMimicFeature
+import torch
+
+from .models.utils import mlvl_extract_roi_features, mlvl_extract_gt_masks, match_gts
 from up.utils.general.log_helper import default_logger as logger
+from up.utils.general.registry_factory import MIMIC_REGISTRY, MIMIC_LOSS_REGISTRY
 
 
-__all__ = ["MimicJob", "Mimicker"]
-
-
-class MimicJob(object):
-    """
-    A basic class providing abstract for a mimic job.
-    """
-    def __init__(self, mimic_name, mimic_type, s_name, t_name, mimic_loss_weight=1.0, **kwargs):
-        """Init a mimic job.
-
-        Args:
-            mimic_name: str. The name given to the mimic job. DO NOT register multiple jobs sharing a same name.
-            mimic_type: str. Losses provided in distiller. E.g, "l2" or "kd".
-            s_name: list of str. A list of layer names in student model that need to be used for mimic.
-                    E,g, ['neck.p2_conv', 'neck.p6_pool']
-            t_name: list of str. A list of layer names in teacher model that need to be used for mimic.
-                    E,g, ['neck.p2_conv', 'neck.p6_pool']
-                    Note that names with same index in s_name and t_name are matched as a pair in mimicking, thus
-                    the length of s_name is equal to the length of t_name.
-            mimic_loss_weight: float. Mimic job loss weight.
-            kwargs: dict. Other args that are needed to build the loss. E.g, you can specify "normalize" in l2
-            loss. See losses in the distiller for more details.
-        """
-        logger.info("name: spring.distiller.mimicjob, mimic_name : {}, mimic_type: {}".format(mimic_name, mimic_type))
-        assert isinstance(s_name, list), 's_name should be a list object.'
-        assert isinstance(t_name, list), 't_name should be a list object.'
-        self.mimic_name = mimic_name
-        self.mimic_type = mimic_type
-        self.mimic_loss_weight = mimic_loss_weight
-        self.s_name = s_name
-        self.t_name = t_name
-        self.kwargs = kwargs
-
-    @property
-    def config(self):
-        """Return a dict of mimicjob's configuration."""
-        cfg_dict = {'type': self.mimic_type,
-                    'name': self.mimic_name,
-                    'kwargs': {
-                        'student_layer_name': self.s_name,
-                        'teacher_layer_name': self.t_name,
-                        'weight': self.mimic_loss_weight
-                    }
-                    }
-        cfg_dict['kwargs'].update(self.kwargs)
-        return EasyDict(cfg_dict)
+__all__ = ["Mimicker", "Base_Mimicker", "Sample_Feature_Mimicker", "FRS_Mimicker", "DeFeat_Mimicker"]
 
 
 class Mimicker(object):
-    def __init__(self, teacher_model=None, student_model=None):
+    def __init__(self, teacher_model=None, student_model=None, teacher_names=None,
+                 teacher_mimic_names=None, student_mimic_names=None,
+                 loss_weight=1.0, warm_up_iters=-1, configs=None):
         """
         Args:
             teacher_model: Teacher model.
@@ -61,104 +20,330 @@ class Mimicker(object):
         logger.info("name: spring.distiller.mimicker")
         self.teacher_model = teacher_model
         self.student_model = student_model
-        self.job_pool = []
-        self.registered_job_name = set()
-        self.mimicker = FeatureMimicFeature(task_helper=None)
 
-        if not isinstance(self.teacher_model, list):
-            self.teacher_model = [self.teacher_model]
-        self.output_t_maps = [dict() for _ in self.teacher_model]
-        self.output_s_maps = {}
-        self.mimicker.adjust_layer = self._deprecate_adjustlayer
+        assert isinstance(self.teacher_model, list), 'teacher_model must be a list'
+        self.teacher_nums = len(self.teacher_model)
+        self.teacher_names = teacher_names
 
-    def register_job(self, mimic_job):
-        """Register a mimic job to the mimicker."""
-        self._registry_sanity_check(mimic_job)
-        self.job_pool.append(mimic_job)
-        self.registered_job_name.add(mimic_job.mimic_name)
+        self.loss_weight = loss_weight
+        self.warm_up_iters = warm_up_iters
+        self.configs = configs
 
-    def _registry_sanity_check(self, mimic_job):
-        """Sanity check when registring a mimic job."""
-        assert isinstance(mimic_job, MimicJob), 'Only MimicJob object can be registered.'
-        assert mimic_job.mimic_name not in self.registered_job_name, 'job name \'{}\' is duplicated.'
-        if len(self.teacher_model) == 1:
-            for single_t_name in mimic_job.t_name:
-                assert isinstance(single_t_name, str), 'type of mimic job {}\'s \
-                t_name should be str.'.format(mimic_job.mimic_name)
+        self.teacher_mimic_names = teacher_mimic_names
+        self.student_mimic_names = student_mimic_names
+
+        assert isinstance(self.student_mimic_names, list), 'student mimic name must be a list'
+        for tdx in range(self.teacher_nums):
+            assert isinstance(self.teacher_mimic_names[tdx], list) and \
+                len(self.teacher_mimic_names[tdx]) == len(self.student_mimic_names), 'teacher mimic names error'
+
+        self.s_handles = []
+        self.t_handles = [[] for _ in range(self.teacher_nums)]
+        self.s_output_maps = {}
+        self.t_output_maps = [{} for _ in range(self.teacher_nums)]
+
+        self.build_losses()
+
+    def _register_losses(self, loss_name, default_configs):
+        default_type = default_configs['type']
+        default_kwargs = default_configs.get('kwargs', {})
+        if loss_name in self.configs:
+            loss_type = self.configs[loss_name].get('type', default_type)
+            if loss_type == default_type:
+                default_kwargs.update(self.configs[loss_name].get('kwargs', {}))
+                loss_kwargs = default_kwargs
+            else:
+                loss_kwargs = self.configs[loss_name].get('kwargs', {})
         else:
-            for single_t_name in mimic_job.t_name:
-                assert isinstance(single_t_name, list) and len(single_t_name) == len(self.teacher_model), \
-                    'each t_name of mimic job should have length of {}'.format(len(self.teacher_model))
+            loss_type = default_type
+            loss_kwargs = default_kwargs
+        setattr(self, loss_name, MIMIC_LOSS_REGISTRY[loss_type](**loss_kwargs))
+
+    def build_losses(self):
+        """predefined for each mimic method"""
+        raise NotImplementedError
+
+    def clear(self):
+        """End variables lifetime within mimic() function."""
+        self.s_output_maps = {}
+        self.t_output_maps = [{} for _ in range(self.teacher_nums)]
+        for handle in self.s_handles:
+            handle.remove()
+        for thandles in self.t_handles:
+            for handle in thandles:
+                handle.remove()
+        self.s_handles = []
+        self.t_handles = [[] for _ in range(self.teacher_nums)]
+
+    def _find_module(self, model, layer_name):
+        if not layer_name:
+            return model
+
+        split_name = layer_name.split('.')
+        module = model
+        is_found = True
+        for i, part_name in enumerate(split_name):
+            is_found = False
+            for child_name, child_module in module.named_children():
+                if part_name == child_name:
+                    module = child_module
+                    is_found = True
+                    break
+            if not is_found:
+                raise Exception("layer_name {} doesn't exist".format(layer_name))
+        return module
+
+    def _register_hooks(self, model, layer_name, output_map, handles):
+        def hook(module, input, output):
+            output_map[layer_name] = output
+
+        module = self._find_module(model, layer_name)
+
+        if layer_name not in output_map:
+            handles.append(module.register_forward_hook(hook))
 
     def _register_forward_hooks(self):
-        """Register forward hook to obtain output features of the objective layer."""
-        for mimic_job in self.job_pool:
-            for _name in mimic_job.t_name:
-                if isinstance(_name, list):
-                    for t_idx, _single_name in enumerate(_name):
-                        self.mimicker._register_hooks(self.teacher_model[t_idx],
-                                                      _single_name,
-                                                      self.output_t_maps[t_idx])
-                else:
-                    self.mimicker._register_hooks(self.teacher_model[0], _name, self.output_t_maps[0])
-            for _name in mimic_job.s_name:
-                self.mimicker._register_hooks(self.student_model, _name, self.output_s_maps)
+        for tdx in range(self.teacher_nums):
+            for _name in self.teacher_mimic_names[tdx]:
+                self._register_hooks(self.teacher_model[tdx], _name, self.t_output_maps[tdx], self.t_handles[tdx])
+        for _name in self.student_mimic_names:
+            self._register_hooks(self.student_model, _name, self.s_output_maps, self.s_handles)
 
     def mimic(self, **kwargs):
         """Excute all of the registered mimicjobs.
         Returns:
-            mimic_losses: List. A list of losses of registered mimic jobs.
+            mimic_losses: Dict. A list of losses of registered mimic jobs.
         """
-        mimic_losses = []
-        # generate mimic loss
-        for mimic_job in self.job_pool:
-            feature_t, feature_s = self._resolve_features(mimic_job)
-            mimic_loss, _, _, _ = self.mimicker.mimic(feature_s, feature_t, mimic_job.config, **kwargs)
-            mimic_losses.append(mimic_loss)  # loss weight has been multiplied in mimicker.mimic
-        return mimic_losses
+        raise NotImplementedError
 
-    def _resolve_features(self, mimic_job):
-        feature_t = []
-        feature_s = []
-        for _name in mimic_job.t_name:
-            if isinstance(_name, list):
-                valid_ensemble_num = 0
-                ensemble_t_feats = 0
-                for t_idx, _single_name in enumerate(_name):
-                    if _single_name is not None:
-                        ensemble_t_feats += self.output_t_maps[t_idx][_single_name]
-                        valid_ensemble_num += 1
-                feature_t.append(ensemble_t_feats / valid_ensemble_num)
-            else:
-                feature_t.append(self.output_t_maps[0][_name])
-        for _name in mimic_job.s_name:
-            feature_s.append(self.output_s_maps[_name])
-        return feature_t, feature_s
+    def loss_post_process(self, losses, cur_iter):
+        for k in losses:
+            if 'loss' in k:
+                if self.warm_up_iters > cur_iter:
+                    losses[k] = self.loss_weight * (cur_iter / self.warm_up_iters) * losses[k]
+                else:
+                    losses[k] = self.loss_weight * losses[k]
+        return losses
 
     def prepare(self):
         """Pre-work of each forward step."""
-        self.output_t_maps = [dict() for _ in self.teacher_model]
-        self.output_s_maps = {}
-        self.mimicker.clear()
+        self.clear()
         self._register_forward_hooks()
 
-    def get_output_maps(self):
-        """Get output feature of layers that are registered in Mimicker, both in teacher and student models.
-        Returns:
-            teacher output features: A dict of teacher features used for mimic, if there are multiple teachers,
-            then return a list of dicts.
-            student output features: A dict of student features used for mimic.
-        """
-        assert isinstance(self.output_t_maps, list)
-        # For compatibility
-        if len(self.output_t_maps) == 1:
-            return self.output_t_maps[0], self.output_s_maps
-        else:
-            return self.output_t_maps, self.output_s_maps
 
-    @staticmethod
-    def _deprecate_adjustlayer(s_feats, t_feats):
-        """Here we deprecate adjust layer and provide a `get_output_maps` API to facilitate flexible and
-           user-defined adjustment demand.
-        """
-        return s_feats, t_feats
+@MIMIC_REGISTRY.register('base')
+class Base_Mimicker(Mimicker):
+    def __init__(self, teacher_model=None, student_model=None, teacher_names=None,
+                 teacher_mimic_names=None, student_mimic_names=None,
+                 loss_weight=1.0, warm_up_iters=-1, configs=None):
+        super(Base_Mimicker, self).__init__(teacher_model, student_model, teacher_names,
+                                            teacher_mimic_names, student_mimic_names,
+                                            loss_weight, warm_up_iters, configs)
+
+    def build_losses(self):
+        self._register_losses('loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': True, 'batch_mean': True}})
+
+    def mimic(self, **kwargs):
+        s_output = kwargs['s_output']
+        t_output = kwargs['t_output']  # noqa
+        mimic_losses = {}
+        for tdx in range(self.teacher_nums):
+            feature_s = [self.s_output_maps[_name] for _name in self.student_mimic_names]
+            feature_t = [self.t_output_maps[tdx][_name] for _name in self.teacher_mimic_names[tdx]]
+
+            loss = self.loss(feature_s, feature_t) / len(feature_s)
+            mimic_losses.update({self.teacher_names[tdx] + '.loss': loss})
+        mimic_losses = self.loss_post_process(mimic_losses, s_output['cur_iter'])
+        self.clear()
+        return mimic_losses
+
+
+@MIMIC_REGISTRY.register('SampleFeature')
+class Sample_Feature_Mimicker(Mimicker):
+    """
+    Mimicking Very Efficient Network for Object Detection, CVPR 2017
+    https://openaccess.thecvf.com/content_cvpr_2017/papers/Li_Mimicking_Very_Efficient_CVPR_2017_paper.pdf
+    """
+    def __init__(self, teacher_model=None, student_model=None, teacher_names=None,
+                 teacher_mimic_names=None, student_mimic_names=None,
+                 loss_weight=1.0, warm_up_iters=-1, configs=None):
+        super(Sample_Feature_Mimicker, self).__init__(teacher_model, student_model, teacher_names,
+                                                      teacher_mimic_names, student_mimic_names,
+                                                      loss_weight, warm_up_iters, configs)
+
+    def build_losses(self):
+        self._register_losses('feature_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+
+    def mimic(self, **kwargs):
+        s_output = kwargs['s_output']
+        t_output = kwargs['t_output']
+        mimic_losses = {}
+
+        rcnn_fpn_levels = self.configs.get('rcnn_fpn_levels', [0, 1, 2, 3])
+        rcnn_fpn_strides = self.configs.get('rcnn_fpn_strides', [4, 8, 16, 32])
+        rcnn_base_scale = self.configs.get('rcnn_fpn_base_scale', 56)
+        teacher_proposal = self.configs.get('teacher_proposal', True)
+        rois = s_output['rpn_dt_bboxes']
+
+        for tdx in range(self.teacher_nums):
+            feature_s = [self.s_output_maps[_name] for _name in self.student_mimic_names]
+            feature_t = [self.t_output_maps[tdx][_name] for _name in self.teacher_mimic_names[tdx]]
+            if teacher_proposal:
+                rois = t_output[tdx]['rpn_dt_bboxes']
+            with torch.no_grad():
+                t_pooled_feats = mlvl_extract_roi_features(rois, feature_t, rcnn_fpn_levels,
+                                                           rcnn_fpn_strides, rcnn_base_scale,
+                                                           self.teacher_model[tdx].bbox_head.roipool)
+            s_pooled_feats = mlvl_extract_roi_features(rois, feature_s, rcnn_fpn_levels,
+                                                       rcnn_fpn_strides, rcnn_base_scale,
+                                                       self.student_model.bbox_head.roipool)
+            feature_loss = self.feature_loss([t_pooled_feats], [s_pooled_feats]) / 2.0
+            mimic_losses.update({self.teacher_names[tdx] + '.feature_loss': feature_loss})
+        mimic_losses = self.loss_post_process(mimic_losses, s_output['cur_iter'])
+        self.clear()
+        return mimic_losses
+
+
+@MIMIC_REGISTRY.register('FRS')
+class FRS_Mimicker(Mimicker):
+    """
+    Distilling Object Detectors with Feature Richness, NIPS 2021
+    https://arxiv.org/pdf/2111.00674.pdf
+    """
+    def __init__(self, teacher_model=None, student_model=None, teacher_names=None,
+                 teacher_mimic_names=None, student_mimic_names=None,
+                 loss_weight=1.0, warm_up_iters=-1, configs=None):
+        super(FRS_Mimicker, self).__init__(teacher_model, student_model, teacher_names,
+                                           teacher_mimic_names, student_mimic_names,
+                                           loss_weight, warm_up_iters, configs)
+
+    def build_losses(self):
+        self._register_losses('neck_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+        self._register_losses('rpn_loss', {'type': 'bce_loss', 'kwargs': {'T': 1.0, 'batch_mean': False}})
+
+    def mimic(self, **kwargs):
+        s_output = kwargs['s_output']
+        t_output = kwargs['t_output']
+        mimic_losses = {}
+
+        for tdx in range(self.teacher_nums):
+            feature_s = [self.s_output_maps[_name] for _name in self.student_mimic_names]
+            feature_t = [self.t_output_maps[tdx][_name] for _name in self.teacher_mimic_names[tdx]]
+            stu_cls_score = [p[0] for p in s_output['rpn_preds']]
+            tea_cls_score = [p[0] for p in t_output[tdx]['rpn_preds']]
+
+            masks = []
+            pred_s = []
+            pred_t = []
+            for ldx in range(len(feature_t)):
+                stu_cls_score_sigmoid = stu_cls_score[ldx].sigmoid()
+                tea_cls_score_sigmoid = tea_cls_score[ldx].sigmoid()
+                mask = torch.max(tea_cls_score_sigmoid, dim=1).values
+                mask = mask.detach()
+                masks.append(mask[:, None, :, :])
+                pred_s.append(stu_cls_score_sigmoid)
+                pred_t.append(tea_cls_score_sigmoid)
+            neck_loss = self.neck_loss(feature_s, feature_t, masks=masks)
+            rpn_cls_loss = self.rpn_loss(pred_s, pred_t, masks=masks)
+
+            mimic_losses.update({self.teacher_names[tdx] + '.neck_loss': neck_loss,
+                                 self.teacher_names[tdx] + '.rpn_cls_loss': rpn_cls_loss})
+        mimic_losses = self.loss_post_process(mimic_losses, s_output['cur_iter'])
+        self.clear()
+        return mimic_losses
+
+
+@MIMIC_REGISTRY.register('DeFeat')
+class DeFeat_Mimicker(Mimicker):
+    """
+    Distilling Object Detectors via Decoupled Features, CVPR 2021
+    https://arxiv.org/pdf/2103.14475.pdf
+    """
+    def __init__(self, teacher_model=None, student_model=None, teacher_names=None,
+                 teacher_mimic_names=None, student_mimic_names=None,
+                 loss_weight=1.0, warm_up_iters=-1, configs=None):
+        super(DeFeat_Mimicker, self).__init__(teacher_model, student_model, teacher_names,
+                                              teacher_mimic_names, student_mimic_names,
+                                              loss_weight, warm_up_iters, configs)
+
+    def build_losses(self):
+        self._register_losses('backbone_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+        self._register_losses('neck_fg_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+        self._register_losses('neck_bg_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
+        self._register_losses('head_fg_loss', {'type': 'kd_loss', 'kwargs': {'T': 1.0}})
+        self._register_losses('head_bg_loss', {'type': 'kd_loss', 'kwargs': {'T': 1.0}})
+
+    def mimic(self, **kwargs):
+        s_output = kwargs['s_output']
+        t_output = kwargs['t_output']
+        mimic_losses = {}
+
+        rpn_fpn_levels = self.configs.get('rpn_fpn_levels', [0, 1, 2, 3, 4])
+        rpn_fpn_strides = self.configs.get('rpn_fpn_strides', [4, 8, 16, 32, 64])
+        rpn_base_scale = self.configs.get('rpn_fpn_base_scale', 56)
+        rcnn_fpn_levels = self.configs.get('rcnn_fpn_levels', [0, 1, 2, 3])
+        rcnn_fpn_strides = self.configs.get('rcnn_fpn_strides', [4, 8, 16, 32])
+        rcnn_base_scale = self.configs.get('rcnn_fpn_base_scale', 56)
+        teacher_proposal = self.configs.get('teacher_proposal', True)
+        rois = s_output['rpn_dt_bboxes']
+
+        neck_feature_nums = self.configs.get('neck_feature_nums', 5)
+        for tdx in range(self.teacher_nums):
+            feature_s = [self.s_output_maps[_name] for _name in self.student_mimic_names]
+            feature_t = [self.t_output_maps[tdx][_name] for _name in self.teacher_mimic_names[tdx]]
+
+            bb_nums = len(feature_s) - neck_feature_nums
+            student_bb_feat = feature_s[:bb_nums]
+            teacher_bb_feat = feature_t[:bb_nums]
+
+            feature_s = feature_s[bb_nums:]
+            feature_t = feature_t[bb_nums:]
+
+            # mimic backbone
+            backbone_loss = self.backbone_loss(student_bb_feat, teacher_bb_feat) / bb_nums / 2.0
+
+            # mimic neck
+            adapt_neck_s = s_output['adapt_neck_features']
+            featmap_sizes = [featmap.shape for featmap in adapt_neck_s]
+            gt_masks = mlvl_extract_gt_masks(s_output['gt_bboxes'], rpn_fpn_levels,
+                                             rpn_fpn_strides, rpn_base_scale, featmap_sizes)
+            neck_fg_masks = [m.unsqueeze(1).repeat(1, featmap_sizes[idx][1], 1, 1) for idx, m in enumerate(gt_masks)]
+            neck_bg_masks = [1 - m.unsqueeze(1).repeat(1, featmap_sizes[idx][1], 1, 1) for idx, m in enumerate(gt_masks)]   # noqa
+            neck_fg_loss = self.neck_fg_loss(adapt_neck_s, feature_t, masks=neck_fg_masks) / neck_feature_nums / 2.0
+            neck_bg_loss = self.neck_bg_loss(adapt_neck_s, feature_t, masks=neck_bg_masks) / neck_feature_nums / 2.0
+
+            # mimic head
+            if teacher_proposal:
+                rois = t_output[tdx]['rpn_dt_bboxes']
+            labels = match_gts(rois, s_output['gt_bboxes'],
+                               s_output.get('gt_ignores', None), s_output['image_info'],
+                               self.student_model.bbox_head.supervisor.matcher)
+
+            with torch.no_grad():
+                t_pooled_feats, recover_inds = mlvl_extract_roi_features(rois, feature_t,
+                                                                         rcnn_fpn_levels,
+                                                                         rcnn_fpn_strides,
+                                                                         rcnn_base_scale,
+                                                                         self.teacher_model[tdx].bbox_head.roipool,
+                                                                         return_recover_inds=True)
+                t_cls_pred, _ = self.teacher_model[tdx].bbox_head.forward_net(t_pooled_feats)
+                t_cls_pred = t_cls_pred[recover_inds]
+            s_pooled_feats, recover_inds = mlvl_extract_roi_features(rois, feature_s,
+                                                                     rcnn_fpn_levels,
+                                                                     rcnn_fpn_strides,
+                                                                     rcnn_base_scale,
+                                                                     self.student_model.bbox_head.roipool,
+                                                                     return_recover_inds=True)
+            s_cls_pred, _ = self.student_model.bbox_head.forward_net(s_pooled_feats)
+            s_cls_pred = s_cls_pred[recover_inds]
+            head_fg_loss = self.head_fg_loss([s_cls_pred], [t_cls_pred], masks=[labels])
+            head_bg_loss = self.head_bg_loss([s_cls_pred], [t_cls_pred], masks=[(1 - labels)])
+
+            mimic_losses.update({self.teacher_names[tdx] + '.backbone_loss': backbone_loss,
+                                 self.teacher_names[tdx] + '.neck_fg_loss': neck_fg_loss,
+                                 self.teacher_names[tdx] + '.neck_bg_loss': neck_bg_loss,
+                                 self.teacher_names[tdx] + '.head_fg_loss': head_fg_loss,
+                                 self.teacher_names[tdx] + '.head_bg_loss': head_bg_loss})
+        mimic_losses = self.loss_post_process(mimic_losses, s_output['cur_iter'])
+        self.clear()
+        return mimic_losses

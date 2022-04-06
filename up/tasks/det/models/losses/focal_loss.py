@@ -11,8 +11,6 @@ from up.extensions import (
     SoftmaxFocalLossFunction,
     CrossSigmoidFocalLossFunction
 )
-
-
 __all__ = ['QualityFocalLoss', 'SigmoidFocalLoss', 'TorchSigmoidFocalLoss', 'CrossSigmoidFocalLoss']
 
 
@@ -188,7 +186,7 @@ class SigmoidFocalLoss(GeneralizedCrossEntropyLoss):
         self.dynamic_normalizer = dynamic_normalizer
         assert ignore_index == -1, 'only -1 is allowed for ignore index'
 
-    def forward(self, input, target, reduction, normalizer=None):
+    def forward(self, input, target, reduction, normalizer=None, weights=None):
         """
         Arguments:
             - input (FloatTenosor): [[M, N,]C]
@@ -201,6 +199,21 @@ class SigmoidFocalLoss(GeneralizedCrossEntropyLoss):
         normalizer = torch.Tensor([normalizer]).type_as(input).to(input.device)
         if self.dynamic_normalizer:
             normalizer = dynamic_normalizer(input, target, self.alpha, self.gamma)
+        if weights is not None:
+            if weights.shape.__len__() == 2 or (weights.shape.__len__() == 1 and target.shape.__len__() == 2):
+                loss = SigmoidFocalLossFunction.apply(
+                    input,
+                    target,
+                    normalizer,
+                    self.gamma,
+                    self.alpha,
+                    self.num_channels,
+                    'none')
+                weights = weights.reshape(-1).unsqueeze(-1)
+                assert weights.shape.__len__() == loss.shape.__len__()
+                loss = loss * weights
+                return _reduce(loss, reduction='sum')
+
         loss = SigmoidFocalLossFunction.apply(
             input, target, normalizer, self.gamma, self.alpha, self.num_channels, reduction)
         return loss
@@ -211,6 +224,7 @@ class TorchSigmoidFocalLoss(GeneralizedCrossEntropyLoss):
     """
     Quality focal loss: https://arxiv.org/abs/2006.04388,
     """
+
     def __init__(self,
                  alpha=0.25,
                  gamma=2.0,
@@ -277,8 +291,9 @@ class TorchSigmoidFocalLoss(GeneralizedCrossEntropyLoss):
         loss = ce_loss * ((1 - p_t) ** self.gamma)
 
         if isinstance(self.alpha, list):
-            alpha_t = torch.from_numpy(np.array(self.alpha)).to(target.device)
-            alpha_t = alpha_t.view(-1, len(self.alpha)).expand_as(target)
+            alpha_t = torch.from_numpy(np.array(self.alpha[1:])).to(target.device)
+            alpha_t = alpha_t.view(-1, len(self.alpha) - 1).expand_as(target)
+            alpha_t = alpha_t * target + (1 - self.alpha[0]) * (1 - target)
             loss = alpha_t * loss
         elif self.alpha >= 0:
             alpha_t = self.alpha * target + (1 - self.alpha) * (1 - target)

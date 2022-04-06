@@ -16,12 +16,12 @@ class_names: &class_names [
 ]
 
 to_kestrel:
-  detector: FASTER-RCNN  # choices [RETINANET, RFCN, FASTER-RCNN]
-  save_to: kestrel_model  # saved file
-  default_confidence_thresh: 0.3
+  toks_type: det
+  save_to: FASTER-RCNN  # saved file
+  default_confidence_thresh: 0.0
   plugin: harpy   # choices = [essos, harpy, sphinx]
   version: 1.0.0
-  resize_hw: 640x1024
+  resize_hw: 800x1333
 
 flip: &flip
  type: flip
@@ -142,7 +142,7 @@ net:
     kwargs:
       feat_planes: 512    # channels of intermediate conv
       num_classes: 2      # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
-      num_anchors: 5
+      num_anchors: 15
       class_activation: softmax
       num_level: 1
       initializer:

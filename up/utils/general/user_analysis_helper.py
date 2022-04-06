@@ -1,4 +1,7 @@
-from spring_aux.analytics.io import send_async as send
+try:
+    from spring_aux.analytics.io import send_async as send
+except Exception as err:
+    print(err)
 
 from up.utils.env.dist_helper import env
 from up import __version__
@@ -115,6 +118,8 @@ def get_task_from_cfg(cfg):
             'lvis': 'det',
             'cls': 'cls',
             'seg': 'seg',
+            'keypoint': 'kp',
+            'kitti': '3d',
             'unknown': 'unknown'
         }
         dataset_type = cfg['dataset'].get('train', {}).get('dataset', {}).get('type', 'unknown')
@@ -166,4 +171,7 @@ def send_info(cfg=None, func=''):
         except:  # noqa
             pass
     if env.is_master():
-        send(UPINFO)
+        try:
+            send(UPINFO)
+        except:  # noqa
+            pass

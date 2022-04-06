@@ -20,6 +20,35 @@ style:
   except:
     - schedules
 
+test:
+  tags:
+    - gpu
+    - diamond
+  stage: test
+  script:
+    - export TORCH_CUDA_ARCH_LIST='3.5;5.0+PTX;6.0;7.0'
+    - pip uninstall -y nart_tools
+    - pip uninstall -y nart==0.2.4
+    - pip uninstall -y springvision==1.0.1
+    - pip uninstall -y kestrel==1.5.4-patch1
+    - pip install -r requirements.txt
+    - export MAX_JOBS=8
+    - python setup.py build_ext -i
+    - coverage erase
+    - pip install http://spring.sensetime.com/pypi/packages/spring-0.6.0+cu101.torch150.mvapich2.nartgpu-cp37-cp37m-linux_x86_64.whl --trusted-host spring.sensetime.com
+    - pip install einops 
+    # det essos
+    - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/det/deploy/retinanet-r18_1x_essos.yaml --save_to=kestrel_model_essos --backend=dist
+    # cls classifier
+    - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/cls/deploy/res18_deploy.yaml --save_to=kestrel_model_classifier --backend=dist
+    # seg psyche
+    - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/seg/pspnet_psyche.yaml --save_to=kestrel_model_psyche --backend=dist
+    # kp raven
+    - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/kp/res50_sb_raven.yaml --save_to=kestrel_model_raven --backend=dist
+    # - PYTHONWARNINGS=ignore PYTHONPATH=.:./patches:$PYTHONPATH coverage run -m unittest discover tests -p 'test_[!t]*py'
+    # - coverage report -i --rcfile .coveragerc
+  only:
+    - schedules
 
 docs:
     tags:

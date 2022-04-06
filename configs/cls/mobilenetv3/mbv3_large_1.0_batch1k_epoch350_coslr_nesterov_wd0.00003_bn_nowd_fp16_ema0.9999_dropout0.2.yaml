@@ -159,6 +159,7 @@ net: &subnet
        num_classes: *num_classes
        in_plane: &head_out_channel 1280
        input_feature_idx: -1
+       dropout: 0.2
   - name: post_process
     type: base_cls_postprocess
     kwargs:

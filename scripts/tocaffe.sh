@@ -12,5 +12,4 @@ spring.submit run -n$1 -p spring_scheduler --gpu --job-name=$3 --cpus-per-task=$
   --config=$cfg \
   --save_prefix=tocaffe \
   --input_size=3x512x512 \
-  --backend=linklink \
   2>&1 | tee log.tocaffe.$T.$(basename $cfg) "

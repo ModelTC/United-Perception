@@ -112,6 +112,7 @@ trainer: # Required.
 
 saver: # Required.
   save_dir: res18_kd/checkpoints/cls_std     # dir to save checkpoints
+  pretrain_model: /mnt/lustre/share_data/baishihao/to_libo/res18.pth.tar
   results_dir: res18_kd/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
@@ -163,16 +164,19 @@ teacher:
        in_plane: &teacher_out_channel 2048
        input_feature_idx: -1
 mimic:
-  mimic_name: res152_to_res18
-  mimic_type: kl
+  mimic_ins_type: base
   loss_weight: 1.0
+  warm_up_iters: -1
+  cfgs:
+    loss:
+      type: kl_loss
+      kwargs:
+        loss_weight: 1.0
   teacher:
     mimic_name: ['head.classifier']
-    teacher_weight: /mnt/lustre/baishihao/united-perception/resnet152/teacher.pth.tar
+    teacher_weight: /mnt/lustre/share_data/baishihao/to_libo/teacher.pth.tar
   student:
     mimic_name: ['head.classifier']
-    student_weight: /mnt/lustre/baishihao/united-perception/res18/res18.pth.tar
-
 
 runtime:
   runner:

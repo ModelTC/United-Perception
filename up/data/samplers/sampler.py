@@ -11,7 +11,6 @@ from up.utils.env.dist_helper import env, get_rank, get_world_size
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import SAMPLER_REGISTRY
 
-
 __all__ = ['DistributedSampler', 'LocalSampler', 'TestDistributedSampler']
 
 

@@ -16,10 +16,12 @@ BATCHING_REGISTRY = Registry()
 # predictor
 ROI_PREDICTOR_REGISTRY = Registry()
 BBOX_PREDICTOR_REGISTRY = Registry()
+MASK_PREDICTOR_REGISTRY = Registry()
 
 # supervisior
 ROI_SUPERVISOR_REGISTRY = Registry()
 BBOX_SUPERVISOR_REGISTRY = Registry()
+MASK_SUPERVISOR_REGISTRY = Registry()
 
 # matcher
 MATCHER_REGISTRY = Registry()
@@ -88,4 +90,8 @@ KS_PARSER_REGISTRY = Registry()
 TOKESTREL_REGISTRY = Registry()
 
 # distill
-DISTILL_REGISTRY = Registry()
+MIMIC_REGISTRY = Registry()
+MIMIC_LOSS_REGISTRY = Registry()
+
+# box_coder
+BOX_CODER_REGISTRY = Registry()

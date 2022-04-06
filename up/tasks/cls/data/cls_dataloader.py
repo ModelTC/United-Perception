@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from easydict import EasyDict
 
-from up.utils.general.registry_factory import DATALOADER_REGISTRY
+from up.utils.general.registry_factory import DATALOADER_REGISTRY, BATCHING_REGISTRY
 from up.data.samplers.batch_sampler import InfiniteBatchSampler
 
 
@@ -14,16 +14,22 @@ __all__ = ['ClassDataLoader']
 class ClassDataLoader(DataLoader):
 
     def __init__(self, dataset, batch_size=1, shuffle=False, sampler=None, batch_sampler=None,
-                 num_workers=0, pin_memory=False, drop_last=False,
+                 num_workers=0, pin_memory=False, drop_last=False, batch_fn=None
                  ):
         super(ClassDataLoader, self).__init__(
             dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
             self._collate_fn, pin_memory, drop_last)
+        if batch_fn is not None:
+            self.batch_fn = BATCHING_REGISTRY.get(batch_fn['type'])(**batch_fn['kwargs'])
+        else:
+            self.batch_fn = None
 
     def _collate_fn(self, batch):
         images = torch.stack([_.image for _ in batch])
         if type(batch[0].gt) == int:
             gts = torch.from_numpy(np.array([_.gt for _ in batch]))
+        elif type(batch[0].gt) == list:
+            gts = torch.stack([torch.from_numpy(np.array(_.gt)) for _ in batch])
         elif batch[0].gt.dim() > 0:
             gts = torch.stack([_.gt for _ in batch])
 
@@ -31,6 +37,9 @@ class ClassDataLoader(DataLoader):
             'image': images,
             'gt': gts,
         })
+        if self.batch_fn is not None:
+            output = self.batch_fn(output)
+
         return output
 
     def get_epoch_size(self):

@@ -75,21 +75,47 @@ class QuantDeploy(object):
         from mqbench.prepare_by_platform import BackendType
         return {'tensorrt': BackendType.Tensorrt,
                 'snpe': BackendType.SNPE,
+                'vitis': BackendType.Vitis,
                 'academic': BackendType.Academic}
+
+    def get_leaf_module(self, leaf_module):
+        from mqbench.nn.modules import FrozenBatchNorm2d
+        from up.tasks.det.plugins.yolov5.models.components import Space2Depth
+        leaf_module_map = {'FrozenBatchNorm2d': FrozenBatchNorm2d,
+                           'Space2Depth': Space2Depth}
+        leaf_module_ret = [leaf_module_map[k] for k in leaf_module]
+        return tuple(leaf_module_ret)
+
+    def get_extra_quantizer_dict(self, extra_quantizer_dict):
+        from mqbench.nn.intrinsic.qat.modules import ConvFreezebn2d, ConvFreezebnReLU2d
+        additional_module_type = extra_quantizer_dict.get('additional_module_type')
+        additional_module_type_map = {'ConvFreezebn2d': ConvFreezebn2d,
+                                      'ConvFreezebnReLU2d': ConvFreezebnReLU2d}
+        extra_quantizer_dict_ret = {}
+        if additional_module_type is not None:
+            additional_module_type = [additional_module_type_map[k] for k in additional_module_type]
+            extra_quantizer_dict_ret['additional_module_type'] = tuple(additional_module_type)
+        return extra_quantizer_dict_ret
 
     def quantize_model(self):
         from mqbench.prepare_by_platform import prepare_by_platform
-        from up.utils.model.bn_helper import FrozenBatchNorm2d
-        from up.tasks.det.plugins.yolov5.models.components import Space2Depth
         logger.info("prepare quantize model")
         deploy_backend = self.config['quant']['deploy_backend']
         prepare_args = self.config['quant'].get('prepare_args', {})
+        prepare_custom_config_dict = {}
+        extra_qconfig_dict = prepare_args.get('extra_qconfig_dict', {})
+        prepare_custom_config_dict['extra_qconfig_dict'] = extra_qconfig_dict
+        leaf_module = prepare_args.get('leaf_module')
+        if leaf_module is not None:
+            prepare_custom_config_dict['leaf_module'] = self.get_leaf_module(leaf_module)
+        extra_quantizer_dict = prepare_args.get('extra_quantizer_dict')
+        if extra_quantizer_dict is not None:
+            prepare_custom_config_dict['extra_quantizer_dict'] = self.get_extra_quantizer_dict(extra_quantizer_dict)
         self.model.train().cuda()
+        self.model.deploy = True
         self.model = prepare_by_platform(self.model,
-                                         self.backend_type[deploy_backend],
-                                         prepare_args,
-                                         leaf_modules=[FrozenBatchNorm2d, Space2Depth],
-                                         custombn=[FrozenBatchNorm2d])
+                                         self.backend_type[deploy_backend], prepare_custom_config_dict)
+        self.model.cuda()
         print(self.model)
 
     def load_checkpoint(self):
@@ -107,6 +133,7 @@ class QuantDeploy(object):
         self.model.load_state_dict(state_trained)
 
     def deploy(self):
+        self.load_checkpoint()
         logger.info("deploy model")
         from mqbench.convert_deploy import convert_deploy
         deploy_backend = self.config['quant']['deploy_backend']

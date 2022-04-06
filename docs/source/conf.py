@@ -15,6 +15,7 @@
 #
 import os
 import sys
+import re
 
 sys.path.insert(0, os.path.abspath('../../'))
 print(sys.path)
@@ -185,5 +186,5 @@ epub_title = project
 epub_exclude_files = ['search.html']
 
 # -- Extension configuration -------------------------------------------------
-scv_whitelist_branches = ('master$', 'dev$')
+scv_whitelist_branches = ('master$', re.compile('^dev$'))
 # scv_recent_tag = True

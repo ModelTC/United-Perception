@@ -1,12 +1,5 @@
 num_classes: &num_classes 1000
 
-mixup: &mixup
-  type: torch_mixup
-  kwargs:
-    alpha: 0.2
-    num_classes: 1000
-    extra_input: True
-
 random_resized_crop: &random_resized_crop
  type: torch_random_resized_crop
  kwargs:
@@ -55,7 +48,7 @@ dataset: # Required.
             image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
             color_mode: RGB
             memcached: True
-        transformer: [*mixup, *random_resized_crop, *random_horizontal_flip, *to_tensor, *normalize]
+        transformer: [*random_resized_crop, *random_horizontal_flip, *to_tensor, *normalize]
     batch_sampler:
         type: base
         kwargs:
@@ -68,6 +61,11 @@ dataset: # Required.
         kwargs:
           num_workers: 12
           pin_memory: True
+          batch_fn:
+            type: batch_mixup
+            kwargs:
+              alpha: 0.2
+              num_classes: *num_classes
   test:
     dataset:
       type: cls
@@ -122,6 +120,7 @@ trainer: # Required.
 
 saver: # Required.
   save_dir: res18_kd_tricks_1/checkpoints/cls_std     # dir to save checkpoints
+  pretrain_model: /mnt/lustre/baishihao/UP/res18_s/res18.pth
   results_dir: res18_kd_tricks_1/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
@@ -175,16 +174,19 @@ teacher:
        in_plane: &teacher_out_channel 2048
        input_feature_idx: -1
 mimic:
-  mimic_name: res152_to_res18
-  mimic_type: kl
-  loss_weight: 1.0 
+  mimic_ins_type: base
+  loss_weight: 1.0
+  warm_up_iters: -1
+  cfgs:
+    loss:
+      type: kl_loss
+      kwargs:
+        loss_weight: 1.0
   teacher:
     mimic_name: ['head.classifier']
     teacher_weight: /mnt/lustre/baishihao/UP/resnet152_tricks/teacher.pth.tar
   student:
     mimic_name: ['head.classifier']
-    student_weight: /mnt/lustre/baishihao/UP/res18_s/res18.pth.tar
-
 
 runtime:
   runner:

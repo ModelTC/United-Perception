@@ -23,10 +23,11 @@ class YoloV5PostProcess(nn.Module):
                  out_strides=[8, 16, 32],
                  loss_weights=[0.05, 1.0, 0.5],
                  obj_loss_layer_weights=[4.0, 1.0, 0.4],
-                 initializer=None):
+                 initializer=None,
+                 prefix=None):
         super(YoloV5PostProcess, self).__init__()
 
-        self.prefix = self.__class__.__name__
+        self.prefix = prefix if prefix is not None else self.__class__.__name__
         self.num_classes = num_classes - 1
         self.single_cls = (num_classes == 2)
 

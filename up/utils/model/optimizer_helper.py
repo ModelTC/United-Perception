@@ -68,6 +68,7 @@ class BaseOptimizer(object):
 
     def param_group_all(self, model, config):
         pgroup_normal = []
+        pgroup_nodecay = []
         pgroup = {'bn_w': [], 'bn_b': [], 'conv_b': [], 'linear_b': []}
         names = {'bn_w': [], 'bn_b': [], 'conv_b': [], 'linear_b': []}
         if 'conv_dw_w' in config:
@@ -85,6 +86,12 @@ class BaseOptimizer(object):
         if 'linear_w' in config:
             pgroup['linear_w'] = []
             names['linear_w'] = []
+        if 'ln_b' in config:
+            pgroup['ln_b'] = []
+        if 'ln_w' in config:
+            pgroup['ln_w'] = []
+
+        nodecay = config.get('nodecay', [])
 
         names_all = []
         type2num = defaultdict(lambda: 0)
@@ -140,15 +147,28 @@ class BaseOptimizer(object):
                     names_all.append(name + '.bias')
                     names['bn_b'].append(name + '.bias')
                     type2num[m.__class__.__name__ + '.bias'] += 1
+            elif isinstance(m, torch.nn.LayerNorm):
+                if m.weight is not None:
+                    pgroup['ln_w'].append(m.weight)
+                    names_all.append(name + '.weight')
+                if m.bias is not None:
+                    pgroup['ln_b'].append(m.bias)
+                    names_all.append(name + '.bias')
 
         for name, p in model.named_parameters():
             if name not in names_all:
-                pgroup_normal.append(p)
+                nodecay_sign = 0
+                for key_nodecay in nodecay:
+                    if key_nodecay in name:
+                        pgroup_nodecay.append(p)
+                        nodecay_sign = 1
+                        break
+                if not nodecay_sign:
+                    pgroup_normal.append(p)
 
-        param_groups = [{'params': pgroup_normal}]
+        param_groups = [{'params': pgroup_normal}, {'params': pgroup_nodecay, 'weight_decay': 0.0}]
         for ptype in pgroup.keys():
             if ptype in config.keys():
-                print(ptype, config[ptype], len(pgroup[ptype]))
                 param_groups.append({'params': pgroup[ptype], **config[ptype]})
             else:
                 param_groups.append({'params': pgroup[ptype]})

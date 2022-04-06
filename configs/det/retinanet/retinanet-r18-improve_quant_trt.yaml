@@ -2,20 +2,22 @@ num_classes: &num_classes 81
 
 runtime:
   rank_init: True
-
-runtime:
-   runner:
-      type: quant
+  runner:
+    type: quant
 
 quant:
-    deploy_backend: tensorrt
-    cali_batch_size: 900
-    prepare_args:
-      extra_qconfig_dict:
-        w_observer: MinMaxObserver
-        a_observer: EMAMinMaxObserver
-        w_fakequantize: FixedFakeQuantize
-        a_fakequantize: FixedFakeQuantize
+  ptq_only: False
+  deploy_backend: tensorrt
+  cali_batch_size: 900
+  prepare_args:
+    extra_qconfig_dict:
+      w_observer: MinMaxObserver
+      a_observer: EMAMinMaxObserver
+      w_fakequantize: FixedFakeQuantize
+      a_fakequantize: FixedFakeQuantize
+    leaf_module: [Space2Depth, FrozenBatchNorm2d]
+    extra_quantizer_dict:
+      additional_module_type: [ConvFreezebn2d, ConvFreezebnReLU2d]
 
 
 flip: &flip
@@ -138,7 +140,7 @@ trainer: # Required.
 
 saver: # Required.
   save_dir: checkpoints/retinanet-r18-improve_quant_trt    # dir to save checkpoints
-  pretrain_model: pretrained_fp32/ckpt_e100.pth
+  resume_model: pretrained_fp32/ckpt_e100.pth
   results_dir: results_dir/retinanet-r18-improve_quant_trt  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
@@ -155,7 +157,7 @@ net:
       out_layers: [2,3,4]       # layer1...4, commonly named Conv2...5
       out_strides: [8,16,32]    # tell the strides of output features
       normalize:
-        type: freeze_bn
+        type: mqbench_freeze_bn
       initializer:
         method: msra
   - name: neck
@@ -171,7 +173,8 @@ net:
       initializer:
         method: xavier
       normalize:
-        type: freeze_bn
+        type: mqbench_freeze_bn
+      tocaffe_friendly: True
   - name: roi_head
     prev: neck
     type: RetinaHeadWithBNSep
@@ -186,7 +189,7 @@ net:
       num_level: 5
       class_activation: sigmoid
       normalize:
-        type: freeze_bn
+        type: mqbench_freeze_bn
   - name: post_process
     prev: roi_head
     type: retina_post

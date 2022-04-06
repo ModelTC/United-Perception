@@ -4,7 +4,11 @@ import math
 # Import from third library
 import torch.nn as nn
 import torch.nn.functional as F
-import spring.linklink as link
+
+try:
+    import spring.linklink as link
+except:  # noqa
+    from up.utils.general.fake_linklink import link
 
 # Import from pod
 from up.utils.model.initializer import initialize_from_cfg

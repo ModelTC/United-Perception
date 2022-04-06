@@ -1,0 +1,28 @@
+FP16
+====
+
+* Accuracy: Training with fp16 on mask-rcnn, keypoint-rcnn, retinanet, and faster-rcnn gives equal performance to training with fp32 on them.
+* Speed: speeding only on V100, e.g., R50-C4-Faster-RCNN using fp16 runs 1.87 times faster compared with that using fp32.
+* Memory: R50-C4-Faster-RCNN with fp16 only occupies 46.5% memory compared with that with fp32.
+
+.. note::
+
+    The optimization of speed and memory are in direct proportion to the size of models.
+
+Theory & Realize
+
+* f16 means using Float16 for the training and saving of parameters and fp32 means using Float32 for that. V100 has specific designing for fp16, speeding the training. Directly using fp16 zeros some gradients, decreasing the accuracy. In practice, we use fp32 to copy and save the model, and use scale_factor to change the range of fp16 values.
+
+* In the process of forwarding, bn layers and losses are computed with fp32, and others are computed with fp16; in the process of backwarding, the gradient with fp16 are copied by fp32 for updating in the optimizer, and the updated gradient will be copied back with fp16.
+
+* The details can be referenced in  `Mixed Precision Traning <https://arxiv.org/abs/1710.03740>`_
+
+.. code-block:: yaml
+
+  runtime:
+    # dist 
+    fp16: True
+    # linklink
+    fp16:
+      keep_batchnorm_fp32: True
+      scale_factor: dynamic

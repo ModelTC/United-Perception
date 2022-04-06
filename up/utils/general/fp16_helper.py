@@ -5,8 +5,8 @@ from up.utils.model.bn_helper import (
     CaffeFrozenBatchNorm2d,
     PyTorchSyncBN,
     GroupNorm,
-    GroupSyncBatchNorm,
     TaskBatchNorm2d,
+    GroupSyncBatchNorm,
     SyncTaskBatchNorm2d
 )
 

@@ -1,6 +1,7 @@
 # Import from third library
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from up.utils.general.global_flag import DIST_BACKEND
 
 from up.utils.model.bn_helper import (
@@ -8,8 +9,8 @@ from up.utils.model.bn_helper import (
     FrozenBatchNorm2d,
     GroupNorm,
     PyTorchSyncBN,
-    GroupSyncBatchNorm,
     TaskBatchNorm2d,
+    GroupSyncBatchNorm,
     SyncTaskBatchNorm2d
 )
 
@@ -19,11 +20,19 @@ _norm_cfg = {
     'caffe_freeze_bn': ('bn', CaffeFrozenBatchNorm2d),
     'gn': ('gn', GroupNorm),
     'pt_sync_bn': ('bn', PyTorchSyncBN),
+    'taskbn': ('bn', TaskBatchNorm2d),
     'link_sync_bn': ('bn', GroupSyncBatchNorm),
     'sync_bn': ('bn', GroupSyncBatchNorm),
-    'taskbn': ('bn', TaskBatchNorm2d),
-    'task_sync_bn': ('bn', SyncTaskBatchNorm2d)
+    'task_sync_bn': ('bn', SyncTaskBatchNorm2d),
+    'ln': ('ln', torch.nn.LayerNorm)
 }
+
+try:
+    from mqbench.nn.modules import FrozenBatchNorm2d as MqbenchFrozenBatchNorm2d
+    _norm_cfg.update({'mqbench_freeze_bn': ('bn', MqbenchFrozenBatchNorm2d)})
+except Exception as err:
+    print(err)
+    print("If you need Mqbench to quantize model, you should add Mqbench to this project. Or just ignore this error.")
 
 
 def is_bn(m):
@@ -40,6 +49,8 @@ def is_bn(m):
     if isinstance(m, TaskBatchNorm2d):
         return True
     if isinstance(m, SyncTaskBatchNorm2d):
+        return True
+    if isinstance(m, torch.nn.LayerNorm):
         return True
     return False
 
@@ -104,3 +115,31 @@ def build_conv_norm(in_channels,
         if not relu_first:
             seq.add_module('relu', nn.ReLU(inplace=True))
     return seq
+
+
+class LayerNorm(nn.Module):
+    r""" LayerNorm that supports two data formats: channels_last (default) or channels_first.
+    The ordering of the dimensions in the inputs. channels_last corresponds to inputs with
+    shape (batch_size, height, width, channels) while channels_first corresponds to inputs
+    with shape (batch_size, channels, height, width).
+    """
+
+    def __init__(self, normalized_shape, eps=1e-6, data_format="channels_last"):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(normalized_shape))
+        self.bias = nn.Parameter(torch.zeros(normalized_shape))
+        self.eps = eps
+        self.data_format = data_format
+        if self.data_format not in ["channels_last", "channels_first"]:
+            raise NotImplementedError
+        self.normalized_shape = (normalized_shape,)
+
+    def forward(self, x):
+        if self.data_format == "channels_last":
+            return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
+        elif self.data_format == "channels_first":
+            u = x.mean(1, keepdim=True)
+            s = (x - u).pow(2).mean(1, keepdim=True)
+            x = (x - u) / torch.sqrt(s + self.eps)
+            x = self.weight[:, None, None] * x + self.bias[:, None, None]
+            return x
