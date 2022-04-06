@@ -1,15 +1,66 @@
-num_classes: &num_classes 81
+asses: &num_classes 81
+runtime:
+  rank_init: True
+  runner:
+    type: quant
+
+quant:
+  ptq_only: False
+  deploy_backend: tensorrt
+  cali_batch_size: 900
+  prepare_args:
+    extra_qconfig_dict:
+      w_observer: MinMaxObserver
+      a_observer: EMAMinMaxObserver
+      w_fakequantize: FixedFakeQuantize
+      a_fakequantize: FixedFakeQuantize
+    leaf_module: [Space2Depth, FrozenBatchNorm2d]
+    extra_quantizer_dict:
+      additional_module_type: [ConvFreezebn2d, ConvFreezebnReLU2d]
+
 
 flip: &flip
  type: flip
  kwargs:
    flip_p: 0.5
 
-resize: &resize
+resize: &train_resize
  type: keep_ar_resize
  kwargs:
-   scales: [800]
+   scales: [640, 672, 704, 736, 768, 800]
    max_size: 1333
+   separate_wh: True
+
+resize: &test_resize
+ type: fix_output_resize
+ kwargs:
+   scales: [800, 800]
+
+mosaicv2: &mosaicv2
+ type: mosaic
+ kwargs:
+   extra_input: True
+   mosaic_prob: 1.0     # do not change this prob and tar_size, it's coupled with random_perspective
+   tar_size: 1024
+   fill_color: 0
+
+random_perspective: &random_perspective
+  type: random_perspective
+  kwargs:
+    degrees: 0.0
+    translate: 0.1
+    scale: 0.5
+    shear: 0.0
+    perspective: 0.0
+    border: [-512, -512]
+    fill_color: 0
+
+augment_hsv: &augment_hsv
+  type: augment_hsv
+  kwargs:
+    hgain: 0.015
+    sgain: 0.7
+    vgain: 0.4
 
 to_tensor: &to_tensor
   type: to_tensor
@@ -20,19 +71,20 @@ normalize: &normalize
    mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
    std: [0.229, 0.224, 0.225]
 
-dataset:
+dataset: # Required.
   train:
     dataset:
       type: coco
       kwargs:
         source: train  # dataset id
         meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
+        has_mask: True
         image_reader:
           type: fs_opencv
           kwargs:
             image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
             color_mode: RGB
-        transformer: [*flip, *resize, *to_tensor, *normalize]
+        transformer: [*test_resize, *to_tensor, *normalize]
   test:
     dataset:
       type: coco
@@ -44,7 +96,7 @@ dataset:
           kwargs:
             image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
             color_mode: RGB
-        transformer: [*resize, *to_tensor, *normalize]
+        transformer: [*test_resize, *to_tensor, *normalize]
         evaluator:
           type: COCO               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
@@ -56,7 +108,7 @@ dataset:
       sampler:
         type: dist
         kwargs: {}
-      batch_size: 2
+      batch_size: 1
       aspect_grouping: [1,]
   dataloader:
     type: base
@@ -67,76 +119,87 @@ dataset:
 
 
 trainer: # Required.
-  max_epoch: 14              # total epochs for the training
-  test_freq: 14
+  max_epoch: 6             # total epochs for the training
+  test_freq: 1
+  only_save_latest: False
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
     kwargs:
-      lr: 0.00125
+      lr: 0.0000125
       momentum: 0.9
-      weight_decay: 0.0001
+      weight_decay: 0.0
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
-    warmup_epochs: 1         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_epochs: 1        # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    warmup_type: linear
     type: MultiStepLR
     kwargs:
-      milestones: [9,12]     # epochs to decay lr
+      milestones: [2, 4]     # epochs to decay lr
       gamma: 0.1             # decay rate
 
 saver: # Required.
-  save_dir: checkpoints     # dir to save checkpoints
-  pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet101-5d3b4d8f.pth
-  results_dir: results_dir  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
-                     # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+  save_dir: checkpoints/fpn_6e_quant_deploy     # dir to save checkpoints
+  resume_model: checkpoints/fpn_6e_quant/ckpt_e6.pth
+  results_dir: results_dir/fpn_6e_quant_deploy # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
+                     
+
 hooks:
   - type: auto_checkpoint
 
 net:
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet101
+    type: resnet50
     kwargs:
       frozen_layers: [0,1]     # layer0...1 is fixed
-      out_layers: [4]          # layer1...4, commonly named Conv2...5
-      out_strides: [16]        # tell the strides of output features
+      out_layers: [1,2,3,4]     # layer1...4, commonly named Conv2...5
+      out_strides: [4,8,16,32]  # tell the strides of output features
       normalize:
-        type: freeze_bn
+        type: mqbench_freeze_bn
       initializer:
         method: msra
-  - name: roi_head
+  - name: neck
     prev: backbone
+    type: FPN
+    kwargs:
+      outplanes: 256
+      start_level: 2
+      num_level: 5                # if num_level>len(backbone.out_layers), additional conv with be stacked.
+      out_strides: [4,8,16,32,64] # strides of output features. aka., anchor strides for roi_head
+      downsample: pool            # method to downsample, for FPN, it's pool, for RetienaNet, it's conv
+      upsample: nearest           # method to interp, nearest or bilinear
+      initializer:
+        method: xavier
+  - name: roi_head
+    prev: neck
     type: NaiveRPN
     kwargs:
-      feat_planes: 512      # channels of intermediate conv
-      num_classes: 2        # for rpn, it's 2; for RetinaNet, it's 81
-      num_anchors: 9
-      class_activation: softmax
-      num_level: 1
+      feat_planes: 256    # channels of intermediate conv
+      num_classes: 2      # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      num_anchors: 3
+      class_activation: sigmoid
+      num_level: 5
       initializer:
         method: normal
         std: 0.01
-  - name: post_process
+  - name: rpn_post_process
     prev: roi_head
-    type: retina_post
+    type: rpn_post
     kwargs:
       num_classes: 2
       cfg:
         cls_loss:
-          type: softmax_cross_entropy
-          kwargs:
-            class_dim: -1  # last dim is the class dim
+          type: sigmoid_cross_entropy
         loc_loss:
-          type: smooth_l1_loss
-          kwargs:
-            sigma: 3.0
+          type: l1_loss
         anchor_generator:
           type: hand_craft
           kwargs:
-            anchor_ratios: [0.5,1,2]    # anchor strides are provided as feature strides by feature extractor
-            anchor_scales: [8,16,32]    # scale of anchors relative to feature map
+            anchor_ratios: [0.5,1,2]  # anchor strides are provided as feature strides by feature extractor
+            anchor_scales: [8]        # scale of anchors relative to feature map
         roi_supervisor:
           type: rpn
           kwargs:
-            allowed_border: 0
+            allowed_border: -1
             matcher:
               type: max_iou
               kwargs:
@@ -144,7 +207,7 @@ net:
                 negative_iou_thresh: 0.3
                 ignore_iou_thresh:   0.5
                 allow_low_quality_match: True
-                low_quality_thresh: 0.1  # !this option is not supported yet, but we have future plan
+                low_quality_thresh: 0.3  # !this option is not supported yet, but we have future plan
             sampler:
               type: naive
               kwargs:
@@ -155,33 +218,42 @@ net:
             type: base
             kwargs:
               pre_nms_score_thresh: 0.0
-              pre_nms_top_n: 12000
-              post_nms_top_n: 2000
+              pre_nms_top_n: 2000
+              post_nms_top_n: 1000
               roi_min_size: 0
               nms:
                 type: naive
                 nms_iou_thresh: 0.7
+              merger:
+                type: rpn
+                kwargs:
+                  top_n: 1000
         test:
           roi_predictor:
             type: base
             kwargs:
               pre_nms_score_thresh: 0.0
-              pre_nms_top_n: 6000
-              post_nms_top_n: 300
+              pre_nms_top_n: 1000
+              post_nms_top_n: 1000
               roi_min_size: 0
               nms:
                 type: naive
                 nms_iou_thresh: 0.7
+              merger:
+                type: rpn
+                kwargs:
+                  top_n: 1000
   - name: bbox_head_pre_process
-    type: BboxRFCN_Pre
+    type: BboxFC_Pre
     kwargs:
+      with_drp: False
       cfg:
         bbox_supervisor:
           type: faster
           kwargs:
             bbox_normalize: &bbox_norm
               means: [0, 0, 0, 0]         # statics to normalize localization predictions.
-              stds: [0.1, 0.1, 0.2, 0.2]  
+              stds: [0.1, 0.1, 0.2, 0.2]
             matcher:
               type: max_iou
               kwargs:
@@ -189,18 +261,22 @@ net:
                 positive_iou_thresh: 0.5
                 negative_iou_thresh: 0.5
                 allow_low_quality_match: False  # positive if a anchor has highest iou with any gt
+                low_quality_thresh: 0.5
             sampler:
               type: naive
               kwargs:
                 batch_size: 512
                 positive_percent: 0.25
+        fpn:
+          fpn_levels: [0,1,2,3]   # indices of fpn features used for this stage. these levels are supposed to be continuous
+          base_scale: 56          # target level of a RoI is floor(log2((w*h)**0.5/base_scale))
         roipooling: &roipooling
           method: 'roialignpool'      # choices=['roialignpool', 'psroipool', 'roipool', 'psroimaskpool']. note that 'psroipool' is for RFCN head
           pool_size: 7
-          sampling_ratio: 2  
+          sampling_ratio: 0           # number of sampling points in each bin. 0 means densely sampled
   - name: bbox_head
-    prev: backbone
-    type: BboxRFCN
+    prev: neck
+    type: BboxFC
     kwargs:
       feat_planes: 1024
       num_classes: *num_classes                 # number of classification classes
@@ -210,7 +286,6 @@ net:
         class_activation: softmax
         roipooling: *roipooling
         share_location: &share_location False         # is share location in bbox regression for all classes
-        add_relu_after_feature_conv: False            # add relu after feature conv will bring ~0.3 precision drop
   - name: bbox_head_post_process
     type: Bbox_Post
     kwargs:
@@ -219,10 +294,11 @@ net:
           type: softmax_cross_entropy
           kwargs:
             class_dim: -1  # last dim is the class dim
+            loss_weight: 4.0
         loc_loss:
-          type: smooth_l1_loss
+          type: l1_loss
           kwargs:
-            sigma: 1.0
+            loss_weight: 4.5
         share_location: *share_location
         bbox_normalize: *bbox_norm
         bbox_predictor:
@@ -232,6 +308,6 @@ net:
             share_location: *share_location
             nms:
               type: naive
-              nms_iou_thresh: 0.3
+              nms_iou_thresh: 0.5
             bbox_score_thresh: 0.0
             top_n: 100

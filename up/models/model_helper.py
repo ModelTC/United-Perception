@@ -7,9 +7,16 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 
+from up.utils.env.dist_helper import env
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.env.gene_env import patterns_match
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY, MODEL_HELPER_REGISTRY, MODULE_WRAPPER_REGISTRY
+from up.utils.general.registry_factory import (
+    MODULE_ZOO_REGISTRY,
+    MODULE_PROCESS_REGISTRY,
+    MODEL_HELPER_REGISTRY,
+    MODULE_WRAPPER_REGISTRY
+)
+from up.utils.general.global_flag import DEPLOY_FLAG
 
 
 __all__ = ['ModelHelper']
@@ -19,7 +26,7 @@ __all__ = ['ModelHelper']
 class ModelHelper(nn.Module):
     """Build model from cfg"""
 
-    def __init__(self, cfg, deploy=False):
+    def __init__(self, cfg):
         super(ModelHelper, self).__init__()
 
         if 'net' in cfg:
@@ -46,7 +53,6 @@ class ModelHelper(nn.Module):
             self.add_module(mname, module)
         self.dtype = torch.float32
         self.device = torch.device('cpu')
-        self.deploy = deploy
 
         self._init_functional(**functional_kwargs)
         self.train()
@@ -76,7 +82,15 @@ class ModelHelper(nn.Module):
             return cls(**kwargs)
         else:  # For usage that models are registered by MODULE_ZOO_REGISTRY
             cfg = {'type': mtype, 'kwargs': kwargs}
-            return MODULE_ZOO_REGISTRY.build(cfg)
+            if env.is_master():
+                assert (mtype in MODULE_ZOO_REGISTRY or mtype in MODULE_PROCESS_REGISTRY), \
+                    '{} is not supported, avaiables are:{} and {}'.format(mtype,
+                                                                          MODULE_ZOO_REGISTRY,
+                                                                          MODULE_PROCESS_REGISTRY)
+            if mtype in MODULE_ZOO_REGISTRY:
+                return MODULE_ZOO_REGISTRY.build(cfg)
+            else:
+                return MODULE_PROCESS_REGISTRY.build(cfg)
 
     def float(self):
         self.dtype = torch.float32
@@ -108,10 +122,10 @@ class ModelHelper(nn.Module):
         for submodule in self.children():
             output = submodule(input)
             input.update(output)
-        if not self.deploy:
+        if not DEPLOY_FLAG.flag:
             return input
         else:
-            return input['preds']
+            return input['deploy_output_node']
 
     def load(self, other_state_dict, strict=False):
         """

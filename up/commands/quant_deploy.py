@@ -20,20 +20,10 @@ class QuantDeploy(Subcommand):
         sub_parser = parser.add_parser(name,
                                        description='subcommand for deploying',
                                        help='deploy a model')
-
         sub_parser.add_argument('--config',
                                 dest='config',
                                 required=True,
                                 help='settings of detection in yaml format')
-        sub_parser.add_argument('--ckpt',
-                                dest='ckpt',
-                                required=True,
-                                help='ckpt loaded for inferencing')
-        sub_parser.add_argument('--input_shape',
-                                dest='input_shape',
-                                type=str,
-                                required=True,
-                                help='input shape NCHW')
         sub_parser.add_argument('--cfg_type',
                                 dest='cfg_type',
                                 type=str,
@@ -50,8 +40,6 @@ class QuantDeploy(Subcommand):
 def main(args):
     cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
-        'ckpt': args.ckpt,
-        'input_shape': args.input_shape,
         'opts': args.opts
     }
     cfg['runtime'] = cfg.setdefault('runtime', {})

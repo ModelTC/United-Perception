@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# cmd example: sh train_quant.sh 16 ToolChain
+
 UP=/path to up
 MQB=/path to mqbench
 

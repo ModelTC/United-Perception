@@ -15,11 +15,6 @@ class QuantRunner(BaseRunner):
         self.do_ptq = True
         super(QuantRunner, self).__init__(config, work_dir, training)
 
-    def split_cfg(self):
-        net_cfg = self.config['net'][:-1]
-        post_cfg = [self.config['net'][-1]]
-        return net_cfg, post_cfg
-
     def build(self):
         self.build_env()
         self.get_git_version()
@@ -47,19 +42,18 @@ class QuantRunner(BaseRunner):
             logger.info('Running with config:\n{}'.format(format_cfg(self.config)))
 
     def build_model(self):
-        model_helper_type = self.config['runtime']['model_helper']['type']
-        model_helper_kwargs = self.config['runtime']['model_helper']['kwargs']
-        model_helper_ins = MODEL_HELPER_REGISTRY[model_helper_type]
-        net_cfg, post_cfg = self.split_cfg()
-        self.model = model_helper_ins(net_cfg, **model_helper_kwargs)
-        self.post_process = model_helper_ins(post_cfg, **model_helper_kwargs)
+        QuantModelHelper = MODEL_HELPER_REGISTRY['quant']
+        self.model = QuantModelHelper(self.config)
+        self.model_list = self.model.model_list
+        self.model_map = self.model.model_map
+        if env.is_master():
+            print(self.model)
+            print(self.model_list)
+            print(self.model_map)
         if self.device == 'cuda':
             self.model = self.model.cuda()
-            self.post_process = self.post_process.cuda()
         if self.config['runtime']['special_bn_init']:
             self.special_bn_init()
-        if self.fp16:
-            self.model = self.model.half()
 
     def load_ckpt(self):
         self.ckpt = self.saver.load_pretrain_or_resume()
@@ -68,8 +62,11 @@ class QuantRunner(BaseRunner):
                 self.ckpt['model'] = self.ckpt['ema']['ema_state_dict']
 
     def resume_model_from_fp(self):
+        def add_prefix(state_dict):
+            f = lambda x: self.model_map[x.split('.')[0]] + '.' + x
+            return {f(key): value for key, value in state_dict.items()}
         if 'qat' not in self.ckpt:
-            self.model.load_state_dict(self.ckpt['model'])
+            self.model.load_state_dict(add_prefix(self.ckpt['model']))
 
     def resume_model_from_quant(self):
         if 'qat' in self.ckpt:
@@ -80,15 +77,6 @@ class QuantRunner(BaseRunner):
                 self.optimizer.load_state_dict(self.ckpt['optimizer'])
                 self.lr_scheduler.load_state_dict(self.ckpt['lr_scheduler'])
                 logger.info(f'resume from epoch:{start_epoch} iteration:{self.cur_iter}')
-
-    def forward_model(self, batch):
-        output = self.model(batch)
-        if self.model.training:
-            self.post_process.train()
-        else:
-            self.post_process.eval()
-        output = self.post_process(output)
-        return output
 
     @property
     def backend_type(self):
@@ -131,12 +119,21 @@ class QuantRunner(BaseRunner):
         extra_quantizer_dict = prepare_args.get('extra_quantizer_dict')
         if extra_quantizer_dict is not None:
             prepare_custom_config_dict['extra_quantizer_dict'] = self.get_extra_quantizer_dict(extra_quantizer_dict)
+
         self.model.train().cuda()
-        self.model = prepare_by_platform(self.model,
-                                         self.backend_type[deploy_backend], prepare_custom_config_dict)
-        self.model.cuda()
+        for mname in self.model_list:
+            mod = getattr(self.model, mname)
+            mod = prepare_by_platform(mod, self.backend_type[deploy_backend], prepare_custom_config_dict)
+            setattr(self.model, mname, mod)
+            if env.is_master():
+                print(mod)
+
+        self.model.train().cuda()
+
         if env.is_master():
             print(self.model)
+
+        # exit(0)
 
     def calibrate(self):
         logger.info("calibrate model")

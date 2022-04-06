@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from up.utils.general.registry_factory import MODULE_PROCESS_REGISTRY
 from up.utils.model import accuracy as A  # noqa F401
 from up.tasks.det.models.utils.anchor_generator import build_anchor_generator
 from up.models.losses import build_loss
@@ -18,7 +18,7 @@ from .roi_predictor import build_roi_predictor
 __all__ = ['BaseDetPostProcess', 'IOUPostProcess', 'RPNPostProcess']
 
 
-@MODULE_ZOO_REGISTRY.register('retina_post')
+@MODULE_PROCESS_REGISTRY.register('retina_post')
 class BaseDetPostProcess(nn.Module):
     """
     Head for the first stage detection task
@@ -226,7 +226,7 @@ class BaseDetPostProcess(nn.Module):
         return decode_loc_target, decode_loc_pred
 
 
-@MODULE_ZOO_REGISTRY.register('retina_post_iou')
+@MODULE_PROCESS_REGISTRY.register('retina_post_iou')
 class IOUPostProcess(BaseDetPostProcess):
     """
     Head for the first stage detection task
@@ -320,7 +320,7 @@ class IOUPostProcess(BaseDetPostProcess):
         return ave_normalizer
 
 
-@MODULE_ZOO_REGISTRY.register('rpn_post')
+@MODULE_PROCESS_REGISTRY.register('rpn_post')
 class RPNPostProcess(BaseDetPostProcess):
     """
     hzh_22_1_5

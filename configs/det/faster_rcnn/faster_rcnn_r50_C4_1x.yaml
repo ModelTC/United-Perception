@@ -182,37 +182,16 @@ net:
               nms:
                 type: naive
                 nms_iou_thresh: 0.7
-  - name: bbox_head
-    prev: backbone
-    type: BboxRes5
+  - name: bbox_head_pre_process
+    type: BboxRes5_Pre
     kwargs:
-      backbone: resnet50
-      normalize:
-        type: freeze_bn
-      num_classes: *num_classes                 # number of classification classes
-      initializer:
-        method: msra
       cfg:
-        cls_loss:
-          type: softmax_cross_entropy
-          kwargs:
-            class_dim: -1  # last dim is the class dim
-        loc_loss:
-          type: smooth_l1_loss
-          kwargs:
-            sigma: 1.0
-        roipooling:
-          method: 'roialignpool'      # choices=['roialignpool', 'psroipool', 'roipool', 'psroimaskpool']. note that 'psroipool' is for RFCN head
-          pool_size: 7
-          sampling_ratio: 0           # number of sampling points in each bin. 0 means densely sampled
-        bbox_normalize: &bbox_norm
-          means: [0, 0, 0, 0]         # statics to normalize localization predictions.
-          stds: [0.1, 0.1, 0.2, 0.2]
-        share_location: &share_location False         # is share location in bbox regression for all classes
         bbox_supervisor:
           type: faster
           kwargs:
-            bbox_normalize: *bbox_norm
+            bbox_normalize: &bbox_norm
+              means: [0, 0, 0, 0]         # statics to normalize localization predictions.
+              stds: [0.1, 0.1, 0.2, 0.2] 
             matcher:
               type: max_iou
               kwargs:
@@ -225,6 +204,38 @@ net:
               kwargs:
                 batch_size: 512
                 positive_percent: 0.25
+        roipooling: &roipooling
+          method: 'roialignpool'      # choices=['roialignpool', 'psroipool', 'roipool', 'psroimaskpool']. note that 'psroipool' is for RFCN head
+          pool_size: 7
+          sampling_ratio: 0           # number of sampling points in each bin. 0 means densely sampled
+  - name: bbox_head
+    prev: backbone
+    type: BboxRes5
+    kwargs:
+      backbone: resnet50
+      normalize:
+        type: freeze_bn
+      num_classes: *num_classes                 # number of classification classes
+      initializer:
+        method: msra
+      cfg:
+        class_activation: softmax
+        roipooling: *roipooling
+        share_location: &share_location False         # is share location in bbox regression for all classes
+  - name: bbox_head_post_process
+    type: Bbox_Post
+    kwargs:
+      cfg:
+        cls_loss:
+          type: softmax_cross_entropy
+          kwargs:
+            class_dim: -1  # last dim is the class dim
+        loc_loss:
+          type: smooth_l1_loss
+          kwargs:
+            sigma: 1.0
+        share_location: *share_location
+        bbox_normalize: *bbox_norm
         bbox_predictor:
           type: faster
           kwargs:

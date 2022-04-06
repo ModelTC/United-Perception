@@ -49,6 +49,7 @@ class BaseNet(nn.Module):
         output['preds'] = mlvl_raw_preds
         if 'RPN' in self.prefix:
             output.update({'rpn_preds': output['preds']})
+        output.update({'deploy_output_node': output['preds']})
         return output
 
 

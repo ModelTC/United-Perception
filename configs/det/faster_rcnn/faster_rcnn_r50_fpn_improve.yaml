@@ -123,7 +123,7 @@ trainer: # Required.
 
 saver: # Required.
   save_dir: checkpoints/fpn_100e     # dir to save checkpoints
-  pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth
+  pretrain_model: /mnt/lustre/share/DSK/model_zoo/pytorch/imagenet/resnet50-19c8e357.pth 
   results_dir: results_dir/fpn_100e # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
                      
@@ -168,7 +168,7 @@ net:
       initializer:
         method: normal
         std: 0.01
-  - name: post_process
+  - name: rpn_post_process
     prev: roi_head
     type: rpn_post
     kwargs:
@@ -230,39 +230,17 @@ net:
                 type: rpn
                 kwargs:
                   top_n: 1000
-  - name: bbox_head
-    prev: neck
-    type: BboxFC
+  - name: bbox_head_pre_process
+    type: BboxFC_Pre
     kwargs:
-      feat_planes: 1024
-      num_classes: *num_classes                 # number of classification classes
-      initializer:
-        method: msra
+      with_drp: False
       cfg:
-        cls_loss:
-          type: softmax_cross_entropy
-          kwargs:
-            class_dim: -1  # last dim is the class dim
-            loss_weight: 4.0
-        loc_loss:
-          type: l1_loss
-          kwargs:
-            loss_weight: 4.5
-        fpn:
-          fpn_levels: [0,1,2,3]   # indices of fpn features used for this stage. these levels are supposed to be continuous
-          base_scale: 56          # target level of a RoI is floor(log2((w*h)**0.5/base_scale))
-        roipooling:
-          method: 'roialignpool'      # choices=['roialignpool', 'psroipool', 'roipool', 'psroimaskpool']. note that 'psroipool' is for RFCN head
-          pool_size: 7
-          sampling_ratio: 0           # number of sampling points in each bin. 0 means densely sampled
-        bbox_normalize: &bbox_norm
-          means: [0, 0, 0, 0]         # statics to normalize localization predictions.
-          stds: [0.1, 0.1, 0.2, 0.2]
-        share_location: &share_location False         # is share location in bbox regression for all classes
         bbox_supervisor:
           type: faster
           kwargs:
-            bbox_normalize: *bbox_norm
+            bbox_normalize: &bbox_norm
+              means: [0, 0, 0, 0]         # statics to normalize localization predictions.
+              stds: [0.1, 0.1, 0.2, 0.2]
             matcher:
               type: max_iou
               kwargs:
@@ -276,6 +254,40 @@ net:
               kwargs:
                 batch_size: 512
                 positive_percent: 0.25
+        fpn:
+          fpn_levels: [0,1,2,3]   # indices of fpn features used for this stage. these levels are supposed to be continuous
+          base_scale: 56          # target level of a RoI is floor(log2((w*h)**0.5/base_scale))
+        roipooling: &roipooling
+          method: 'roialignpool'      # choices=['roialignpool', 'psroipool', 'roipool', 'psroimaskpool']. note that 'psroipool' is for RFCN head
+          pool_size: 7
+          sampling_ratio: 0           # number of sampling points in each bin. 0 means densely sampled
+  - name: bbox_head
+    prev: neck
+    type: BboxFC
+    kwargs:
+      feat_planes: 1024
+      num_classes: *num_classes                 # number of classification classes
+      initializer:
+        method: msra
+      cfg:
+        class_activation: softmax
+        roipooling: *roipooling
+        share_location: &share_location False         # is share location in bbox regression for all classes
+  - name: bbox_head_post_process
+    type: Bbox_Post
+    kwargs:
+      cfg:
+        cls_loss:
+          type: softmax_cross_entropy
+          kwargs:
+            class_dim: -1  # last dim is the class dim
+            loss_weight: 4.0
+        loc_loss:
+          type: l1_loss
+          kwargs:
+            loss_weight: 4.5
+        share_location: *share_location
+        bbox_normalize: *bbox_norm
         bbox_predictor:
           type: faster
           kwargs:

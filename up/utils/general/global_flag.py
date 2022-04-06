@@ -5,6 +5,11 @@ class QuantFlag():
         self.flag = False
 
 
+class DeployFlag():
+    def __init__(self):
+        self.flag = False
+
+
 class Aligned():
     def __init__(self):
         self.aligned = False
@@ -36,3 +41,4 @@ FP16_FLAG = Fp16Flag()
 ALIGNED_FLAG = Aligned()
 DIST_BACKEND = DistBackend()
 QUANT_FLAG = QuantFlag()
+DEPLOY_FLAG = QuantFlag()
