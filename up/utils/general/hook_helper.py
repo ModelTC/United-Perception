@@ -161,6 +161,8 @@ class TrainEvalLogger(Hook):
             self.summary_writer = get_summary_writer_class(summary_writer)(os.path.join(runner.work_dir, logdir))
         self.train_timers = MetricLogger(delimiter=" ")
         self.eval_timers = MetricLogger(delimiter=" ")
+        self.t_before_allreduce = 0
+        self.t_after_allreduce = 0
 
     def before_data(self, cur_iter):
         self.t_before_data = time.time()
