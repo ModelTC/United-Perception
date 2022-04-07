@@ -285,18 +285,29 @@ class ClsToKestrel(object):
         with open(to_kestrel_yml, 'w') as f:
             json.dump(self.parameters, f, indent=2)
 
+        parameters_json = 'tmp_parameters_json'
+        # convert torch.tensor in parameters to int or list
+        for key in self.parameters:
+            if torch.is_tensor(self.parameters[key]):
+                self.parameters[key] = self.parameters[key].tolist()
+        with open(parameters_json, 'w') as f:
+            json.dump(self.parameters, f, indent=2)
+
         if self.save_to is None:
             self.save_to = config['to_kestrel']['save_to']
 
-        cmd = 'python -m spring.nart.tools.kestrel.classifier {} {} -v {} -c {} -n {} -p {}'.format(
-            prototxt, caffemodel, version, to_kestrel_yml, self.save_to, self.save_to)
-        if not os.path.exists('./to_kestrel'):
-            os.system('mkdir to_kestrel')
-        mv_cmd = 'mv temp_to_kestrel.yml ./to_kestrel/'
-
         logger.info('Converting Model to Kestrel...')
-        os.system(cmd)
-        os.system(mv_cmd)
+        plugin = config['to_kestrel']['plugin']
+        ks_processor = KS_PROCESSOR_REGISTRY[plugin](prototxt,
+                                                     caffemodel, b=1,
+                                                     n=self.save_to, v=version,
+                                                     p=self.save_to,
+                                                     k=parameters_json,
+                                                     i=self.input_channel,
+                                                     s=self.serialize,
+                                                     resize_hw=None,
+                                                     nnie=None)
+        ks_processor.process()
         logger.info('To Kestrel Done!')
 
         # convert model to nnie
