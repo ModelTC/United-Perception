@@ -4,6 +4,9 @@ from __future__ import division
 import logging
 import sys
 from collections import defaultdict, deque
+import os
+import time
+from multiprocessing import Value
 
 import numpy as np
 import torch
@@ -198,3 +201,54 @@ def init_log(name='global', level=logging.INFO):
 
 
 default_logger = init_log('global', logging.INFO)
+
+read_time = 0
+count = 0
+last_time = time.time()
+max_pid = Value('i', 0)
+
+
+def dataset_timer_log(obj, type):
+    cls = obj.__class__
+    call = cls.__call__
+    data_timer = MetricLogger(delimiter=" ")
+    freq = int(os.environ['BATCH_SIZE']) * int(os.environ['DISPLAY_FREQ'])
+    dataset_timer_enabled = float(os.environ.get("DATASET_TIMER_ENABLED", 1))
+    dataset_time_threshold = float(os.environ.get("DATASET_TIMER_THRESHOLD", 30))
+    if dataset_timer_enabled == 0:
+        return obj
+
+    init = False
+    pid = 0
+
+    def wrapper(*args, **kw):
+        global last_time, count, read_time
+        nonlocal init, pid
+        if not init:
+            init = True
+            pid = os.getpid()
+            with max_pid.get_lock():
+                max_pid.value = max(max_pid.value, pid)
+
+        start = time.time()
+        result = call(*args, **kw)
+        end = time.time()
+
+        if type == "read":
+            read_time = end - start
+        else:
+            data_timer.update(count, read_time=read_time, transform_time=end - start)
+
+        if type != "read" and max_pid.value == pid:
+            if count % freq == 0:
+                default_logger.info(f"interval {end - last_time} Load a image: {data_timer}")
+            elif end - last_time > dataset_time_threshold:
+                default_logger.info(f"Load a image exceed {dataset_time_threshold}s: {data_timer}")
+
+        if type != "read":
+            count += 1
+            last_time = end
+        return result
+
+    cls.__call__ = wrapper
+    return obj

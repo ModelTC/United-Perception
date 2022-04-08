@@ -149,6 +149,22 @@ class BaseRunner(object):
                 check_pool.append(p)
         return check_pool
 
+    def set_dataset_timer(self, cfg_data):
+        cfg_dataset_timer = cfg_data.get('dataset_timer', None)
+        batch_size = 1
+        if cfg_data['train'].get('batch_sampler', None):
+            batch_size = cfg_data['train']['batch_sampler']['kwargs']['batch_size']
+        elif cfg_data['test'].get('batch_sampler', None):
+            batch_size = cfg_data['test']['batch_sampler']['kwargs']['batch_size']
+        elif cfg_data.get('batch_sampler', None):
+            batch_size = cfg_data['batch_sampler']['kwargs']['batch_size']
+
+        os.environ['BATCH_SIZE'] = str(batch_size)
+        os.environ['DISPLAY_FREQ'] = str(self.config['args']['display'])
+        if cfg_dataset_timer:
+            os.environ['DATASET_TIMER_ENABLED'] = str(1 if cfg_dataset_timer['enabled'] is True else 0)
+            os.environ['DATASET_TIMER_THRESHOLD'] = str(cfg_dataset_timer['threshold_seconds'])
+
     def build_dataloaders(self, reload_cfg=None):
         def build(builder_type, cfg_data, pool, reload_cfg):
             loaders = {}
@@ -160,6 +176,7 @@ class BaseRunner(object):
                 loaders[source] = loader
             return loaders
         cfg_data = self.config['dataset']
+        self.set_dataset_timer(cfg_data)
         self.config['dataset']['builder_type'] = cfg_data.setdefault('builder_type', 'base')
         self.config['dataset']['data_ppol'] = cfg_data.setdefault('data_pool', ['train:train', 'test:test'])
         builder_type = cfg_data.get('builder_type', 'base')

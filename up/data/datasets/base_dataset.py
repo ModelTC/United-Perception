@@ -6,6 +6,7 @@ import numpy as np
 from easydict import EasyDict
 import torch
 from torch.utils.data import Dataset
+from up.utils.general.log_helper import dataset_timer_log
 
 # Import from local
 from ..image_reader import build_image_reader
@@ -34,7 +35,7 @@ class BaseDataset(Dataset):
                  class_names=None):
         super(BaseDataset, self).__init__()
         self.meta_file = meta_file
-        self.image_reader = build_image_reader(image_reader)
+        self.image_reader = dataset_timer_log(build_image_reader(image_reader), "read")
         self.classes = class_names
         if transformer is not None:
             # add datset handler in transform kwargs in need of mosaic/mixup etc.
@@ -44,7 +45,7 @@ class BaseDataset(Dataset):
                     trans['kwargs'].pop('extra_input')
                     if trans['kwargs'].get('transform', False):
                         trans['kwargs']['transform'] = build_transformer(transformer[:trans_id])
-            self.transformer = build_transformer(transformer)
+            self.transformer = dataset_timer_log(build_transformer(transformer), "transform")
             self.visable_transformer = build_partially_inverse_transformer(self.transformer)
         else:
             self.visable_transformer = self.transformer = lambda x: x
