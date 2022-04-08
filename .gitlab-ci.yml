@@ -12,7 +12,6 @@ before_script:
 style:
   tags:
     - gpu
-    - diamond
   stage: build
   script:
     - pip install flake8
@@ -23,7 +22,6 @@ style:
 test:
   tags:
     - gpu
-    - diamond
   stage: test
   script:
     - export TORCH_CUDA_ARCH_LIST='3.5;5.0+PTX;6.0;7.0'
@@ -53,7 +51,6 @@ test:
 docs:
     tags:
       - gpu
-      - diamond
     stage: deploy
     script:
     - export MAX_JOBS=8
