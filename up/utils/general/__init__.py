@@ -2,6 +2,7 @@ from .hook_helper import * # noqa
 from .saver_helper import * # noqa
 from .vis_helper import * # noqa
 from .checkpoint import * # noqa
+from .toonnx_helper import * # noqa
 from .tocaffe_helper import * # noqa
 from .tokestrel_helper import * # noqa
 from .latency_helper import * # noqa

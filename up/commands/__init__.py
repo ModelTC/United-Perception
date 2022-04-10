@@ -3,6 +3,7 @@ from .inference import Inference # noqa
 from .eval import Eval # noqa
 from .quant_deploy import QuantDeploy # noqa
 from .to_caffe import ToCaffe # noqa
+from .to_onnx import ToOnnx # noqa
 from .to_kestrel import ToKestrel # noqa
 from .flops import Flops # noqa
 from .adela_deploy import AdelaDeploy # noqa

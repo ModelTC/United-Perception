@@ -18,7 +18,7 @@ from up.utils.general.tocaffe_utils import ToCaffe
 from up.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY, TOCAFFE_REGISTRY, MODEL_HELPER_REGISTRY
 from .user_analysis_helper import get_task_from_cfg
 
-__all__ = ['ToCaffe']
+__all__ = ['BaseToCaffe']
 
 
 def build_model(cfg):

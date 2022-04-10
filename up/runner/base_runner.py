@@ -24,6 +24,7 @@ from up.utils.general.registry_factory import (
     LR_SCHEDULER_REGISTY,
     MODEL_HELPER_REGISTRY,
     TOCAFFE_REGISTRY,
+    TOONNX_REGISTRY,
     TOKESTREL_REGISTRY,
     KS_PARSER_REGISTRY,
     LATENCY_REGISTRY,
@@ -420,6 +421,17 @@ class BaseRunner(object):
             onnx_file = tocaffe_ins.save_prefix + '.onnx'
             self.latency_test(cfg_gdbp, onnx_file)
         return caffemodel_name
+
+    @torch.no_grad()
+    def to_onnx(self, save_prefix='model', input_size=None, input_channel=3):
+        model = self.ema.model if self.ema is not None else self.model
+        toonnx_type = self.config.pop('toonnx_type', 'base')
+        toonnx_ins = TOONNX_REGISTRY[toonnx_type](self.config,
+                                                  save_prefix,
+                                                  input_size,
+                                                  model,
+                                                  input_channel)
+        toonnx_ins.process()
 
     def latency_test(self, cfg_gdbp, onnx_file):
         latency_type = cfg_gdbp.pop('latency_type', 'base')
