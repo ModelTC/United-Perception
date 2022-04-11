@@ -29,16 +29,28 @@ adela:
   server: 'adela.sensetime.com'
   dep_params:
     # dataset_added: quantity_dataset.json
-    platform: &platform 'cuda10.0-trt7.0-int8-T4'
-    max_batch_size: &max_batch_size 8
-    quantify: True
-    quantify_dataset_name: 'faces_simple_quant'
+    - platform: &platform1 'cuda10.0-trt7.0-int8-T4'
+      max_batch_size: &max_batch_size1 2
+      quantify: True
+      quantify_dataset_name: 'faces_simple_quant'
+    - platform: &platform2 'cuda10.0-trt7.0-int8-T4'
+      max_batch_size: &max_batch_size2 2
+      quantify: True
+      quantify_dataset_name: 'faces_simple_quant'
+    - platform: &platform3 'cuda10.0-trt7.0-int8-T4'
+      max_batch_size: &max_batch_size3 2
+      quantify: True
+      quantify_dataset_name: 'faces_simple_quant'
   precision_params:
     # dataset_added: benchmark_dataset.json
-    platform: *platform
-    max_batch_size: *max_batch_size
-    type: 0 # 0: precsion, 1: performance
-    dataset_name: "detection_asian_celebrity"
+    didxs: [1]
+    kwargs:
+      platform: *platform2
+      max_batch_size: *max_batch_size2
+      type: 0 # 0: precsion, 1: performance
+      dataset_name: "detection_asian_celebrity"
+  publish_params:
+    didxs: [1, 2]
 
 flip: &flip
  type: flip
