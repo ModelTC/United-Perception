@@ -29,12 +29,12 @@ test:
     - pip uninstall -y nart==0.2.4
     - pip uninstall -y springvision==1.0.1
     - pip uninstall -y kestrel==1.5.4-patch1
-    - pip install -r requirements.txt
+    - pip install -r requirements.txt -i https://pkg.sensetime.com/repository/pypi-proxy/simple/ --trusted-host pkg.sensetime.com
     - export MAX_JOBS=8
     - python setup.py build_ext -i
     - coverage erase
     - pip install http://spring.sensetime.com/pypi/packages/spring-0.6.0+cu101.torch150.mvapich2.nartgpu-cp37-cp37m-linux_x86_64.whl --trusted-host spring.sensetime.com
-    - pip install einops 
+    - pip install einops -i https://pkg.sensetime.com/repository/pypi-proxy/simple/ --trusted-host pkg.sensetime.com 
     # det essos
     - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/det/deploy/retinanet-r18_1x_essos.yaml --save_to=kestrel_model_essos --backend=dist
     # cls classifier
@@ -54,8 +54,8 @@ docs:
     stage: deploy
     script:
     - export MAX_JOBS=8
-    - pip install sphinx==1.5.6
-    - pip install docutils==0.17.1
+    - pip install sphinx==1.5.6 -i https://pkg.sensetime.com/repository/pypi-proxy/simple/ --trusted-host pkg.sensetime.com
+    - pip install docutils==0.17.1 -i https://pkg.sensetime.com/repository/pypi-proxy/simple/ --trusted-host pkg.sensetime.com
     - pip install http://spring.sensetime.com/pypi/packages/sphinx_rtd_theme-0.4.3-py2.py3-none-any.whl
     - pip install http://spring.sensetime.com/pypi/packages/sphinxcontrib_versioning-2.2.1-py3-none-any.whl
     - git --version
