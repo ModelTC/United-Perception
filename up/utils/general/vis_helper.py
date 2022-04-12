@@ -120,9 +120,9 @@ def colormap(rgb=False):
 
 
 class BaseVisualizer(object):
-    def __init__(self, class_names=None, vis_dir='vis_dir', thresh=0.9, show_box=True, show_class=True):
+    def __init__(self, class_names=None, output_dir='vis_dir', thresh=0.9, show_box=True, show_class=True):
         self.class_names = class_names
-        self.vis_dir = vis_dir
+        self.output_dir = output_dir
         self.thresh = thresh
         self.show_box = show_box
         self.show_class = show_class
@@ -146,11 +146,11 @@ class OpenCVVisualizer(BaseVisualizer):
 
     def __init__(self,
                  class_names=None,
-                 vis_dir='vis_dir',
+                 output_dir='vis_dir',
                  thresh=0.5,
                  show_box=True,
                  show_class=True):
-        super(OpenCVVisualizer, self).__init__(class_names, vis_dir, thresh, show_box, show_class)
+        super(OpenCVVisualizer, self).__init__(class_names, output_dir, thresh, show_box, show_class)
 
     def vis_bbox(self, img, bbox, thick=1):
         """Visualizes a bounding box."""
@@ -201,7 +201,7 @@ class OpenCVVisualizer(BaseVisualizer):
                 im = self.vis_class(im, (bbox[0], bbox[1] - 2), class_str)
 
         output_name = os.path.basename(filename)
-        output_name = os.path.join(self.vis_dir, output_name)
+        output_name = os.path.join(self.output_dir, output_name)
         cv2.imwrite(output_name, im)
 
 
@@ -209,14 +209,14 @@ class OpenCVVisualizer(BaseVisualizer):
 class PLTVisualizer(BaseVisualizer):
     def __init__(self,
                  class_names=None,
-                 vis_dir='vis_dir',
+                 output_dir='vis_dir',
                  thresh=0.5,
                  show_box=True,
                  show_class=True,
                  dpi=200,
                  box_alpha=0.0,
                  ext='pdf'):
-        super(PLTVisualizer, self).__init__(class_names, vis_dir, thresh, show_box, show_class)
+        super(PLTVisualizer, self).__init__(class_names, output_dir, thresh, show_box, show_class)
         self.dpi = dpi
         self.box_alpha = box_alpha
         self.ext = ext
@@ -300,6 +300,6 @@ class PLTVisualizer(BaseVisualizer):
                         color='white')
 
         output_name = os.path.basename(filename) + '.' + self.ext
-        output_name = os.path.join(self.vis_dir, '{}'.format(output_name))
+        output_name = os.path.join(self.output_dir, '{}'.format(output_name))
         fig.savefig(output_name, dpi=self.dpi)
         plt.close('all')

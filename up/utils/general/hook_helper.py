@@ -329,13 +329,18 @@ class Visualize(Hook):
             - vis_dt: (:obj:`dict`): dict with keys {``output_dir``, ``bbox_thresh``}
         """
         super(Visualize, self).__init__(runner)
-        vis_gt_dir = vis_gt['kwargs'].get('output_dir', 'vis_gt')
-        vis_dt_dir = vis_dt['kwargs'].get('output_dir', 'vis_dt')
-        os.makedirs(vis_gt_dir, exist_ok=True)
-        os.makedirs(vis_dt_dir, exist_ok=True)
-        # build visualizer
-        self.vis_gt = VISUALIZER_REGISTRY.build(vis_gt)
-        self.vis_dt = VISUALIZER_REGISTRY.build(vis_dt)
+        self.vis_gt = None
+        self.vis_dt = None
+        if vis_gt:
+            vis_gt_dir = vis_gt['kwargs'].get('output_dir', 'vis_gt')
+            os.makedirs(vis_gt_dir, exist_ok=True)
+            vis_gt['kwargs'].update({'output_dir': vis_gt_dir})
+            self.vis_gt = VISUALIZER_REGISTRY.build(vis_gt)
+        if vis_dt:
+            vis_dt_dir = vis_dt['kwargs'].get('output_dir', 'vis_dt')
+            os.makedirs(vis_dt_dir, exist_ok=True)
+            vis_dt['kwargs'].update({'output_dir': vis_dt_dir})
+            self.vis_dt = VISUALIZER_REGISTRY.build(vis_dt)
         logger.info('build visualizer done')
 
     def before_forward(self, cur_iter, input):
