@@ -1,5 +1,4 @@
 import json
-from easydict import EasyDict
 from up.utils.general.petrel_helper import PetrelHelper
 from up.tasks.cls.data.cls_dataset import BaseParser, CLS_PARSER_REGISTRY
 

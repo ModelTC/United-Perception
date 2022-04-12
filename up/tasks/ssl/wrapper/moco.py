@@ -1,15 +1,16 @@
 import torch
 import torch.nn as nn
 import spring.linklink as link
-import torchvision.models as models
 from up.utils.env.dist_helper import simple_group_split
 from up.utils.general.registry_factory import (
     MODULE_WRAPPER_REGISTRY
 )
 
+
 @MODULE_WRAPPER_REGISTRY.register('moco')
 class MoCo(nn.Module):
-    def __init__(self, encoder_q, encoder_k, q_plane=2048, k_plane=2048, dim=128, K=65536, m=0.999, T=0.07, mlp=False, group_size=8):
+    def __init__(self, encoder_q, encoder_k, q_plane=2048, k_plane=2048, dim=128, K=65536,
+                 m=0.999, T=0.07, mlp=False, group_size=8):
         """
         K: queue size; number of negative keys (default: 65536)
         m: moco momentum of updating key encoder (default: 0.999)
@@ -27,7 +28,7 @@ class MoCo(nn.Module):
         self.encoder_k = encoder_k
         dim_q = q_plane
         dim_k = k_plane
-        if mlp:  # hack: brute-force replacement    
+        if mlp:  # hack: brute-force replacement
             self.encoder_q_fc = nn.Sequential(nn.Linear(dim_q, dim_q), nn.ReLU(), nn.Linear(dim_q, dim))
             self.encoder_k_fc = nn.Sequential(nn.Linear(dim_k, dim_k), nn.ReLU(), nn.Linear(dim_k, dim))
         else:
@@ -126,8 +127,8 @@ class MoCo(nn.Module):
         im_q = im_q.contiguous()
         im_k = im_k.contiguous()
         # compute query features
-        q = self.encoder_q({'image':im_q})  # queries: NxC
-        q = self.encoder_q_fc(q['features'][-1].mean(dim=[2,3]))
+        q = self.encoder_q({'image' : im_q})  # queries: NxC
+        q = self.encoder_q_fc(q['features'][-1].mean(dim=[2, 3]))
         q = nn.functional.normalize(q, dim=1)
 
         # compute key features
@@ -137,8 +138,8 @@ class MoCo(nn.Module):
             # shuffle for making use of BN
             im_k, idx_unshuffle = self._batch_shuffle_ddp(im_k)
 
-            k = self.encoder_k({'image':im_k})  # keys: NxC
-            k = self.encoder_k_fc(k['features'][-1].mean(dim=[2,3]))
+            k = self.encoder_k({'image' : im_k})  # keys: NxC
+            k = self.encoder_k_fc(k['features'][-1].mean(dim=[2, 3]))
 
             k = nn.functional.normalize(k, dim=1)
 

@@ -32,7 +32,7 @@ def is_pil_image(img):
 
 
 def is_tensor_image(img):
-    return torch.is_tensor(img) and img.ndimension() == 3
+    return torch.is_tensor(img)
 
 
 def _is_numpy(img):

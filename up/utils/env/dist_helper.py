@@ -8,6 +8,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import pickle
+import numpy as np
 from collections import OrderedDict
 from up.utils.general.global_flag import DIST_BACKEND
 try:
@@ -186,6 +187,16 @@ class DistEnv(object):
 
 
 env = DistEnv()
+
+
+def simple_group_split(world_size, rank, num_groups):
+    groups = []
+    rank_list = np.split(np.arange(world_size), num_groups)
+    rank_list = [list(map(int, x)) for x in rank_list]
+    for i in range(num_groups):
+        groups.append(link.new_group(rank_list[i]))
+    group_size = world_size // num_groups
+    return groups[rank // group_size]
 
 
 def DistModule(model, sync=True):

@@ -37,23 +37,34 @@ class ModelHelper(nn.Module):
         self.model_cfg = copy.deepcopy(cfg)
         for cfg_subnet in cfg:
             mname = cfg_subnet['name']
-            kwargs = cfg_subnet['kwargs']
-            mtype = cfg_subnet['type']
-            if cfg_subnet.get('prev', None) is not None:
-                if hasattr(self, cfg_subnet['prev']):
-                    prev_module = getattr(self, cfg_subnet['prev'])
-                    if hasattr(prev_module, "get_outplanes"):
-                        kwargs['inplanes'] = prev_module.get_outplanes()
-            module = self.build(mtype, kwargs)
+            if 'multi_model' in cfg_subnet:
+                module = {}
+                for cfg_m in cfg_subnet['multi_model']:
+                    name = cfg_m['name']
+                    kwargs = cfg_m['kwargs']
+                    mtype = cfg_m['type']
+                    sub_module = self.build(mtype, kwargs)
+                    module.update({name : sub_module})
+            else:
+                kwargs = cfg_subnet['kwargs']
+                mtype = cfg_subnet['type']
+                if cfg_subnet.get('prev', None) is not None:
+                    if hasattr(self, cfg_subnet['prev']):
+                        prev_module = getattr(self, cfg_subnet['prev'])
+                        if hasattr(prev_module, "get_outplanes"):
+                            kwargs['inplanes'] = prev_module.get_outplanes()
+                module = self.build(mtype, kwargs)
             if 'wrappers' in cfg_subnet:
                 for wrapper_cfg in cfg_subnet['wrappers']:
                     wrapper_func = MODULE_WRAPPER_REGISTRY[wrapper_cfg['type']]
                     wrapper_kwargs = wrapper_cfg.get('kwargs', {})
-                    module = wrapper_func(module, **wrapper_kwargs)
+                    if isinstance(module, dict):
+                        module = wrapper_func(**module, **wrapper_kwargs)
+                    else:
+                        module = wrapper_func(module, **wrapper_kwargs)
             self.add_module(mname, module)
         self.dtype = torch.float32
         self.device = torch.device('cpu')
-
         self._init_functional(**functional_kwargs)
         self.train()
 
