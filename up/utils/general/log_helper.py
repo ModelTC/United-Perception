@@ -241,7 +241,7 @@ def dataset_timer_log(obj, type):
 
         if type != "read" and max_pid.value == pid:
             if count % freq == 0:
-                default_logger.info(f"interval {end - last_time} Load a image: {data_timer}")
+                default_logger.info(f"Load a image: {data_timer}")
             elif end - last_time > dataset_time_threshold:
                 default_logger.info(f"Load a image exceed {dataset_time_threshold}s: {data_timer}")
 
