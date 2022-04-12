@@ -1,10 +1,14 @@
 # Standard Library
+import os
+import bisect
 import json
 import copy
 from collections import Counter, OrderedDict
 
 # Import from third library
 import numpy as np
+import cv2
+import matplotlib.pyplot as plt
 import pandas
 import yaml
 from prettytable import PrettyTable
@@ -14,7 +18,8 @@ from up.utils.general.yaml_loader import IncludeLoader
 from up.utils.general.registry_factory import EVALUATOR_REGISTRY
 from up.utils.general.petrel_helper import PetrelHelper
 from up.data.metrics.base_evaluator import Evaluator, Metric
-
+from up.data.image_reader import build_image_reader
+from up.utils.general.vis_helper import vis_bad_case_with_text
 
 __all__ = ['MREvaluator']
 
@@ -290,6 +295,11 @@ class MREvaluator(CustomEvaluator):
                  fppi=np.array([0.1, 0.5, 1]),
                  metrics_csv='metrics.csv',
                  label_mapping=None,
+                 analysis_json='bad_case.jsonl',
+                 bad_case_analyser=None,
+                 img_root=None,
+                 vis_mode=None,
+                 image_reader=None,
                  ignore_mode=0,
                  ign_iou_thresh=0.5,
                  iou_types=['bbox'],
@@ -308,13 +318,40 @@ class MREvaluator(CustomEvaluator):
         if len(eval_class_idxs) == 0:
             eval_class_idxs = list(range(1, num_classes))
         self.eval_class_idxs = eval_class_idxs
+        self.image_reader = image_reader
 
         self.fppi = np.array(fppi)
         self.class_names = class_names
         self.metrics_csv = metrics_csv
         if self.class_names is None:
-            self.class_names = eval_class_idxs
+            self.class_names = list(range(1, num_classes))
+        self.init_vis(bad_case_analyser, analysis_json, img_root, vis_mode)
         self.iou_types = iou_types
+
+    def init_vis(self, bad_case_analyser, analysis_json, img_root, vis_mode):
+        # init for bad case analysis
+        if self.image_reader is not None:
+            self.image_reader = build_image_reader(self.image_reader)
+            self.img_root = '/'  # assert
+        if bad_case_analyser:
+            self.bad_case_analyzer_is_on = True
+            # if vis_mode is not None:
+            #     assert img_root is not None and os.path.exists(img_root)
+            mode, thresh = bad_case_analyser.split('_')
+            assert mode in ['manual', 'fppi']
+            if mode == 'fppi':
+                assert float(thresh) in self.fppi
+        else:
+            self.bad_case_analyzer_is_on = False
+        self.analysis_json = analysis_json
+        self.img_root = img_root
+        self.bad_case_analyser = bad_case_analyser
+        assert vis_mode in [None, 'all', 'fp', 'fn']
+        self.vis_missing = self.vis_mistake = False
+        if vis_mode in ['all', 'fn']:
+            self.vis_missing = True
+        if vis_mode in ['all', 'fp']:
+            self.vis_mistake = True
 
     def get_miss_rate(self, tp, fp, scores, image_num, gt_num, return_index=False):
         """
@@ -402,6 +439,89 @@ class MREvaluator(CustomEvaluator):
         csv_metrics_table.to_csv(output, index=False, float_format='%.4f')
         return output, csv_metrics_table, csv_metrics
 
+    def export_bad_case(self, original_data):
+        with open(self.analysis_json, 'w') as fd:
+            for image_id, res in original_data.items():
+                fd.write(json.dumps(res, ensure_ascii=False) + '\n')
+
+    def visualize_bad_case(self, analyze_res, class_names, ext='jpg', dpi=200):
+        mix_root = 'vis_dt_bad_case'
+        if not os.path.exists(mix_root):
+            os.mkdir(mix_root)
+        for ind, img_res in analyze_res.items():
+            missing_list = img_res.get('missing_instances', [])
+            predict_list = img_res.get('predict_instances', [])
+            with_missing = len(missing_list) > 0
+            with_mistake = not all(x['is_right'] for x in predict_list)
+            if self.vis_missing and self.vis_mistake and (with_missing or with_mistake):
+                pass
+            elif self.vis_missing and with_missing:
+                pass
+            elif self.vis_mistake and with_mistake:
+                pass
+            else:
+                continue
+            logger.info('visualzing bad case for image {}'.format(ind))
+            if self.image_reader is not None:
+                img = self.image_reader(ind)
+            else:
+                img_path = os.path.join(self.img_root, ind)
+                img = cv2.imread(img_path)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            instances = img_res['instances']
+            fig = vis_bad_case_with_text(img, instances, missing_list, predict_list, mix_root, class_names)
+            im_name = ind.split('/')[-1].split('.')[0]
+            output_name = os.path.basename(im_name) + '.' + ext
+            fig.savefig(os.path.join(mix_root, '{}'.format(output_name)))
+            plt.close('all')
+
+    def analyze_bad_case(self, original_gt, results, tps, fps, gts, score_fppi):
+        """Analyze bad for one specific class
+        Args:
+          original_gt -> dict: key is image_id, value is original annotated format for each image
+          results -> list: detections results, with 'bbox', 'score'
+          fps, tps -> list: same length with 'results', indicating the coresponding detection results
+          is false positive or true positive
+          gts -> dict: key is image_id, value is list of ground truth instances
+          score_fppi -> list: same length with self.fppi
+        """
+        # First of all, guess score threshold
+        mode, thresh = self.bad_case_analyser.split('_')
+        thresh = float(thresh)
+        assert mode in ['manual', 'fppi']
+        assert len(score_fppi) == len(self.fppi)
+        if mode == 'fppi':
+            assert thresh in self.fppi
+            index = bisect.bisect(self.fppi, thresh)
+            score_thresh = score_fppi[index]
+        else:
+            score_thresh = thresh
+
+        # analyze fase positives and true positives in the context that the bbox score threshold = 'score_thresh'
+        for dt, fp, tp in zip(results, fps, tps):
+            if dt['score'] <= score_thresh:
+                # actually, we can break
+                continue
+            dt['is_right'] = dt['is_ignored'] = False
+            if fp > 0:
+                dt['is_right'] = False
+            elif tp > 0:
+                dt['is_right'] = True
+            else:
+                dt['is_ignored'] = True
+            image_id = dt['image_id']
+            pred_list = original_gt[image_id].setdefault('predict_instances', [])
+            pred_list.append(dt)
+
+        # analyze false negative (missing ground truthes)
+        for image_id, gts_and_ignores in gts.items():
+            missing_list = original_gt[image_id].setdefault('missing_instances', [])
+            gt_list = gts_and_ignores['gts']
+            # we ignore gts_and_ignores['ignores']
+            for gt in gt_list:
+                if not gt['detected'] or gt['detected_score'] < score_thresh:
+                    missing_list.append(gt['local_index'])
+
     def pretty_print(self, metric_table):
         columns = list(metric_table.columns)
         for col in columns:
@@ -474,6 +594,9 @@ class MREvaluator(CustomEvaluator):
                 recalls_at_fppi[class_i] = rec[np.array(indices)]
                 precisions_at_fppi[class_i] = prec[np.array(indices)]
 
+                if self.bad_case_analyzer_is_on:
+                    self.analyze_bad_case(original_gt, results_i, tps, fps, cur_gt, s_fppi)
+
             mAP = np.sum(ap[1:]) / num_mean_cls
 
             _, metric_table, csv_metrics = self.export(
@@ -484,6 +607,11 @@ class MREvaluator(CustomEvaluator):
             csv_metrics.update({metric_name: mAP})
             metric_res.update(csv_metrics)
             metric_res.set_cmp_key(metric_name)
+
+            if self.bad_case_analyzer_is_on:
+                self.export_bad_case(original_gt)
+                if self.vis_missing or self.vis_mistake:
+                    self.visualize_bad_case(original_gt, self.class_names)
         return metric_res
 
     @staticmethod

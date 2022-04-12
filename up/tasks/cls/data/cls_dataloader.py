@@ -26,16 +26,19 @@ class ClassDataLoader(DataLoader):
 
     def _collate_fn(self, batch):
         images = torch.stack([_.image for _ in batch])
-        if type(batch[0].gt) == int:
+        if isinstance(batch[0].gt, int):
             gts = torch.from_numpy(np.array([_.gt for _ in batch]))
-        elif type(batch[0].gt) == list:
+        elif isinstance(batch[0].gt, list):
             gts = torch.stack([torch.from_numpy(np.array(_.gt)) for _ in batch])
         elif batch[0].gt.dim() > 0:
             gts = torch.stack([_.gt for _ in batch])
 
+        filenames = [_.get('filename', '') for _ in batch]
+
         output = EasyDict({
             'image': images,
             'gt': gts,
+            'filenames': filenames,
         })
         if self.batch_fn is not None:
             output = self.batch_fn(output)

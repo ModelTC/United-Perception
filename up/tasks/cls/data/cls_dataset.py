@@ -144,6 +144,7 @@ class ClsDataset(BaseDataset):
         input = EasyDict({
             'image': img,
             'gt': label,
+            'filename': meta['filename'],
             'data_type': 1
         })
         return input
@@ -159,6 +160,7 @@ class ClsDataset(BaseDataset):
         label = self.tensor2numpy(output['gt'])
         multicls = False
         scores = output['scores']
+        filenames = output['filenames']
         if isinstance(prediction, list):
             # for multicls
             # prediction n * single cls
@@ -181,10 +183,12 @@ class ClsDataset(BaseDataset):
                 _prediction = int(prediction[b_idx])
                 _label = int(label[b_idx])
                 _score = [float('%.8f' % s) for s in score[b_idx]]
+                _filename = filenames[b_idx]
             res = {
                 'prediction': _prediction,
                 'label': _label,
                 'score': _score,
+                'filename': _filename
             }
             out_res.append(res)
         return out_res

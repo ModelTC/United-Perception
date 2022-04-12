@@ -4,12 +4,95 @@ import numpy as np
 import matplotlib.pyplot as plt  # noqa E402
 from matplotlib.lines import Line2D  # noqa E402
 import warnings
+from itertools import chain
 
 from up.utils.general.registry_factory import VISUALIZER_REGISTRY
 
 warnings.filterwarnings("ignore")
 
 __all__ = ['OpenCVVisualizer', 'PLTVisualizer']
+
+
+def vis_bad_case_helper(box, label, text, ax, color_list, box_alpha=1):
+    x1, y1, x2, y2 = box
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    color_box = color_list[label % len(color_list), 0:3]
+    ax.add_patch(
+        plt.Rectangle((box[0], box[1]),
+                      box[2] - box[0],
+                      box[3] - box[1],
+                      fill=True,
+                      color=color_box,
+                      linewidth=0.5,
+                      alpha=box_alpha * 0.5))
+    box_w = x2 - x1
+    box_h = y2 - y1
+    len_ratio = 0.2
+    d = min(box_w, box_h) * len_ratio
+    corners = list()
+    # top left
+    corners.append([(x1, y1 + d), (x1, y1), (x1 + d, y1)])
+    # top right
+    corners.append([(x2 - d, y1), (x2, y1), (x2, y1 + d)])
+    # bottom left
+    corners.append([(x1, y2 - d), (x1, y2), (x1 + d, y2)])
+    # bottom right
+    corners.append([(x2 - d, y2), (x2, y2), (x2, y2 - d)])
+    line_w = 2 if d * 0.4 > 2 else d * 0.4
+    for corner in corners:
+        (line_xs, line_ys) = zip(*corner)
+        ax.add_line(Line2D(line_xs, line_ys, linewidth=line_w, color=color_box))
+        ax.text(x1, y1 - 5, text, fontsize=5,
+                family='serif',
+                bbox=dict(facecolor=color_box, alpha=0.4, pad=0,
+                          edgecolor='none'),
+                color='white')
+    return ax
+
+
+def vis_bad_case_with_text(img, instances, missing_list, predict_list, mix_root, class_names, thick=1, dpi=80):
+
+    def get_axes():
+        fig, axes = plt.subplots(2, 2)
+        fig.set_size_inches(img.shape[1] / dpi * 2, img.shape[0] / dpi * 2)
+        axes_list = list(chain(*axes))
+        title_list = [
+            'ground_truth \n{class name}: {class id} ',
+            'false negative/missing \n {class name}: {class id} ',
+            'false positive/mistake \n {pred class name}: {pred class id}, {score} ',
+            'true positive \n {pred class name}: {pred class id}, {score}'
+        ]
+        for ax, title in zip(axes_list, title_list):
+            ax.axis('off')
+            ax.set_title(title)
+            ax.imshow(img)
+        return fig, axes_list
+
+    color_list = colormap(rgb=True) / 255
+    fig, axes_list = get_axes()
+    # visualize ground truth and false negatives
+    for idx, ins in enumerate(instances):
+        bbox = ins['bbox']
+        label = ins['label']
+        name = class_names[label]
+        axes_list[0] = vis_bad_case_helper(bbox, label, f'{name}: {label}', axes_list[0], color_list)
+        if idx in missing_list:
+            axes_list[1] = vis_bad_case_helper(bbox, label, f'{name}: {label}', axes_list[1], color_list)
+    # visualize false positives and true positives
+    for ins in predict_list:
+        bbox = ins['bbox']
+        label = ins['label']
+        name = class_names[label]
+        score = round(ins['score'], 2)
+        if not ins['is_right']:
+            # false positive
+            axes_list[2] = vis_bad_case_helper(bbox, label, f'{name}: {label}, {score}', axes_list[2], color_list)
+        else:
+            # true positives
+            axes_list[3] = vis_bad_case_helper(bbox, label, f'{name}: {label}, {score}', axes_list[3], color_list)
+    for ax in axes_list:
+        ax.imshow(img)
+    return fig
 
 
 def colormap(rgb=False):
