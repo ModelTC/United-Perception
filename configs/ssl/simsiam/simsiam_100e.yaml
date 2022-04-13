@@ -1,5 +1,5 @@
-mocov1: &mocov1
-  type: torch_mocov1
+mocov2: &mocov2
+  type: torch_mocov2
 
 dataset: # Required.
   train:
@@ -14,7 +14,7 @@ dataset: # Required.
             image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
             color_mode: RGB
             memcached: True
-        transformer: [*mocov1]
+        transformer: [*mocov2]
     batch_sampler:
         type: base
         kwargs:
@@ -29,30 +29,29 @@ dataset: # Required.
           pin_memory: True
 
 trainer: # Required.
-  max_epoch: 200
+  max_epoch: 100
   test_freq: 500
   save_freq: 5
   only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
     kwargs:
-      lr: 0.06
+      lr: 0.1
       nesterov: True
       momentum: 0.9
       weight_decay: 0.0001
-  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
-    warmup_iter: 0          # 1000 iterations of warmup
+    special_param_group: [{'key': 'predictor'}]
+  lr_scheduler:
+    warmup_iter: 0
     warmup_type: linear
     warmup_register_type: no_scale_lr
-    warmup_ratio: 0
-    type: MultiStepLR
+    warmup_ratio: 0.0001
+    type: SimSiamScheduler
     kwargs:
-      milestones: [120, 160]
-      gamma: 0.1
-
+        T_max: 100
 saver: # Required.
-  save_dir: moco_v1_bs512/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: moco_v1_bs512/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: simsiam_bs512/checkpoints/cls_std     # dir to save checkpoints
+  results_dir: simsiam_bs512/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
@@ -63,7 +62,7 @@ net: &subnet
   - name: backbone
     type: ssl
     multi_model:
-      - name: encoder_q
+      - name: base_encoder
         type: resnet50
         kwargs:
           frozen_layers: []
@@ -73,25 +72,17 @@ net: &subnet
             type: solo_bn
           initializer:
             method: msra
-      - name: encoder_k
-        type: resnet50
-        kwargs:
-          frozen_layers: []
-          out_layers: [4]     # layer1...4, commonly named Conv2...5
-          out_strides: [32]  # tell the strides of output features
-          normalize:
-            type: solo_bn
-          initializer:
-            method: msra
+
     wrappers:
-      - type: moco
+      - type: simsiam
         kwargs:
-          dim: 128
-          K: 65536
+          plane: 2048    # output plance of backbone
+          dim: 2048      #dim: feature dimension (default: 2048) 
+          pred_dim: 512  #pred_dim: hidden dimension of the predictor (default: 512)
 
   - name: post_process
     type: base_ssl_postprocess
     kwargs:
        ssl_loss:
-         type: loss_moco
+         type: loss_simsiam
 

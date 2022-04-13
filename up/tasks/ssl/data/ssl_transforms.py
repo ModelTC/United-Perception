@@ -95,7 +95,7 @@ class MOCOv3(TwoCropsTransform):
 
 
 @AUGMENTATION_REGISTRY.register('torch_gaussian_blur')
-class GaussianBlur(Augmentation):
+class GaussianBlur():
     """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
 
     def __init__(self, sigma=[.1, 2.]):
@@ -105,6 +105,12 @@ class GaussianBlur(Augmentation):
         sigma = random.uniform(self.sigma[0], self.sigma[1])
         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
+
+    def augment(self, data):
+        output = copy.copy(data)
+        output.image = self.op(data.image)
+        return output
+
 
 
 @AUGMENTATION_REGISTRY.register('torch_solarize')

@@ -3,7 +3,7 @@ import copy
 # Import from third library
 import torch
 import math
-from torch.optim.lr_scheduler import MultiStepLR, StepLR, ReduceLROnPlateau, CosineAnnealingLR, _LRScheduler
+from torch.optim.lr_scheduler import MultiStepLR, StepLR, ReduceLROnPlateau, CosineAnnealingLR, _LRScheduler, LambdaLR
 from ..general.registry_factory import WARM_LR_REGISTRY, LR_REGISTRY
 from ..general.registry_factory import LR_SCHEDULER_REGISTY, WARM_SCHEDULER_REGISTY
 
@@ -61,8 +61,27 @@ class _CosineLREpochScheduler(CosineAnnealingLR):
     def get_lr(self):
         last_epoch = self.last_epoch // self.data_size
         return [self.eta_min + (base_lr - self.eta_min)
-                * (1 + math.cos(math.pi * last_epoch / self.T_max)) / 2
+                * (1 + math.cos(math.pi * (last_epoch - self.warm_epoch) / (self.T_max - self.warm_epoch))) / 2
                 for base_lr in self.base_lrs]
+
+
+@LR_REGISTRY.register('SimSiamScheduler')
+class _SimSiamScheduler(LambdaLR):
+    def __init__(self, **kwargs):
+        self.T_max = kwargs.pop('T_max')
+        if 'warm_epoch' in kwargs:
+            self.warm_epoch = kwargs.pop('warm_epoch')
+            self.T_max = self.T_max - self.warm_epoch
+        self.data_size = kwargs.pop('data_size')
+        lambda_backbone = lambda s: 0.5 * (1 + math.cos(math.pi * s / self.T_max))
+        lambda_pred = lambda s: 1.0
+        kwargs.update({'lr_lambda': [lambda_backbone, lambda_pred]})
+        super(_SimSiamScheduler, self).__init__(**kwargs)
+
+    def get_lr(self):
+        last_epoch = self.last_epoch // self.data_size
+        return [base_lr * lmbda(last_epoch - self.warm_epoch)
+                for lmbda, base_lr in zip(self.lr_lambdas, self.base_lrs)]
 
 
 @LR_REGISTRY.register('polylr')
