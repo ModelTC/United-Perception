@@ -33,7 +33,7 @@ test:
     - export MAX_JOBS=8
     - python setup.py build_ext -i
     - coverage erase
-    - pip install http://spring.sensetime.com/pypi/packages/spring-0.6.0+cu101.torch150.mvapich2.nartgpu-cp37-cp37m-linux_x86_64.whl --trusted-host spring.sensetime.com
+    - pip install http://spring.sensetime.com/pypi/packages/spring-0.6.0+cu101.torch150.mvapich2.nartgpu-cp37-cp37m-linux_x86_64.whl -i https://pkg.sensetime.com/repository/pypi-proxy/simple/ --trusted-host spring.sensetime.com 
     - pip install einops -i https://pkg.sensetime.com/repository/pypi-proxy/simple/ --trusted-host pkg.sensetime.com 
     # det essos
     - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/det/deploy/retinanet-r18_1x_essos.yaml --save_to=kestrel_model_essos --backend=dist
