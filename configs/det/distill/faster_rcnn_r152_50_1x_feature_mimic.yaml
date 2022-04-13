@@ -240,7 +240,7 @@ net:
         roipooling: *roipooling
         share_location: &share_location False         # is share location in bbox regression for all classes
   - name: bbox_head_post_process
-    type: Bbox_Post
+    type: bbox_post
     kwargs:
       cfg:
         cls_loss: &cls_loss
@@ -403,7 +403,7 @@ teacher:
         roipooling: *roipooling
         share_location: False         # is share location in bbox regression for all classes
   - name: bbox_head_post_process
-    type: Bbox_Post
+    type: bbox_post
     kwargs:
       cfg:
         cls_loss: *cls_loss
