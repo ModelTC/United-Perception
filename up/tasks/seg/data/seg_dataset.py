@@ -136,11 +136,24 @@ class CustomSeg(BaseDataset):
                  transformer,
                  num_classes,
                  evaluator=None,
-                 mask_reader=None,
+                 seg_label_reader=None,
                  output_pred=False,
                  ignore_label=255,
                  class_names=None,
                  mask_dump_dir=None):
+        # mask reader
+        if isinstance(seg_label_reader, str) or seg_label_reader is None:
+            mc = image_reader['kwargs'].get('memcached', True)
+            seg_label_reader = {
+                'type': 'ceph_opencv',
+                'kwargs': {
+                    'image_dir': seg_label_reader if seg_label_reader else image_reader['kwargs']['image_dir'],
+                    'color_mode': 'GRAY',
+                    'memcached': mc,
+                }
+            }
+        self.seg_label_reader = build_image_reader(seg_label_reader)
+
         super(CustomSeg, self).__init__(meta_file,
                                         image_reader,
                                         transformer,
@@ -150,19 +163,6 @@ class CustomSeg(BaseDataset):
         self._normal_init(meta_file)
         self.num_classes = num_classes
         self.output_pred = output_pred
-
-        # mask reader
-        if isinstance(mask_reader, str) or mask_reader is None:
-            mc = image_reader['kwargs'].get('memcached', True)
-            mask_reader = {
-                'type': 'ceph_opencv',
-                'kwargs': {
-                    'image_dir': mask_reader if mask_reader else image_reader['kwargs']['image_dir'],
-                    'color_mode': 'GRAY',
-                    'memcached': mc,
-                }
-            }
-        self.mask_reader = build_image_reader(mask_reader)
 
         self.mask_dump_dir = mask_dump_dir
         self.ignore_label = ignore_label
@@ -204,7 +204,7 @@ class CustomSeg(BaseDataset):
         img_id = filename = meta['filename']
         mask_filename = meta['mask_filename']
         img = self.image_reader(meta['filename'], meta.get('image_source', 0))
-        gt_semantic_seg = self.mask_reader(meta['mask_filename'], meta.get('image_source', 0))
+        gt_semantic_seg = self.seg_label_reader(meta['mask_filename'], meta.get('image_source', 0))
         input = EasyDict({
             'filename': filename,
             'image_id': img_id,
