@@ -178,7 +178,7 @@ class BaseRunner(object):
         cfg_data = self.config['dataset']
         self.set_dataset_timer(cfg_data)
         self.config['dataset']['builder_type'] = cfg_data.setdefault('builder_type', 'base')
-        self.config['dataset']['data_ppol'] = cfg_data.setdefault('data_pool', ['train:train', 'test:test'])
+        self.config['dataset']['data_pool'] = cfg_data.setdefault('data_pool', ['train:train', 'test:test'])
         builder_type = cfg_data.get('builder_type', 'base')
         pool = cfg_data.get('data_pool', ['train:train', 'test:test'])
         pool = self._check_data_pool(pool, cfg_data)
