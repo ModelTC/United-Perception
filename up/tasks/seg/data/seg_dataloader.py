@@ -1,5 +1,5 @@
 from torch.utils.data import DataLoader
-import torch
+# import torch
 from easydict import EasyDict
 
 from up.utils.general.registry_factory import DATALOADER_REGISTRY
@@ -25,7 +25,7 @@ class SegDataLoader(DataLoader):
         self.pad_label = BATCHING_REGISTRY.get(pad_type)(alignment, pad_value[1])
 
     def _collate_fn(self, batch):
-        images = torch.stack([_.image for _ in batch])
+        images = [_.image for _ in batch]
         gt_semantic_seg = [_.get('gt_semantic_seg', None) for _ in batch]
         image_info = [_.get('image_info', None) for _ in batch]
         output = EasyDict({
@@ -33,14 +33,15 @@ class SegDataLoader(DataLoader):
             'image_info': image_info
         })
         if gt_semantic_seg[0] is not None:
-            gt_semantic_seg = torch.stack(gt_semantic_seg)
+            gt_semantic_seg = gt_semantic_seg
         output.gt_semantic_seg = gt_semantic_seg
 
-        if self.alignment > 1:
+        if self.alignment > 0:  # when size not match, directly cat will fail
             output = self.pad_image(output)  # image
             if gt_semantic_seg[0] is not None:
-                fake_dict = {'image': gt_semantic_seg[:, None, :, :]}
+                fake_dict = {'image': [seg[None, :, :] for seg in gt_semantic_seg]}
                 output['gt_semantic_seg'] = self.pad_label(fake_dict)['image'][:, 0, :, :]
+
         return output
 
     def get_epoch_size(self):

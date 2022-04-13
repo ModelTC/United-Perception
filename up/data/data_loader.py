@@ -102,8 +102,8 @@ class BaseDataLoader(DataLoader):
         output['gt_bboxes'] = gt_bboxes if gt_bboxes[0] is not None else None
         output['gt_ignores'] = gt_ignores if gt_ignores[0] is not None else None
         if gt_semantic_seg[0] is not None:
-            fake_dict = {'image': gt_semantic_seg}
-            output['gt_semantic_seg'] = self.pad(fake_dict)['image']
+            fake_dict = {'image': [seg[None, :, :] for seg in gt_semantic_seg]}
+            output['gt_semantic_seg'] = self.pad(fake_dict)['image'][:, 0, :, :]
         output = self.pad(output)
         return output
 
