@@ -55,7 +55,11 @@ class BaseOptimizer(object):
         pconfig = cfg_optim.get('pconfig', None)
         if pconfig is not None:
             return self.param_group_all(self.model, pconfig)
-        trainable_params = [{"params": []}] + [{"params": [], "lr": spg['lr']} for spg in special_param_group]
+        # trainable_params = [{"params": []}] + [{"params": [], "lr": spg['lr']} for spg in special_param_group]
+        trainable_params = [{"params": []}]
+        for spg in special_param_group:
+            spg.update({'params': []})
+            trainable_params.append(spg)
         for n, p in self.model.named_parameters():
             if p.requires_grad:
                 gid = 0
