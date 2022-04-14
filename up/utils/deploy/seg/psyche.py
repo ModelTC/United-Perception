@@ -2,9 +2,12 @@ import os
 import json
 import yaml
 
-import spring.nart.tools.caffe.count as count
-import spring.nart.tools.caffe.utils.graph as graph
-import spring.nart.tools.kestrel.utils.scaffold as scaffold
+try:
+    import spring.nart.tools.caffe.count as count
+    import spring.nart.tools.caffe.utils.graph as graph
+    import spring.nart.tools.kestrel.utils.scaffold as scaffold
+except:  # noqa
+    print('No module named spring in up/utils/deploy/seg/psyche.py')
 
 from up.utils.deploy import parser as up_parser
 from up.utils.deploy.parser import BaseProcessor
