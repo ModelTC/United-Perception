@@ -122,7 +122,7 @@ class CustomDataset(BaseDataset):
             if 'tar_size' in self.cache:
                 img = cv2.imdecode(img, cv2.IMREAD_COLOR)
                 img = self.resize_img(img, self.cache['tar_size'])
-                img = cv2.imencode('.jng')[1]
+                img = cv2.imencode('.jpg')[1]
             self.cache_image[filename] = img
 
     def resize_img(self, img, tar_size):
