@@ -393,7 +393,7 @@ class MREvaluator(CustomEvaluator):
 
         f1_score_at_fppi = compute_f1_score(recalls_at_fppi, precisions_at_fppi)
 
-        fg_class_names = self.class_names
+        fg_class_names = copy.deepcopy(self.class_names)
         if self.num_classes == len(self.class_names):
             fg_class_names = fg_class_names[1:]
 
