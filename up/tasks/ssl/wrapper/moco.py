@@ -165,6 +165,119 @@ class MoCo(nn.Module):
         return {'logits': logits}
 
 
+class MoCo_ViT(nn.Module):
+    def __init__(self, encoder_q, encoder_k, dim=256, mlp_dim=4096, m=0.999, T=1.0, group_size=8):
+        """
+        dim: feature dimension (default: 256)
+        mlp_dim: hidden dimension in MLPs (default: 4096)
+        T: softmax temperature (default: 1.0)
+        """
+        super(MoCo_ViT, self).__init__()
+
+        self.T = T
+        self.m = m
+
+        self.base_encoder = encoder_q
+        self.momentum_encoder = encoder_k
+
+        self._build_projector_and_predictor_mlps(dim, mlp_dim)
+
+        for param_b, param_m in zip(self.base_encoder.parameters(), self.momentum_encoder.parameters()):
+            param_m.data.copy_(param_b.data)  # initialize
+            param_m.requires_grad = False  # not update by gradient
+
+        rank = link.get_rank()
+        world_size = link.get_world_size()
+        self.group_size = world_size if group_size is None else min(
+            world_size, group_size)
+
+        assert world_size % self.group_size == 0
+        self.group_idx = simple_group_split(
+            world_size, rank, world_size // self.group_size)
+
+    def _build_mlp(self, num_layers, input_dim, mlp_dim, output_dim, last_bn=True):
+        mlp = []
+        for i in range(num_layers):
+            dim1 = input_dim if i == 0 else mlp_dim
+            dim2 = output_dim if i == num_layers - 1 else mlp_dim
+
+            mlp.append(nn.Linear(dim1, dim2, bias=False))
+
+            if i < num_layers - 1:
+                mlp.append(nn.BatchNorm1d(dim2))
+                mlp.append(nn.ReLU(inplace=True))
+            elif last_bn:
+                # follow SimCLR's design: https://github.com/google-research/simclr/blob/master/model_util.py#L157
+                # for simplicity, we further removed gamma in BN
+                mlp.append(nn.BatchNorm1d(dim2, affine=False))
+
+        return nn.Sequential(*mlp)
+
+    def _build_projector_and_predictor_mlps(self, dim, mlp_dim):
+        hidden_dim = self.base_encoder.head.weight.shape[1]
+        del self.base_encoder.head, self.momentum_encoder.head  # remove original fc layer
+
+        # projectors
+        self.base_encoder.head = self._build_mlp(3, hidden_dim, mlp_dim, dim)
+        self.momentum_encoder.head = self._build_mlp(3, hidden_dim, mlp_dim, dim)
+
+        # predictor
+        self.predictor = self._build_mlp(2, dim, mlp_dim, dim)
+
+    @torch.no_grad()
+    def _update_momentum_encoder(self):
+        """Momentum update of the momentum encoder"""
+        for param_b, param_m in zip(self.base_encoder.parameters(), self.momentum_encoder.parameters()):
+            param_m.data = param_m.data * self.m + param_b.data * (1. - self.m)
+
+    def forward(self, input):
+        """
+        Input:
+            x1: first views of images
+            x2: second views of images
+            m: moco momentum
+        Output:
+            loss
+        """
+
+        if isinstance(input, dict):
+            input = input['image']
+        x1, x2 = input[:, 0], input[:, 1]
+        x1 = x1.contiguous()
+        x2 = x2.contiguous()
+
+        # compute features
+        q1 = self.predictor(self.base_encoder(x1))
+        q2 = self.predictor(self.base_encoder(x2))
+
+        with torch.no_grad():  # no gradient
+            self._update_momentum_encoder()  # update the momentum encoder
+
+            # compute momentum features as targets
+            k1 = self.momentum_encoder(x1)
+            k2 = self.momentum_encoder(x2)
+
+        # normalize
+        q1 = nn.functional.normalize(q1, dim=1)
+        k2 = nn.functional.normalize(k2, dim=1)
+        # gather all targets
+        k2 = concat_all_gather(k2, self.group_size, self.group_idx)
+        # Einstein sum is more intuitive
+        q1_k2_logits = torch.einsum('nc,mc->nm', [q1, k2]) / self.T
+
+        # normalize
+        q2 = nn.functional.normalize(q2, dim=1)
+        k1 = nn.functional.normalize(k1, dim=1)
+        # gather all targets
+        k1 = concat_all_gather(k1, self.group_size, self.group_idx)
+        # Einstein sum is more intuitive
+        q2_k1_logits = torch.einsum('nc,mc->nm', [q2, k1]) / self.T
+
+        logits = torch.stack([q1_k2_logits, q2_k1_logits])
+
+        return {'logits': logits}
+
+
 # utils
 @torch.no_grad()
 def concat_all_gather(tensor, group_size, group_idx):
