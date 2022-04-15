@@ -1,9 +1,6 @@
 import torch.nn as nn
-import torch.nn.functional as F
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
-from up.utils.model import accuracy as A
 from up.models.losses import build_loss
-from collections import OrderedDict
 
 __all__ = ['BaseSslPostProcess']
 
@@ -34,4 +31,3 @@ class BaseSslPostProcess(nn.Module):
 
     def forward(self, input):
         return self.get_loss(input)
-

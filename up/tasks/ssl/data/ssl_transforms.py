@@ -1,5 +1,6 @@
 import torch
 import random
+import copy
 import torchvision.transforms as transforms
 from PIL import ImageFilter, ImageOps
 from up.data.datasets.transforms import Augmentation
@@ -110,7 +111,6 @@ class GaussianBlur():
         output = copy.copy(data)
         output.image = self.op(data.image)
         return output
-
 
 
 @AUGMENTATION_REGISTRY.register('torch_solarize')

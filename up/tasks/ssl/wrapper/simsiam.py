@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from up.utils.general.registry_factory import (
     MODULE_WRAPPER_REGISTRY
@@ -29,9 +28,9 @@ class SimSiam(nn.Module):
                                         nn.BatchNorm1d(dim, affine=False))  # output layer
         # build a 2-layer predictor
         self.predictor = nn.Sequential(nn.Linear(dim, pred_dim, bias=False),
-                                        nn.BatchNorm1d(pred_dim),
-                                        nn.ReLU(inplace=True),  # hidden layer
-                                        nn.Linear(pred_dim, dim))  # output layer
+                                       nn.BatchNorm1d(pred_dim),
+                                       nn.ReLU(inplace=True),  # hidden layer
+                                       nn.Linear(pred_dim, dim))  # output layer
 
     def forward(self, input):
         """
