@@ -1,5 +1,5 @@
-mocov1: &mocov1
-  type: torch_mocov1
+mocov2: &mocov2
+  type: torch_mocov2
 
 dataset: # Required.
   train:
@@ -14,7 +14,7 @@ dataset: # Required.
             image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
             color_mode: RGB
             memcached: True
-        transformer: [*mocov1]
+        transformer: [*mocov2]
     batch_sampler:
         type: base
         kwargs:
@@ -40,15 +40,16 @@ trainer: # Required.
       nesterov: True
       momentum: 0.9
       weight_decay: 0.0001
-  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
+  lr_scheduler: # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
     warmup_iter: 0          # 1000 iterations of warmup
     warmup_type: linear
     warmup_register_type: no_scale_lr
     warmup_ratio: 0
-    type: MultiStepLR
+    type: CosineAnnealingLR
     kwargs:
-      milestones: [120, 160]
-      gamma: 0.1
+      T_max: 200
+      eta_min: 0.00001
+      warmup_iter: 0
 
 saver: # Required.
   save_dir: moco_v1_bs512/checkpoints/cls_std     # dir to save checkpoints
@@ -88,6 +89,7 @@ net: &subnet
         kwargs:
           dim: 128
           K: 65536
+          mlp: True
 
   - name: post_process
     type: base_ssl_postprocess

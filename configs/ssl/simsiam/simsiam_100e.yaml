@@ -84,5 +84,5 @@ net: &subnet
     type: base_ssl_postprocess
     kwargs:
        ssl_loss:
-         type: loss_simsiam
+         type: simsiam_loss
 
