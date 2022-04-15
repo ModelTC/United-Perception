@@ -12,9 +12,12 @@ __all__ = ['BaseToAdela']
 
 @TOADELA_REGISTRY.register('base')
 class BaseToAdela(object):
-    def __init__(self, cfg_adela, save_to):
+    def __init__(self, cfg_adela, save_to, retry_deploy_times=3, retry_bench_times=3):
         self.cfg_adela = cfg_adela
         self.tar_model = save_to
+        self.re_d_times, self.re_b_times = 0, 0
+        self.retry_deploy_times = retry_deploy_times
+        self.retry_bench_times = retry_bench_times
 
     def process(self):
         from spring_aux.adela.adela import Adela
@@ -42,6 +45,7 @@ class BaseToAdela(object):
         dids, dep_status = [], [True for _ in range(len(dep_params))]
         for idx in range(len(dep_params)):
             logger.info(f"----task {idx}----")
+            self.re_d_times = 0
             dep_p = dep_params[idx]
             # add quantity dataset
             if dep_p.get('dataset_added', None):
@@ -66,6 +70,12 @@ class BaseToAdela(object):
             status = adela.deployment(pid, did).status
             while (status != "SUCCESS"):
                 if status == "FAILURE":
+                    if self.re_d_times < self.retry_deploy_times:
+                        self.re_d_times += 1
+                        logger.info(f"retry {self.re_d_times} time")
+                        adela.deployment_api.put_deployment(pid, did)
+                        status = adela.deployment(pid, did).status
+                        continue
                     logger.warning('deploy failed')
                     dep_status[idx] = False
                     break
@@ -85,6 +95,7 @@ class BaseToAdela(object):
             for idx in range(len(prec_params)):
                 prec_p, didx = prec_params[idx], didxs[idx]
                 logger.info(f"----task {didx}----")
+                self.re_b_times = 0
                 if not dep_status[didx]:
                     logger.info(f"benchmark task {didx} skip because deploy failed")
                     continue
@@ -97,10 +108,16 @@ class BaseToAdela(object):
                 status = adela.benchmark(pid, dids[didx], bid)["status"]
                 while (status != "SUCCESS"):
                     if status == "FAILURE":
-                        logger.warning('deploy failed')
+                        if self.re_b_times < self.retry_bench_times:
+                            self.re_b_times += 1
+                            logger.info(f"retry {self.re_b_times} time")
+                            adela.benchmark_api.put_benchmark(pid, dids[didx], bid)
+                            status = adela.benchmark(pid, did, bid)["status"]
+                            continue
+                        logger.warning('benchmark failed')
                         break
                     time.sleep(1)
-                    status = adela.deployment(pid, dids[didx]).status
+                    status = adela.benchmark(pid, did, bid)["status"]
         logger.info("========benchmark done========")
 
         # download
@@ -110,11 +127,14 @@ class BaseToAdela(object):
             didxs = publish_params.get('didxs', [_ for _ in range(len(dids))])
             for didx in didxs:
                 logger.info(f"----task {didx}----")
+                if not dep_status[didx]:
+                    logger.info(f"publish task {didx} skip because deploy failed")
+                    continue
                 mid = adela.deployment(pid, dids[didx]).model_id
-                logger.info(f'model id:{mid}')
                 # publish
                 if mid == -1:
                     mid = adela.model_add(pid, dids[didx]).id
+                logger.info(f'model id:{mid}')
                 adela.model_download(pid, mid)
         logger.info("========publish done========")
         logger.info(f'adela done')
