@@ -10,6 +10,14 @@ from up.utils.general.registry_factory import BATCHING_REGISTRY
 __all__ = ['SegDataLoader']
 
 
+def expand_seg(seg):
+    if seg.dim() == 3:
+        assert seg.size(0) == 1, seg.size()
+        return seg
+    else:
+        return seg[None, :, :]
+
+
 @DATALOADER_REGISTRY.register('seg_base')
 class SegDataLoader(DataLoader):
 
@@ -39,7 +47,7 @@ class SegDataLoader(DataLoader):
         if self.alignment > 0:  # when size not match, directly cat will fail
             output = self.pad_image(output)  # image
             if gt_semantic_seg[0] is not None:
-                fake_dict = {'image': [seg[None, :, :] for seg in gt_semantic_seg]}
+                fake_dict = {'image': [expand_seg(seg) for seg in gt_semantic_seg]}
                 output['gt_semantic_seg'] = self.pad_label(fake_dict)['image'][:, 0, :, :]
 
         return output
