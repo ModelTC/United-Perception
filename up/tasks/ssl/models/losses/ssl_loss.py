@@ -7,7 +7,7 @@ from up.utils.general.registry_factory import LOSSES_REGISTRY
 __all__ = ['MoCoLoss', 'ContrastiveLoss', 'SimSiamLoss']
 
 
-@LOSSES_REGISTRY.register('loss_moco')
+@LOSSES_REGISTRY.register('moco_loss')
 class MoCoLoss(_Loss):
     def __init__(self, loss_weight=1.0):
         super(MoCoLoss, self).__init__()
@@ -32,22 +32,23 @@ class ContrastiveLoss(_Loss):
         self.loss_weight = loss_weight
         self.tau = tau
 
-    def forward(self, input, label):
+    def forward(self, input):
         rank = link.get_rank()
-        N = input.shape[1]
+        logits = input['logits']
+        N = logits.shape[1]
         label_1 = (torch.arange(N, dtype=torch.long) + N * rank).cuda()
         label_2 = (torch.arange(N, dtype=torch.long) + N * rank).cuda()
 
-        input_1, input_2 = input[0, :], input[1, :]
+        logit_1, logit_2 = logits[0, :], logits[1, :]
 
-        loss_1 = self.ce_loss(input_1, label_1)
-        loss_2 = self.ce_loss(input_2, label_2)
+        loss_1 = self.ce_loss(logit_1, label_1)
+        loss_2 = self.ce_loss(logit_2, label_2)
         loss = loss_1 + loss_2
         loss = 2 * self.tau * loss
         return loss * self.loss_weight
 
 
-@LOSSES_REGISTRY.register('loss_simsiam')
+@LOSSES_REGISTRY.register('simsiam_loss')
 class SimSiamLoss(_Loss):
     def __init__(self, loss_weight=1.0):
         super(SimSiamLoss, self).__init__()

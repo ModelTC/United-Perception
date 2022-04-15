@@ -57,7 +57,7 @@ from .mb import (MB2_160,  # noqa: F401
                  MB9_ckpt,
                  MB12_ckpt)
 
-from moco_vit import (moco_vit_small,  # noqa: F401
+from .moco_vit import (moco_vit_small,  # noqa: F401
                       moco_vit_base,
                       moco_vit_conv_small,
                       moco_vit_conv_base)
