@@ -165,6 +165,7 @@ class MoCo(nn.Module):
         return {'logits': logits}
 
 
+@MODULE_WRAPPER_REGISTRY.register('moco_vit')
 class MoCo_ViT(nn.Module):
     def __init__(self, encoder_q, encoder_k, dim=256, mlp_dim=4096, m=0.999, T=1.0, group_size=8):
         """

@@ -9,10 +9,10 @@ from up.utils.model.initializer import trunc_normal_, lecun_normal_
 from up.utils.model.utils import to_2tuple, Block, PatchEmbed
 
 __all__ = [
-    'vit_small',
-    'vit_base',
-    'vit_conv_small',
-    'vit_conv_base',
+    'moco_vit_small',
+    'moco_vit_base',
+    'moco_vit_conv_small',
+    'moco_vit_conv_base',
 ]
 
 
@@ -279,21 +279,21 @@ class ConvStem(nn.Module):
         return x
 
 
-def vit_small(**kwargs):
+def moco_vit_small(**kwargs):
     model = VisionTransformerMoCo(
         patch_size=16, embed_dim=384, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
 
-def vit_base(**kwargs):
+def moco_vit_base(**kwargs):
     model = VisionTransformerMoCo(
         patch_size=16, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
 
 
-def vit_conv_small(**kwargs):
+def moco_vit_conv_small(**kwargs):
     # minus one ViT block
     model = VisionTransformerMoCo(
         patch_size=16, embed_dim=384, depth=11, num_heads=12, mlp_ratio=4, qkv_bias=True,
@@ -301,7 +301,7 @@ def vit_conv_small(**kwargs):
     return model
 
 
-def vit_conv_base(**kwargs):
+def moco_vit_conv_base(**kwargs):
     # minus one ViT block
     model = VisionTransformerMoCo(
         patch_size=16, embed_dim=768, depth=11, num_heads=12, mlp_ratio=4, qkv_bias=True,

@@ -26,7 +26,7 @@ class MoCoLoss(_Loss):
 
 @LOSSES_REGISTRY.register('contrastive_loss')
 class ContrastiveLoss(_Loss):
-    def __init__(self, loss_weight, tau):
+    def __init__(self, tau, loss_weight=1.0):
         super().__init__()
         self.ce_loss = torch.nn.CrossEntropyLoss()
         self.loss_weight = loss_weight

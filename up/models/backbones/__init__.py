@@ -57,10 +57,10 @@ from .mb import (MB2_160,  # noqa: F401
                  MB9_ckpt,
                  MB12_ckpt)
 
-from moco_vit import (vit_small,  # noqa: F401
-                      vit_base,
-                      vit_conv_small,
-                      vit_conv_base)
+from moco_vit import (moco_vit_small,  # noqa: F401
+                      moco_vit_base,
+                      moco_vit_conv_small,
+                      moco_vit_conv_base)
 
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
