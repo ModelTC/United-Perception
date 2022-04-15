@@ -49,6 +49,7 @@ trainer: # Required.
     type: SimSiamScheduler
     kwargs:
         T_max: 100
+        warm_epoch: 0
 saver: # Required.
   save_dir: simsiam_bs512/checkpoints/cls_std     # dir to save checkpoints
   results_dir: simsiam_bs512/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
