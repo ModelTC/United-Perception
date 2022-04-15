@@ -56,6 +56,12 @@ from .mb import (MB2_160,  # noqa: F401
                  MB9,
                  MB9_ckpt,
                  MB12_ckpt)
+
+from moco_vit import (vit_small,  # noqa: F401
+                      vit_base,
+                      vit_conv_small,
+                      vit_conv_base)
+
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 imported_vars = list(globals().items())
