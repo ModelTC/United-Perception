@@ -3,6 +3,7 @@
 #include "psroi_align/psroi_align.h"
 #include "psroi_pooling/psroi_pooling.h"
 #include "nms/nms.h"
+#include "softer_nms/softer_nms.h"
 #include "focal_loss/focal_loss.h"
 #include "cross_focal_loss/cross_focal_loss.h"
 #include "iou_overlap/iou_overlap.h"
@@ -87,7 +88,21 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     pybind11::module iou = m.def_submodule("overlaps",
                                            "calculate iou between bboxes & gts");
     iou.def("iou", &gpu_iou_overlaps, "bbox iou overlaps with gt (CUDA)");
-    
+ 
+    // pybind softer_nms (variance voting)
+    pybind11::module softer_nms =
+        m.def_submodule("softer_nms", "softer nms, variance voting");
+    py::enum_<IOUMethod>(softer_nms, "IOUMethod")
+        .value("LINEAR", IOUMethod::LINEAR)
+        .value("GAUSSIAN", IOUMethod::GAUSSIAN)
+        .value("HARD", IOUMethod::HARD)
+        .export_values();
+    py::enum_<Method>(softer_nms, "NMSMethod")
+        .value("VAR_VOTING", Method::VAR_VOTING)
+        .value("SOFTER", Method::SOFTER)
+        .export_values();
+    softer_nms.def("cpu_softer_nms", &cpu_softer_nms, "softer_nms(CPU)");
+
     // pybind roiaware_pool3d
     pybind11::module rw = m.def_submodule("roiaware_pool3d",
                                           "roiaware pool3d");
