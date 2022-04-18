@@ -36,6 +36,13 @@ except Exception as err:
     print(err)
     print("If you need Mqbench to quantize model, you should add Mqbench to this project. Or just ignore this error.")
 
+try:
+    from msbench.nn.modules import FrozenBatchNorm2d as MsbenchFrozenBatchNorm2d
+    _norm_cfg.update({'msbench_freeze_bn': ('bn', MsbenchFrozenBatchNorm2d)})
+except Exception as err:
+    print(err)
+    print("If you need Msbench to prune model, you should add Msbench to this project. Or just ignore this error.")
+
 
 def is_bn(m):
     if isinstance(m, torch.nn.BatchNorm2d):
