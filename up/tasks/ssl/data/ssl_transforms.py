@@ -11,7 +11,8 @@ __all__ = [
     'TwoCropsTransform',
     'MOCOv1',
     'MOCOv2',
-    'MOCOv3']
+    'MOCOv3',
+    'SimCLRv1']
 
 
 class TwoCropsTransform(Augmentation):
@@ -93,6 +94,25 @@ class MOCOv3(TwoCropsTransform):
         ]
         self.trans1 = transforms.Compose(self.augmentation1)
         self.trans2 = transforms.Compose(self.augmentation2)
+
+
+@AUGMENTATION_REGISTRY.register('torch_simclrv1')
+class SimCLRv1(TwoCropsTransform):
+    def __init__(self, **kwargs):
+        self.augmentation = [
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.8, 0.8, 0.8, 0.2)  # not strengthened
+            ], p=0.8),
+            transforms.RandomGrayscale(p=0.2),
+            GaussianBlur([.1, 2.]),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ]
+        self.trans1 = transforms.Compose(self.augmentation)
+        self.trans2 = transforms.Compose(self.augmentation)
 
 
 @AUGMENTATION_REGISTRY.register('torch_gaussian_blur')
