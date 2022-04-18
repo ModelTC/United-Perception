@@ -168,9 +168,11 @@ class CephSystemCVReader(ImageReader):
             self._init_memcached()
         try:
             value = self.mclient.Get(filename)
+            assert value is not None, filename
             img = self.bytes_to_img(value)
         except Exception as e:  # noqa
             value = self.mclient.Get(filename, update_cache=True)
+            assert value is not None, filename
             img = self.bytes_to_img(value)
         if self.color_mode != 'BGR':
             img = cv2.cvtColor(img, self.cvt_color)
