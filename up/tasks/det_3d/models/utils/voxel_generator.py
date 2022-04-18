@@ -1,8 +1,6 @@
-import numba
 import numpy as np
 
 
-@numba.jit(nopython=True)
 def _points_to_voxel_reverse_kernel(points,
                                     voxel_size,
                                     coors_range,
@@ -51,7 +49,6 @@ def _points_to_voxel_reverse_kernel(points,
     return voxel_num
 
 
-@numba.jit(nopython=True)
 def _points_to_voxel_kernel(points,
                             voxel_size,
                             coors_range,
@@ -166,7 +163,6 @@ def points_to_voxel(points,
     return voxels, coors, num_points_per_voxel
 
 
-@numba.jit(nopython=True)
 def bound_points_jit(points, upper_bound, lower_bound):
     # to use nopython=True, np.bool is not supported. so you need
     # convert result to np.bool after this function.
