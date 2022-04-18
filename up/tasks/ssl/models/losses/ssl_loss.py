@@ -4,7 +4,7 @@ import spring.linklink as link
 from up.utils.general.registry_factory import LOSSES_REGISTRY
 
 
-__all__ = ['MoCoLoss', 'ContrastiveLoss', 'SimSiamLoss']
+__all__ = ['MoCoLoss', 'ContrastiveLoss', 'SimCLRLoss', 'SimSiamLoss']
 
 
 @LOSSES_REGISTRY.register('moco_loss')
@@ -45,6 +45,20 @@ class ContrastiveLoss(_Loss):
         loss_2 = self.ce_loss(logit_2, label_2)
         loss = loss_1 + loss_2
         loss = 2 * self.tau * loss
+        return loss * self.loss_weight
+
+
+@LOSSES_REGISTRY.register('simclr_loss')
+class SimCLRLoss(_Loss):
+    def __init__(self, loss_weight=1.0):
+        super().__init__()
+        self.ce_loss = torch.nn.CrossEntropyLoss()
+        self.loss_weight = loss_weight
+
+    def forward(self, input):
+        logits = input['logits']
+        label = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
+        loss = self.ce_loss(logits, label)
         return loss * self.loss_weight
 
 

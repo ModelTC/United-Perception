@@ -5,6 +5,7 @@ from up.utils.general.registry_factory import (
     MODULE_WRAPPER_REGISTRY
 )
 
+
 @MODULE_WRAPPER_REGISTRY.register('simclr')
 class SimCLR(nn.Module):
 
