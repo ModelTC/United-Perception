@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn.modules._functions import SyncBatchNorm as sync_batch_norm
 
 from ..env.dist_helper import env
 from up.utils.general.log_helper import default_logger as logger
@@ -75,7 +76,7 @@ class PyTorchSyncBN(torch.nn.SyncBatchNorm):
         rank = env.rank
         world_size = env.world_size
         if group_size is None or group_size > world_size:
-            logger.warning("roup_size of '{}' invalid, reset to {}".format(group_size, world_size))
+            logger.warning("group_size of '{}' invalid, reset to {}".format(group_size, world_size))
             group_size = world_size
         num_groups = world_size // group_size
         groups = []
@@ -153,14 +154,22 @@ class TaskBatchNorm2d(nn.BatchNorm2d):
         self.task_num = task_num
 
     def set_task_idx(self, idx):
-        self.task_idx = idx
+        if idx == 0:
+            self.task_bn = [self]
+        else:
+            self.task_bn = [self.bn[idx]]
         assert self.task_idx <= self.task_num - 1
+
+    def init_param(self):
+        for idx in range(1, self.task_num):
+            self.bn[idx].running_mean.copy_(self.running_mean)
+            self.bn[idx].running_var.copy_(self.running_var)
 
     def forward(self, x):
         y = nn.functional.batch_norm(
             x,
-            self.bn[self.task_idx].running_mean,
-            self.bn[self.task_idx].running_var,
+            self.bn[0].running_mean,
+            self.bn[0].running_var,
             self.weight,
             self.bias,
             self.training,
@@ -171,6 +180,62 @@ class TaskBatchNorm2d(nn.BatchNorm2d):
     @property
     def module_str(self):
         return 'TaskBN'
+
+
+class TorchSyncTaskBatchNorm2d(PyTorchSyncBN):
+
+    def __init__(self,
+                 num_features,
+                 group_size=None,
+                 momentum=0.1,
+                 task_num=1,
+                 task_idx=0,
+                 skip_multi_task_init: bool = False):
+        super(SyncTaskBatchNorm2d, self).__init__(num_features, group_size)
+        self.bn = nn.ModuleList([
+            nn.BatchNorm2d(num_features, affine=False) for _ in range(task_num)])
+        self.bn[0] = None
+        self.momentum = momentum
+        self.task_idx = task_idx
+        self.task_num = task_num
+        self.set_task_idx(task_idx)
+        self.skip_multi_task_init = skip_multi_task_init
+        self.register_buffer('multi_task_init', torch.torch.ByteTensor([False]))
+
+    def set_task_idx(self, idx):
+        if idx == 0:
+            self.task_bn = [self]
+        else:
+            self.task_bn = [self.bn[idx]]
+        assert self.task_idx <= self.task_num - 1
+
+    def init_param(self):
+        for idx in range(1, self.task_num):
+            self.bn[idx].running_mean.copy_(self.running_mean)
+            self.bn[idx].running_var.copy_(self.running_var)
+
+    def forward(self, x):
+        if not self.multi_task_init.item() and not self.skip_multi_task_init:
+            self.init_param()
+            self.multi_task_init[0] = True
+        if self.momentum is None:
+            exponential_average_factor = 0.0
+        else:
+            exponential_average_factor = self.momentum
+        y = sync_batch_norm.apply(x,
+                                  self.weight,
+                                  self.bias,
+                                  self.task_bn[0].running_mean,
+                                  self.task_bn[0].running_var,
+                                  exponential_average_factor,
+                                  self.eps,
+                                  self.process_group,
+                                  env.world_size)
+        return y
+
+    @property
+    def module_str(self):
+        return 'TorchSyncTaskBN'
 
 
 class SyncTaskBatchNorm2d(GroupSyncBatchNorm):

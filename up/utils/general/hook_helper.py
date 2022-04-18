@@ -163,6 +163,8 @@ class TrainEvalLogger(Hook):
         self.eval_timers = MetricLogger(delimiter=" ")
         self.t_before_allreduce = 0
         self.t_after_allreduce = 0
+        self.t_after_backward = 0
+        self.t_after_forward = 0
 
     def before_data(self, cur_iter):
         self.t_before_data = time.time()

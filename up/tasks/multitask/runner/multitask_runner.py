@@ -186,11 +186,19 @@ class MultiTaskRunner(BaseRunner):
 
         for iter_idx in range(self.start_iter, self.max_iter):
             batches = self._get_train_batches()
-
             losses = self.forward_train(batches)
-
             if self.backend == 'dist':
-                raise NotImplementedError
+                self.model.zero_grad()
+                fake_loss = 0.0
+                for param in self.model.parameters():
+                    fake_loss += param.sum() * 0
+                for loss in losses:
+                    loss += fake_loss
+                    if self.fp16:
+                        self.scaler.scale(loss).backward(retain_graph=True)
+                    else:
+                        loss.backward(retain_graph=True)
+                self._hooks('after_backward', self.cur_iter, sum(losses))
             else:
                 loss = sum(losses)
                 self.backward(loss)

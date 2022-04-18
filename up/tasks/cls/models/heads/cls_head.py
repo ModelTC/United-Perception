@@ -91,7 +91,7 @@ class FPNClsHead(BaseClsHead):
         self.sum_feature = sum_feature
         self.classification_pool = self.pool
         self.relu = nn.ReLU(inplace=True)
-
+        self.build_classifier(feat_planes)
         self.classification_fc_embeding = nn.Linear(self.classification_inplanes, feat_planes)
 
     def forward_classification_feature(self, features):
