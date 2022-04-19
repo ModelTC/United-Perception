@@ -21,7 +21,7 @@ dataset: # Required.
           sampler:
             type: dist
             kwargs: {}
-          batch_size: 32
+          batch_size: 256
     dataloader:
         type: cls_base
         kwargs:
@@ -29,31 +29,30 @@ dataset: # Required.
           pin_memory: True
 
 trainer: # Required.
-  max_epoch: 200
+  max_epoch: 100
   test_freq: 500
   save_freq: 5
   only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
-    type: SGD
+    type: LARS
     kwargs:
-      lr: 0.03
-      nesterov: True
+      lr: 4.8
       momentum: 0.9
       weight_decay: 0.0001
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
-    warmup_iter: 0          # 1000 iterations of warmup
+    warmup_iter: 6250          # 1000 iterations of warmup
     warmup_type: linear
     warmup_register_type: no_scale_lr
     warmup_ratio: 0
     type: CosineAnnealingLR
     kwargs:
-      T_max: 200
+      T_max: 100
       eta_min: 0.00001
       warmup_iter: 0
 
 saver: # Required.
-  save_dir: simclr_v1_bs512/checkpoints/cls_std     # dir to save checkpoints
-  results_dir: simclr_v1_bs512/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: simclr_v1_bs4096/checkpoints/cls_std     # dir to save checkpoints
+  results_dir: simclr_v1_bs4096/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
@@ -76,6 +75,10 @@ net: &subnet
             method: msra
     wrappers:
       - type: simclr
+        kwargs:
+          mlp: True
+          dim: 2048
+          output_dim: 128
 
   - name: post_process
     type: base_ssl_postprocess
