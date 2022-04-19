@@ -9,16 +9,22 @@ from up.utils.general.registry_factory import (
 @MODULE_WRAPPER_REGISTRY.register('simclr')
 class SimCLR(nn.Module):
 
-    def __init__(self, encoder):
+    def __init__(self, encoder, mlp=True, dim=2048, output_dim=128):
         super(SimCLR, self).__init__()
 
         self.encoder = encoder
+        self.mlp = mlp
+        if mlp:
+            self.encoder_fc = nn.Sequential(nn.Linear(dim, dim), nn.ReLU(), nn.Linear(dim, output_dim))
 
     def forward(self, input):
         if isinstance(input, dict):
             input = input['image']
         input = torch.cat((input[:, 0], input[:, 1]), dim=0)
-        features = self.encoder({'image' : input})['features'][-1]
+        features = self.encoder({'image' : input})['features'][-1].mean(dim=[2, 3])
+        features = nn.functional.normalize(features, dim=1)
+        if self.mlp:
+            features = self.encoder_fc(features)
 
         features = features.view(features.shape[0], -1)
 
