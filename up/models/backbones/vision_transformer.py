@@ -99,11 +99,11 @@ class MultiHeadAttention(nn.Module):
 
 class Encoder1DBlock(nn.Module):
     def __init__(self, hidden_dim, mlp_dim, heads,
-                 dropout, attention_dropout, drop_path, qkv_bias, activation):
+                 dropout, attention_dropout, drop_path, qkv_bias, activation, norm_layer=nn.LayerNorm):
         super(Encoder1DBlock, self).__init__()
-        self.norm1 = nn.LayerNorm(hidden_dim)
+        self.norm1 = norm_layer(hidden_dim)
         self.attention = MultiHeadAttention(hidden_dim, heads, dropout, attention_dropout, qkv_bias)
-        self.norm2 = nn.LayerNorm(hidden_dim)
+        self.norm2 = norm_layer(hidden_dim)
         self.feedforward = FeedForward(hidden_dim, mlp_dim, dropout, activation=activation)
         self.drop_path = DropPath(drop_path) if drop_path > 0. else None
 
