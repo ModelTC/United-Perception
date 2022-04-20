@@ -219,7 +219,7 @@ class FRS_Mimicker(Mimicker):
 
     def build_losses(self):
         self._register_losses('neck_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
-        self._register_losses('rpn_loss', {'type': 'bce_loss', 'kwargs': {'T': 1.0, 'batch_mean': False}})
+        self._register_losses('pred_loss', {'type': 'bce_loss', 'kwargs': {'T': 1.0, 'batch_mean': False}})
 
     def mimic(self, **kwargs):
         s_output = kwargs['s_output']
@@ -229,9 +229,16 @@ class FRS_Mimicker(Mimicker):
         for tdx in range(self.teacher_nums):
             feature_s = [self.s_output_maps[_name] for _name in self.student_mimic_names]
             feature_t = [self.t_output_maps[tdx][_name] for _name in self.teacher_mimic_names[tdx]]
-            stu_cls_score = [p[0] for p in s_output['rpn_preds']]
-            tea_cls_score = [p[0] for p in t_output[tdx]['rpn_preds']]
-
+            if 'rpn_preds' in s_output:
+                # two stage
+                stu_cls_score = [p[0] for p in s_output['rpn_preds']]
+            else:
+                # one stage
+                stu_cls_score = [p[0] for p in s_output['preds']]
+            if 'rpn_preds' in t_output[tdx]:
+                tea_cls_score = [p[0] for p in t_output[tdx]['rpn_preds']]
+            else:
+                tea_cls_score = [p[0] for p in t_output[tdx]['preds']]
             masks = []
             pred_s = []
             pred_t = []
@@ -244,10 +251,10 @@ class FRS_Mimicker(Mimicker):
                 pred_s.append(stu_cls_score_sigmoid)
                 pred_t.append(tea_cls_score_sigmoid)
             neck_loss = self.neck_loss(feature_s, feature_t, masks=masks)
-            rpn_cls_loss = self.rpn_loss(pred_s, pred_t, masks=masks)
+            pred_loss = self.pred_loss(pred_s, pred_t, masks=masks)
 
             mimic_losses.update({self.teacher_names[tdx] + '.neck_loss': neck_loss,
-                                 self.teacher_names[tdx] + '.rpn_cls_loss': rpn_cls_loss})
+                                 self.teacher_names[tdx] + '.pred_loss': pred_loss})
         mimic_losses = self.loss_post_process(mimic_losses, s_output['cur_iter'])
         self.clear()
         return mimic_losses
