@@ -252,7 +252,7 @@ net:
     type: bbox_post
     kwargs:
       cfg:
-        cls_loss: &cls_loss
+        cls_loss:
           type: softmax_cross_entropy
           kwargs:
             class_dim: -1  # last dim is the class dim
@@ -387,7 +387,7 @@ teacher:
         bbox_supervisor:
           type: faster
           kwargs:
-            bbox_normalize:
+            bbox_normalize: &teacher_bbox_norm
               means: [0, 0, 0, 0]         # statics to normalize localization predictions.
               stds: [0.1, 0.1, 0.2, 0.2]
             matcher:
@@ -406,7 +406,10 @@ teacher:
         fpn:
           fpn_levels: [0,1,2,3]   # indices of fpn features used for this stage. these levels are supposed to be continuous
           base_scale: 56          # target level of a RoI is floor(log2((w*h)**0.5/base_scale))
-        roipooling: *roipooling
+        roipooling: &teacher_roipooling
+          method: 'roialignpool'      # choices=['roialignpool', 'psroipool', 'roipool', 'psroimaskpool']. note that 'psroipool' is for RFCN head
+          pool_size: 7
+          sampling_ratio: 0           # number of sampling points in each bin. 0 means densely sampled
   - name: bbox_head
     prev: neck
     type: BboxFC
@@ -417,22 +420,25 @@ teacher:
         method: msra
       cfg:
         class_activation: softmax
-        roipooling: *roipooling
-        share_location: False         # is share location in bbox regression for all classes
+        roipooling: *teacher_roipooling
+        share_location: &teacher_share_location  False         # is share location in bbox regression for all classes
   - name: bbox_head_post_process
     type: bbox_post
     kwargs:
       cfg:
-        cls_loss: *cls_loss
+        cls_loss:
+          type: softmax_cross_entropy
+          kwargs:
+            class_dim: -1  # last dim is the class dim
         loc_loss:
           type: l1_loss
-        share_location: *share_location
-        bbox_normalize: *bbox_norm
+        share_location: *teacher_share_location
+        bbox_normalize: *teacher_bbox_norm
         bbox_predictor:
           type: faster
           kwargs:
-            bbox_normalize: *bbox_norm
-            share_location: *share_location
+            bbox_normalize: *teacher_bbox_norm
+            share_location: *teacher_share_location
             nms:
               type: naive
               nms_iou_thresh: 0.5
@@ -447,10 +453,7 @@ mimic:
     rpn_fpn_levels: [0, 1, 2, 3, 4]
     rpn_fpn_strides: [4, 8, 16, 32, 64]
     rpn_fpn_base_scale: 56
-    rcnn_fpn_levels: [0, 1, 2, 3]
-    rcnn_fpn_strides: [4, 8, 16, 32]
-    rcnn_fpn_base_scale: 56
-    teacher_proposal: True
+    neck_feature_nums: 5    
     backbone_loss:
       type: l2_loss
       kwargs:
@@ -469,18 +472,6 @@ mimic:
         feat_norm: False
         batch_mean: False
         loss_weight: 16.0
-    head_fg_loss:
-      type: kd_loss
-      kwargs:
-        T: 3.0
-        # loss_weight: 0.05
-        loss_weight: 0.0
-    head_bg_loss:
-      type: kd_loss
-      kwargs:
-        T: 1.0
-        # loss_weight: 2.0
-        loss_weight: 0.0
   teacher:
     mimic_name: ['backbone.layer2.3', 'backbone.layer3.5', 'backbone.layer4.2', 'neck.p2_conv', 'neck.p3_conv', 'neck.p4_conv', 'neck.p5_conv', 'neck.p6_pool']
     teacher_weight: checkpoints/fpn152/ckpt_e12.pth

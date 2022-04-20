@@ -1,6 +1,6 @@
 import torch
 
-from .models.utils import mlvl_extract_roi_features, mlvl_extract_gt_masks, match_gts
+from .models.utils import mlvl_extract_roi_features, mlvl_extract_gt_masks, match_gts  # noqa
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import MIMIC_REGISTRY, MIMIC_LOSS_REGISTRY
 
@@ -183,6 +183,9 @@ class Sample_Feature_Mimicker(Mimicker):
         rcnn_fpn_strides = self.configs.get('rcnn_fpn_strides', [4, 8, 16, 32])
         rcnn_base_scale = self.configs.get('rcnn_fpn_base_scale', 56)
         teacher_proposal = self.configs.get('teacher_proposal', True)
+        student_roipooler = self.configs.get('student_roipooler', 'bbox_head_pre_process.roipool')
+        teacher_roipooler = self.configs.get('teacher_roipooler', ['bbox_head_pre_process.roipool'])
+        assert len(teacher_roipooler) == self.teacher_nums, 'teacher_roipooler names must match teacher numbers'
         rois = s_output['rpn_dt_bboxes']
 
         for tdx in range(self.teacher_nums):
@@ -193,10 +196,10 @@ class Sample_Feature_Mimicker(Mimicker):
             with torch.no_grad():
                 t_pooled_feats = mlvl_extract_roi_features(rois, feature_t, rcnn_fpn_levels,
                                                            rcnn_fpn_strides, rcnn_base_scale,
-                                                           self.teacher_model[tdx].bbox_head.roipool)
+                                                           self._find_module(self.teacher_model[tdx], teacher_roipooler[tdx]))  # noqa
             s_pooled_feats = mlvl_extract_roi_features(rois, feature_s, rcnn_fpn_levels,
                                                        rcnn_fpn_strides, rcnn_base_scale,
-                                                       self.student_model.bbox_head.roipool)
+                                                       self._find_module(self.student_model, student_roipooler))
             feature_loss = self.feature_loss([t_pooled_feats], [s_pooled_feats]) / 2.0
             mimic_losses.update({self.teacher_names[tdx] + '.feature_loss': feature_loss})
         mimic_losses = self.loss_post_process(mimic_losses, s_output['cur_iter'])
@@ -277,22 +280,22 @@ class DeFeat_Mimicker(Mimicker):
         self._register_losses('backbone_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
         self._register_losses('neck_fg_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
         self._register_losses('neck_bg_loss', {'type': 'l2_loss', 'kwargs': {'feat_norm': False, 'batch_mean': False}})
-        self._register_losses('head_fg_loss', {'type': 'kd_loss', 'kwargs': {'T': 1.0}})
-        self._register_losses('head_bg_loss', {'type': 'kd_loss', 'kwargs': {'T': 1.0}})
+#        self._register_losses('head_fg_loss', {'type': 'kd_loss', 'kwargs': {'T': 1.0}})
+#        self._register_losses('head_bg_loss', {'type': 'kd_loss', 'kwargs': {'T': 1.0}})
 
     def mimic(self, **kwargs):
         s_output = kwargs['s_output']
-        t_output = kwargs['t_output']
+        t_output = kwargs['t_output']       # noqa
         mimic_losses = {}
 
         rpn_fpn_levels = self.configs.get('rpn_fpn_levels', [0, 1, 2, 3, 4])
         rpn_fpn_strides = self.configs.get('rpn_fpn_strides', [4, 8, 16, 32, 64])
         rpn_base_scale = self.configs.get('rpn_fpn_base_scale', 56)
-        rcnn_fpn_levels = self.configs.get('rcnn_fpn_levels', [0, 1, 2, 3])
-        rcnn_fpn_strides = self.configs.get('rcnn_fpn_strides', [4, 8, 16, 32])
-        rcnn_base_scale = self.configs.get('rcnn_fpn_base_scale', 56)
-        teacher_proposal = self.configs.get('teacher_proposal', True)
-        rois = s_output['rpn_dt_bboxes']
+#        rcnn_fpn_levels = self.configs.get('rcnn_fpn_levels', [0, 1, 2, 3])
+#        rcnn_fpn_strides = self.configs.get('rcnn_fpn_strides', [4, 8, 16, 32])
+#        rcnn_base_scale = self.configs.get('rcnn_fpn_base_scale', 56)
+#        teacher_proposal = self.configs.get('teacher_proposal', True)
+#        rois = s_output['rpn_dt_bboxes']
 
         neck_feature_nums = self.configs.get('neck_feature_nums', 5)
         for tdx in range(self.teacher_nums):
@@ -319,38 +322,37 @@ class DeFeat_Mimicker(Mimicker):
             neck_fg_loss = self.neck_fg_loss(adapt_neck_s, feature_t, masks=neck_fg_masks) / neck_feature_nums / 2.0
             neck_bg_loss = self.neck_bg_loss(adapt_neck_s, feature_t, masks=neck_bg_masks) / neck_feature_nums / 2.0
 
-            # mimic head
-            if teacher_proposal:
-                rois = t_output[tdx]['rpn_dt_bboxes']
-            labels = match_gts(rois, s_output['gt_bboxes'],
-                               s_output.get('gt_ignores', None), s_output['image_info'],
-                               self.student_model.bbox_head.supervisor.matcher)
-
-            with torch.no_grad():
-                t_pooled_feats, recover_inds = mlvl_extract_roi_features(rois, feature_t,
-                                                                         rcnn_fpn_levels,
-                                                                         rcnn_fpn_strides,
-                                                                         rcnn_base_scale,
-                                                                         self.teacher_model[tdx].bbox_head.roipool,
-                                                                         return_recover_inds=True)
-                t_cls_pred, _ = self.teacher_model[tdx].bbox_head.forward_net(t_pooled_feats)
-                t_cls_pred = t_cls_pred[recover_inds]
-            s_pooled_feats, recover_inds = mlvl_extract_roi_features(rois, feature_s,
-                                                                     rcnn_fpn_levels,
-                                                                     rcnn_fpn_strides,
-                                                                     rcnn_base_scale,
-                                                                     self.student_model.bbox_head.roipool,
-                                                                     return_recover_inds=True)
-            s_cls_pred, _ = self.student_model.bbox_head.forward_net(s_pooled_feats)
-            s_cls_pred = s_cls_pred[recover_inds]
-            head_fg_loss = self.head_fg_loss([s_cls_pred], [t_cls_pred], masks=[labels])
-            head_bg_loss = self.head_bg_loss([s_cls_pred], [t_cls_pred], masks=[(1 - labels)])
+# mimic head is useless and unstable
+#            # mimic head
+#            if teacher_proposal:
+#                rois = t_output[tdx]['rpn_dt_bboxes']
+#            labels = match_gts(rois, s_output['gt_bboxes'],
+#                               s_output.get('gt_ignores', None), s_output['image_info'],
+#                               self.student_model.bbox_head.supervisor.matcher)
+#
+#            with torch.no_grad():
+#                t_pooled_feats, recover_inds = mlvl_extract_roi_features(rois, feature_t,
+#                                                                         rcnn_fpn_levels,
+#                                                                         rcnn_fpn_strides,
+#                                                                         rcnn_base_scale,
+#                                                                         self.teacher_model[tdx].bbox_head.roipool,
+#                                                                         return_recover_inds=True)
+#                t_cls_pred, _ = self.teacher_model[tdx].bbox_head.forward_net(t_pooled_feats)
+#                t_cls_pred = t_cls_pred[recover_inds]
+#            s_pooled_feats, recover_inds = mlvl_extract_roi_features(rois, feature_s,
+#                                                                     rcnn_fpn_levels,
+#                                                                     rcnn_fpn_strides,
+#                                                                     rcnn_base_scale,
+#                                                                     self.student_model.bbox_head.roipool,
+#                                                                     return_recover_inds=True)
+#            s_cls_pred, _ = self.student_model.bbox_head.forward_net(s_pooled_feats)
+#            s_cls_pred = s_cls_pred[recover_inds]
+#            head_fg_loss = self.head_fg_loss([s_cls_pred], [t_cls_pred], masks=[labels])
+#            head_bg_loss = self.head_bg_loss([s_cls_pred], [t_cls_pred], masks=[(1 - labels)])
 
             mimic_losses.update({self.teacher_names[tdx] + '.backbone_loss': backbone_loss,
                                  self.teacher_names[tdx] + '.neck_fg_loss': neck_fg_loss,
-                                 self.teacher_names[tdx] + '.neck_bg_loss': neck_bg_loss,
-                                 self.teacher_names[tdx] + '.head_fg_loss': head_fg_loss,
-                                 self.teacher_names[tdx] + '.head_bg_loss': head_bg_loss})
+                                 self.teacher_names[tdx] + '.neck_bg_loss': neck_bg_loss})
         mimic_losses = self.loss_post_process(mimic_losses, s_output['cur_iter'])
         self.clear()
         return mimic_losses
