@@ -61,7 +61,10 @@ class BaseInference(object):
 
     def resume(self):
         checkpoint = self.saver.load_checkpoint(self.ckpt)
-        state_dict = checkpoint.get('model', checkpoint.get('state_dict', {}))
+        if 'ema' in checkpoint.keys():
+            state_dict = checkpoint['model']['ema']['ema_state_dict']
+        else:
+            state_dict = checkpoint.get('model', checkpoint.get('state_dict', {}))
         self.detector.load(state_dict, strict=False)
 
     def build_saver(self):
