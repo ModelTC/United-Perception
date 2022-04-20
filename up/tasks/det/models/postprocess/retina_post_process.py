@@ -248,6 +248,21 @@ class IOUPostProcess(BaseDetPostProcess):
             mlvl_activated_preds.append((cls_pred * iou_pred, *preds[1:]))
         return mlvl_activated_preds
 
+    def export(self, mlvl_preds):
+        output = {}
+        for idx, preds in enumerate(mlvl_preds):
+            cls_pred, loc_pred, iou_pred = preds[:]
+            if self.class_activation == 'sigmoid':
+                _, c, h, w = cls_pred.shape
+                iou_pred = F.sigmoid(iou_pred.view(-1, 1, h, w)).view(-1, self.num_anchors * 1, h, w)
+                cls_pred = cls_pred.sigmoid() * torch.cat([iou_pred for _ in range(c)], dim=1)
+            else:
+                raise NotImplementedError
+            output[self.prefix + '.blobs.cls' + str(idx)] = cls_pred
+            output[self.prefix + '.blobs.loc' + str(idx)] = loc_pred
+        output['base_anchors'] = self.anchor_generator.export()
+        return output
+
     def get_loss(self, targets, mlvl_preds, mlvl_shapes=None):
         mlvl_shapes = [shape[:-1] for shape in mlvl_shapes]
         cls_target, loc_target, iou_target, cls_mask, loc_mask = targets
