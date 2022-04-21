@@ -77,7 +77,7 @@ net: &subnet
       - type: simclr
         kwargs:
           mlp: True
-          num_mlp_layer: 2
+          num_mlp_layer: 3
           dim: 2048
           output_dim: 128
 
