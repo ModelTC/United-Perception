@@ -1,0 +1,164 @@
+num_classes: &num_classes 1000
+
+cutmix_mixup: &cutmix_mixup
+  type: torch_cutmix_mixup
+  kwargs:
+    mixup_alpha: 0.8
+    cutmix_alpha: 1.0
+    num_classes: 1000
+    extra_input: True
+    transform: True
+
+random_resized_crop: &random_resized_crop
+ type: torch_random_resized_crop
+ kwargs:
+   size: 224
+   scale: [0.08, 1]
+
+random_horizontal_flip: &random_horizontal_flip
+ type: torch_random_horizontal_flip
+
+
+random_augmentation: &random_augmentation
+  type: torch_random_augmentationIncre
+  kwargs:
+    n: 2  # number of augmentation operations
+    m: 9  # magnitude of each operation
+    magnitude_std: 0.5  # standard deviation of magnitude
+
+center_crop: &center_crop
+  type: torch_center_crop
+  kwargs:
+    size: 224
+
+torch_size: &torch_resize
+  type: torch_resize
+  kwargs:
+    size: 256
+
+to_tensor: &to_tensor
+  type: to_tensor
+
+normalize: &normalize
+ type: normalize
+ kwargs:
+   mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
+   std: [0.229, 0.224, 0.225]
+
+rand_erase: &rand_erase
+ type: torch_randerase
+ kwargs:
+  probability: 0.25
+
+
+dataset: # Required.
+  train:
+    dataset:
+      type: cls
+      kwargs:
+        meta_file: /mnt/lustre/share/images/meta/train.txt
+        image_reader:
+           type: fs_pillow
+           kwargs:
+             image_dir: /mnt/lustre/share/images/train
+             color_mode: RGB
+        transformer: [*random_resized_crop, *random_horizontal_flip, *random_augmentation, *to_tensor, *normalize, *rand_erase, *cutmix_mixup]
+    batch_sampler:
+        type: base
+        kwargs:
+          sampler:
+            type: dist
+            kwargs: {}
+          batch_size: 128 # Use 8 GPUs to have a total 1024 batch size
+    dataloader:
+        type: cls_base
+        kwargs:
+          num_workers: 4
+          pin_memory: True
+
+  test:
+    dataset:
+      type: cls
+      kwargs:
+        meta_file: /mnt/lustre/share/images/meta/val.txt
+        image_reader:
+          type: fs_pillow
+          kwargs:
+            image_dir: /mnt/lustre/share/images/val
+            color_mode: RGB
+        transformer: [ *torch_resize, *center_crop, *to_tensor, *normalize ]
+        evaluator:
+          type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
+          kwargs:
+            topk: [ 1, 5 ]
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: { }
+        batch_size: 64
+    dataloader:
+      type: cls_base
+      kwargs:
+        num_workers: 4
+        pin_memory: False
+
+trainer: # Required.
+  max_epoch: 100
+  test_freq: 10
+  save_freq: 10
+  only_save_latest: True
+  optimizer:
+    type: AdamW
+    kwargs:
+      lr: 0.002  # 5e-4 * total batch size (1024) / 256
+      weight_decay: 0.05
+      betas: [0.9, 0.95]
+    pconfig:
+      nodecay: ['ndim_is1', '.bias']
+      layer_decay:
+        type: vit_base
+        value: 0.75
+
+  lr_scheduler:
+    warmup_iter: 5
+    warmup_type: linear
+    warmup_register_type: no_scale_lr
+    warmup_ratio: 0.05
+    type: CosineLREpochScheduler
+    kwargs:
+        T_max: 100
+        warm_epoch: 5
+
+saver: # Required.
+  save_dir: ./checkpoints/mae     # dir to save checkpoints
+  results_dir: ./results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+                     # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+
+hooks:
+  - type: auto_save_best
+
+net: &subnet
+  - name: backbone
+    type: vit_base_patch16_224
+    kwargs:
+      drop_path: 0.1
+      dropout: 0.0
+      attention_dropout: 0.0
+      qkv_bias: True
+  - name: head
+    type: vit_head
+    kwargs:
+       num_classes: *num_classes
+       in_plane: &head_out_channel 768
+       input_feature_idx: -1
+       cls_type: pool
+  - name: post_process
+    type: base_cls_postprocess
+    kwargs:
+       cls_loss:
+         type: stce
+
+

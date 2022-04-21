@@ -47,6 +47,21 @@ def hard_sigmoid(x, inplace=False):
     return F.relu6(x + 3, inplace) / 6
 
 
+def get_layer_id_for_vit(name, num_layers):
+    """
+    Assign a parameter with its layer id
+    Following BEiT: https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L33
+    """
+    if name in ['cls_token', 'pos_embed']:
+        return 0
+    elif name.startswith('patch_embed'):
+        return 0
+    elif name.startswith('blocks'):
+        return int(name.split('.')[1]) + 1
+    else:
+        return num_layers
+
+
 def drop_path(x, drop_prob: float = 0., training: bool = False):
     """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
     This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,

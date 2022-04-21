@@ -13,6 +13,7 @@ from up.utils.model import optim
 from ..general.log_helper import default_logger as logger
 from ..general.registry_factory import OPTIMIZER_REGISTRY
 from collections import defaultdict
+from up.utils.model.utils import get_layer_id_for_vit
 
 
 def build_cls_instance(module, cfg):
@@ -96,6 +97,7 @@ class BaseOptimizer(object):
             pgroup['ln_w'] = []
 
         nodecay = config.get('nodecay', [])
+        layer_decay = config.get('layer_decay', None)
 
         names_all = []
         type2num = defaultdict(lambda: 0)
@@ -163,19 +165,50 @@ class BaseOptimizer(object):
             if name not in names_all:
                 nodecay_sign = 0
                 for key_nodecay in nodecay:
-                    if key_nodecay in name:
+                    if key_nodecay == 'ndim_is1':
+                        if p.ndim == 1:
+                            pgroup_nodecay.append(p)
+                            nodecay_sign = 1
+                            break
+                    elif key_nodecay in name:
                         pgroup_nodecay.append(p)
                         nodecay_sign = 1
                         break
                 if not nodecay_sign:
                     pgroup_normal.append(p)
 
-        param_groups = [{'params': pgroup_normal}, {'params': pgroup_nodecay, 'weight_decay': 0.0}]
+        param_groups_dict = {}
+        for p in pgroup_normal:
+            param_groups_dict[p] = {}
+        for p in pgroup_nodecay:
+            param_groups_dict[p] = {'weight_decay': 0.0}
+        #param_groups_dict = [{'params': pgroup_normal}, {'params': pgroup_nodecay, 'weight_decay': 0.0}]
         for ptype in pgroup.keys():
             if ptype in config.keys():
-                param_groups.append({'params': pgroup[ptype], **config[ptype]})
+                for p in pgroup[ptype]:
+                    param_groups_dict[p].update(dict(config[ptype]))
             else:
-                param_groups.append({'params': pgroup[ptype]})
+                for p in pgroup[ptype]:
+                    param_groups_dict[p].update({})
+
+        # Handel Layer Decay
+        if layer_decay is not None:
+            if layer_decay['type'] is 'vit_base':
+                num_layers = len(model.blocks) + 1
+                layer_scales = list(layer_decay ** (num_layers - i) for i in range(num_layers + 1))
+                for n, p in model.named_parameters():
+                    if not p.requires_grad:
+                        continue
+                    layer_id = get_layer_id_for_vit(n, num_layers)
+                    param_groups_dict[p].update({'lr_scale': layer_scales[layer_id]})
+            else:
+                assert NotImplementedError, f"Not support for layer decay type: {layer_decay['type']}"
+
+        # Translate param_groups_dict back to param_groups which can be used in torch.optim
+        param_groups = []
+        for p, config in param_groups_dict.items():
+            param_groups += [{'params': p, **config}]
+
         return param_groups
 
     def get_optimizer(self, cfg_optim):
