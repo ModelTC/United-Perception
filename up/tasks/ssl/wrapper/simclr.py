@@ -9,13 +9,22 @@ from up.utils.general.registry_factory import (
 @MODULE_WRAPPER_REGISTRY.register('simclr')
 class SimCLR(nn.Module):
 
-    def __init__(self, encoder, mlp=True, dim=2048, output_dim=128):
+    def __init__(self, encoder, mlp=True, num_mlp_layer=2, dim=2048, output_dim=128):
         super(SimCLR, self).__init__()
 
         self.encoder = encoder
         self.mlp = mlp
+        self.num_mlp_layer = num_mlp_layer
+
         if mlp:
-            self.encoder_fc = nn.Sequential(nn.Linear(dim, dim), nn.ReLU(), nn.Linear(dim, output_dim))
+            if num_mlp_layer == 1:
+                self.encoder_fc = nn.Sequential(nn.Linear(dim, output_dim))
+            elif num_mlp_layer > 1:
+                layers = []
+                for _ in range(num_mlp_layer - 1):
+                    layers += [nn.Linear(dim, dim), nn.ReLU()]
+                layers.append(nn.Linear(dim, output_dim))
+                self.encoder_fc = nn.Sequential(*layers)
 
     def forward(self, input):
         if isinstance(input, dict):
