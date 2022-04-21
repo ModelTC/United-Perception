@@ -1,6 +1,9 @@
 import numpy as np
 import torch
-import SharedArray
+try:
+    import SharedArray
+except: # noqa
+    pass
 
 
 def check_numpy_to_torch(x):
