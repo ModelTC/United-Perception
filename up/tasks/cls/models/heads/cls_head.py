@@ -191,6 +191,9 @@ class ViTHead(BaseClsHead):
             x = x['features'][self.input_feature_idx]
         if self.cls_type == 'token':
             x = x[1]
+        elif self.cls_type == 'mae_pool':
+            x = x[0]
+            x = x.reshape(x.shape[0], x.shape[1], -1).mean(dim=-1)
         else:
             x = x[0]
             self.get_pool_output(x)

@@ -133,6 +133,7 @@ trainer: # Required.
 
 saver: # Required.
   save_dir: ./checkpoints/mae     # dir to save checkpoints
+  pretrain_model: ./checkpoints/mae_t/ckpt_t.pth
   results_dir: ./results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
@@ -154,7 +155,7 @@ net: &subnet
        num_classes: *num_classes
        in_plane: &head_out_channel 768
        input_feature_idx: -1
-       cls_type: pool
+       cls_type: mae_pool
   - name: post_process
     type: base_cls_postprocess
     kwargs:

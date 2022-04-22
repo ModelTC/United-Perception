@@ -131,7 +131,7 @@ class BaseOptimizer(object):
                     type2num[m.__class__.__name__ + '.weight(dense)'] += 1
 
             elif isinstance(m, torch.nn.Linear):
-                if m.bias is not None:
+                if m.bias is not None and 'linear_b' in pgroup:
                     pgroup['linear_b'].append(m.bias)
                     names_all.append(name + '.bias')
                     names['linear_b'].append(name + '.bias')
@@ -143,46 +143,45 @@ class BaseOptimizer(object):
                     type2num[m.__class__.__name__ + '.weight'] += 1
             elif (isinstance(m, torch.nn.BatchNorm2d)
                   or isinstance(m, torch.nn.BatchNorm1d)):
-                if m.weight is not None:
+                if m.weight is not None and 'bn_w' in pgroup:
                     pgroup['bn_w'].append(m.weight)
                     names_all.append(name + '.weight')
                     names['bn_w'].append(name + '.weight')
                     type2num[m.__class__.__name__ + '.weight'] += 1
-                if m.bias is not None:
+                if m.bias is not None and 'bn_b' in pgroup:
                     pgroup['bn_b'].append(m.bias)
                     names_all.append(name + '.bias')
                     names['bn_b'].append(name + '.bias')
                     type2num[m.__class__.__name__ + '.bias'] += 1
             elif isinstance(m, torch.nn.LayerNorm):
-                if m.weight is not None:
+                if m.weight is not None and 'ln_w' in pgroup:
                     pgroup['ln_w'].append(m.weight)
                     names_all.append(name + '.weight')
-                if m.bias is not None:
+                if m.bias is not None and 'ln_b' in pgroup:
                     pgroup['ln_b'].append(m.bias)
                     names_all.append(name + '.bias')
 
         for name, p in model.named_parameters():
-            if name not in names_all:
-                nodecay_sign = 0
-                for key_nodecay in nodecay:
-                    if key_nodecay == 'ndim_is1':
-                        if p.ndim == 1:
-                            pgroup_nodecay.append(p)
-                            nodecay_sign = 1
-                            break
-                    elif key_nodecay in name:
+            nodecay_sign = 0
+            for key_nodecay in nodecay:
+                if key_nodecay == 'ndim_is1':
+                    if p.ndim == 1:
                         pgroup_nodecay.append(p)
                         nodecay_sign = 1
                         break
-                if not nodecay_sign:
-                    pgroup_normal.append(p)
+                elif key_nodecay in name:
+                    pgroup_nodecay.append(p)
+                    nodecay_sign = 1
+                    break
+            if not nodecay_sign:
+                pgroup_normal.append(p)
 
         param_groups_dict = {}
         for p in pgroup_normal:
             param_groups_dict[p] = {}
         for p in pgroup_nodecay:
             param_groups_dict[p] = {'weight_decay': 0.0}
-        #param_groups_dict = [{'params': pgroup_normal}, {'params': pgroup_nodecay, 'weight_decay': 0.0}]
+        # param_groups_dict = [{'params': pgroup_normal}, {'params': pgroup_nodecay, 'weight_decay': 0.0}]
         for ptype in pgroup.keys():
             if ptype in config.keys():
                 for p in pgroup[ptype]:
