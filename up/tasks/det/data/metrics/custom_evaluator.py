@@ -695,8 +695,8 @@ class MREvaluator(CustomEvaluator):
             args.num_classes = len(args.class_names)
         return cls(args.gt_file,
                    args.num_classes,
-                   args.class_names,
                    args.iou_thresh,
+                   args.class_names,
                    metrics_csv=args.metrics_csv,
                    ignore_mode=args.ignore_mode,
                    eval_class_idxs=args.eval_class_idxs,
