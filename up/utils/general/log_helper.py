@@ -212,8 +212,10 @@ def dataset_timer_log(obj, type):
     cls = obj.__class__
     call = cls.__call__
     data_timer = MetricLogger(delimiter=" ")
-    freq = int(os.environ['BATCH_SIZE']) * int(os.environ['DISPLAY_FREQ'])
     dataset_timer_enabled = float(os.environ.get("DATASET_TIMER_ENABLED", 1))
+    if 'BATCH_SIZE' not in os.environ or 'DISPLAY_FREQ' not in os.environ:
+        return obj
+    freq = int(os.environ['BATCH_SIZE']) * int(os.environ['DISPLAY_FREQ'])
     dataset_time_threshold = float(os.environ.get("DATASET_TIMER_THRESHOLD", 30))
     if dataset_timer_enabled == 0:
         return obj
