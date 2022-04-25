@@ -331,22 +331,7 @@ class RFCN_PreProcess(Bbox_PreProcess):
                 mlvl_strides = [int(s) for s in mlvl_strides]
             else:
                 mlvl_strides = mlvl_strides.tolist()
-        pooled_cls = []
-        pooled_loc = []
-        for rois, feat, stride in zip(mlvl_rois, mlvl_features, mlvl_strides):
-            x = self.new_conv(feat)
-            if self.add_relu_after_feature_conv:
-                x = self.relu(x)
-            cls = self.rfcn_score(x)
-            loc = self.rfcn_bbox(x)
-            pooled_cls.append(self.roipool(rois, cls, stride))
-            pooled_loc.append(self.roipool(rois, loc, stride))
-        # ONNX concat requires at least one tensor
-        if len(pooled_cls) == 1:
-            return pooled_cls[0], pooled_loc[0]
-        pooled_cls = torch.cat(pooled_cls, dim=0)
-        pooled_loc = torch.cat(pooled_loc, dim=0)
-        return pooled_cls, pooled_loc
+        return mlvl_rois, mlvl_features, mlvl_strides
 
 
 @MODULE_ZOO_REGISTRY.register('BboxRFCN')
@@ -370,6 +355,7 @@ class RFCN(BboxNet):
         """
         super(RFCN, self).__init__(inplanes, num_classes, cfg)
 
+        self.roipool = E.build_generic_roipool(cfg['roipooling'])
         ps = self.pool_size
         inplanes = self.inplanes
 
@@ -387,7 +373,23 @@ class RFCN(BboxNet):
         initialize_from_cfg(self, initializer)
 
     def forward_net(self, pooled_feats):
-        pooled_cls, pooled_loc = pooled_feats
+        mlvl_rois, mlvl_features, mlvl_strides = pooled_feats
+        pooled_cls = []
+        pooled_loc = []
+        for rois, feat, stride in zip(mlvl_rois, mlvl_features, mlvl_strides):
+            x = self.new_conv(feat)
+            if self.add_relu_after_feature_conv:
+                x = self.relu(x)
+            cls = self.rfcn_score(x)
+            loc = self.rfcn_bbox(x)
+            pooled_cls.append(self.roipool(rois, cls, stride))
+            pooled_loc.append(self.roipool(rois, loc, stride))
+            # ONNX concat requires at least one tensor
+        if len(pooled_cls) == 1:
+            pooled_cls, pooled_loc = pooled_cls[0], pooled_loc[0]
+        else:
+            pooled_cls = torch.cat(pooled_cls, dim=0)
+            pooled_loc = torch.cat(pooled_loc, dim=0)
 
         x_cls = self.pool(pooled_cls)
         x_loc = self.pool(pooled_loc)

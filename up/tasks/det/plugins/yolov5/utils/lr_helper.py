@@ -51,9 +51,11 @@ class YoloV5LinearWarmUpLR(object):
             for x in optimizer.param_groups:
                 if 'momentum' in x:
                     x['momentum'] = np.interp(last_epoch, [0, self.warmup_iter], self.warmup_weight_decay_range)
+        if len(self.warmup_group_init_lr) < len(self.target_lr):
+            self.warmup_group_init_lr = [0.0] + self.warmup_group_init_lr
         return [np.interp(last_epoch, [0, self.warmup_iter],
-                          [self.warmup_group_init_lr[j],
-                           self.target_lr[j] * cal_cos_lines(cur_epoch, self.total_epochs, self.min_lr_scale)])
+                          [self.warmup_group_init_lr[j], self.target_lr[j]
+                           * cal_cos_lines(cur_epoch, self.total_epochs, self.min_lr_scale)])
                 for j in range(len(optimizer.param_groups))]
 
 
