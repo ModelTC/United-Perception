@@ -222,13 +222,13 @@ class RankClsDataset(ClsDataset):
         self.group = reload_cfg.get('group', 1)
         self.world_size = env.world_size
         self.rank = env.rank
-        super(ClsDataset, self).__init__(meta_file,
-                                         image_reader,
-                                         transformer,
-                                         evaluator,
-                                         meta_type,
-                                         parser_info,
-                                         image_type)
+        super(RankClsDataset, self).__init__(meta_file,
+                                             image_reader,
+                                             transformer,
+                                             evaluator,
+                                             meta_type,
+                                             parser_info,
+                                             image_type)
 
     def count_dataset_size(self, meta_files):
         from itertools import (takewhile, repeat)
