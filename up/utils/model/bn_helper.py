@@ -64,7 +64,7 @@ class GroupNorm(torch.nn.GroupNorm):
 
 
 class PyTorchSyncBN(torch.nn.SyncBatchNorm):
-    def __init__(self, num_features, group_size, **kwargs):
+    def __init__(self, num_features, group_size=None, **kwargs):
         super(PyTorchSyncBN, self).__init__(
             num_features,
             process_group=self._get_group(group_size),
@@ -75,7 +75,9 @@ class PyTorchSyncBN(torch.nn.SyncBatchNorm):
     def _get_group(group_size):
         rank = env.rank
         world_size = env.world_size
-        if group_size is None or group_size > world_size:
+        if group_size is None or group_size == world_size:
+            return None
+        if group_size > world_size:
             logger.warning("group_size of '{}' invalid, reset to {}".format(group_size, world_size))
             group_size = world_size
         num_groups = world_size // group_size
@@ -191,7 +193,7 @@ class TorchSyncTaskBatchNorm2d(PyTorchSyncBN):
                  task_num=1,
                  task_idx=0,
                  skip_multi_task_init: bool = False):
-        super(SyncTaskBatchNorm2d, self).__init__(num_features, group_size)
+        super(TorchSyncTaskBatchNorm2d, self).__init__(num_features, group_size)
         self.bn = nn.ModuleList([
             nn.BatchNorm2d(num_features, affine=False) for _ in range(task_num)])
         self.bn[0] = None
