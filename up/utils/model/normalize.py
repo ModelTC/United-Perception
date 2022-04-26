@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from up.utils.general.global_flag import DIST_BACKEND
+from up.utils.general.log_helper import default_logger as logger
 
 from up.utils.model.bn_helper import (
     CaffeFrozenBatchNorm2d,
@@ -33,15 +34,15 @@ try:
     from mqbench.nn.modules import FrozenBatchNorm2d as MqbenchFrozenBatchNorm2d
     _norm_cfg.update({'mqbench_freeze_bn': ('bn', MqbenchFrozenBatchNorm2d)})
 except Exception as err:
-    print(err)
-    print("If you need Mqbench to quantize model, you should add Mqbench to this project. Or just ignore this error.")
+    logger.warning(f"import error {err}; If you need Mqbench to quantize model, \
+     you should add Mqbench to this project. Or just ignore this error.")
 
 try:
     from msbench.nn.modules import FrozenBatchNorm2d as MsbenchFrozenBatchNorm2d
     _norm_cfg.update({'msbench_freeze_bn': ('bn', MsbenchFrozenBatchNorm2d)})
 except Exception as err:
-    print(err)
-    print("If you need Msbench to prune model, you should add Msbench to this project. Or just ignore this error.")
+    logger.warning(f"import error {err}; If you need Msbench to prune model, \
+    you should add Msbench to this project. Or just ignore this error.")
 
 
 def is_bn(m):

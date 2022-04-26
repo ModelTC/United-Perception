@@ -4,6 +4,7 @@ import numpy as np
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from up.tasks.det_3d.models.backbones_3d.vfe.mean_vfe import build_vfe
 from up.tasks.det_3d.models.backbones_3d.map_to_bev import build_map_to_bev
+from up.utils.general.log_helper import default_logger as logger
 from typing import Set
 try:
     try:
@@ -12,8 +13,8 @@ try:
     except BaseException:
         import spconv as spconv
         from spconv import SparseModule
-except Exception:  # ugly code, fake spconv module to avoid error
-    print("If you need spconv, you should install spconv !!!. Or just ignore this error")
+except Exception as err:  # ugly code, fake spconv module to avoid error
+    logger.warning(f"import error {err}; If you need spconv, you should install spconv !!!. Or just ignore this error")
     spconv = None
     SparseModule = nn.Module
 

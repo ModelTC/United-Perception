@@ -98,7 +98,7 @@ class CriterionICNet(nn.Module):
         self.criterion1 = OhemCrossEntropy2dTensor(ignore_index, thresh=thresh, min_kept=min_kept)
 
         if not reduce:
-            print("disabled the reduce.")
+            logger.info("disabled the reduce.")
 
     def forward(self, preds, target):
         h, w = target.size(1), target.size(2)
@@ -130,7 +130,7 @@ class CriterionBiSegNet(nn.Module):
         self.criterion1 = OhemCrossEntropy2dTensor(ignore_index, thresh=thresh, min_kept=min_kept)
 
         if not reduce:
-            print("disabled the reduce.")
+            logger.info("disabled the reduce.")
 
     def forward(self, preds, target):
         h, w = target.size(1), target.size(2)
