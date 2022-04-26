@@ -4,7 +4,7 @@ from up.utils.env.gene_env import get_env_info
 from up.utils.env.dist_helper import env
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.cfg_helper import format_cfg
-from mqbench.utils.state import enable_calibration, enable_quantization
+from mqbench.utils.state import enable_calibration, enable_quantization, enable_calibration_woquantization
 
 __all__ = ['QuantRunner']
 
@@ -12,7 +12,7 @@ __all__ = ['QuantRunner']
 @RUNNER_REGISTRY.register("quant")
 class QuantRunner(BaseRunner):
     def __init__(self, config, work_dir='./', training=True):
-        self.do_ptq = True
+        self.do_calib = True
         super(QuantRunner, self).__init__(config, work_dir, training)
 
     def build(self):
@@ -29,7 +29,7 @@ class QuantRunner(BaseRunner):
             self.quantize_model()
             self.build_trainer()
             self.resume_model_from_quant()
-            if self.do_ptq:
+            if self.do_calib:
                 self.calibrate()
         else:
             self.quantize_model()
@@ -65,14 +65,14 @@ class QuantRunner(BaseRunner):
         def add_prefix(state_dict):
             f = lambda x: self.model_map[x.split('.')[0]] + '.' + x
             return {f(key): value for key, value in state_dict.items()}
-        if 'qat' not in self.ckpt:
+        if 'quant' not in self.ckpt:
             self.model.load_state_dict(add_prefix(self.ckpt['model']))
 
     def resume_model_from_quant(self):
-        if 'qat' in self.ckpt:
-            self.do_ptq = False
+        if 'quant' in self.ckpt:
+            self.do_calib = False
             self.model.load_state_dict(self.ckpt['model'])
-            if self.ckpt['qat'] and self.training and 'optimizer' in self.ckpt:
+            if self.ckpt['quant'] == 'qat' and self.training and 'optimizer' in self.ckpt:
                 start_epoch = self.ckpt['epoch']
                 self.optimizer.load_state_dict(self.ckpt['optimizer'])
                 self.lr_scheduler.load_state_dict(self.ckpt['lr_scheduler'])
@@ -85,6 +85,12 @@ class QuantRunner(BaseRunner):
                 'snpe': BackendType.SNPE,
                 'vitis': BackendType.Vitis,
                 'academic': BackendType.Academic}
+
+    @property
+    def quant_type(self):
+        if hasattr(self, '_quant_type') is False:
+            self._quant_type = self.config['quant'].get('train_type', 'calib_only')
+        return self._quant_type
 
     def get_leaf_module(self, leaf_module):
         from mqbench.nn.modules import FrozenBatchNorm2d
@@ -107,6 +113,7 @@ class QuantRunner(BaseRunner):
 
     def quantize_model(self):
         from mqbench.prepare_by_platform import prepare_by_platform
+        from mqbench.fake_quantize.quantize_base import FakeQuantizeBase
         logger.info("prepare quantize model")
         deploy_backend = self.config['quant']['deploy_backend']
         prepare_args = self.config['quant'].get('prepare_args', {})
@@ -128,48 +135,123 @@ class QuantRunner(BaseRunner):
             if env.is_master():
                 print(mod)
 
+        quant_tricks = self.config['quant'].get('tricks', {})
+        special_layers = quant_tricks.get('special', None)
+        if special_layers is not None:
+            specila_bit = quant_tricks.get('bit', 8)
+            f = lambda x: self.model_map[x.split('.')[0]] + '.' + x
+            special_layers = [f(layer) for layer in special_layers]
+            for name, mod in self.model.named_modules():
+                if name in special_layers:
+                    for _name, _mod in mod.named_modules():
+                        if isinstance(_mod, FakeQuantizeBase):
+                            self.set_bitwidth(_mod, specila_bit)
+                            logger.info(f'set {name}.{_name} to {specila_bit} bit.')
         self.model.train().cuda()
-
+        self.init_quantize_node()
         if env.is_master():
             print(self.model)
 
-        # exit(0)
+    def init_quantize_node(self):
+        if self.training:
+            img = self.get_batch('train')
+        else:
+            img = self.get_batch('test')
+        enable_calibration(self.model)
+        self.model(img)
+
+    def set_bitwidth(self, fake_quant, bit_width):
+        if fake_quant.quant_min == 0:
+            new_min = 0
+            new_max = 2 ** bit_width - 1
+        else:
+            new_min = - 2 ** (bit_width - 1)
+            new_max = 2 ** (bit_width - 1) - 1
+        fake_quant.quant_min = new_min
+        fake_quant.quant_max = new_max
+        fake_quant.activation_post_process.quant_min = new_min
+        fake_quant.activation_post_process.quant_max = new_max
+        fake_quant.bitwidth = bit_width
 
     def calibrate(self):
         logger.info("calibrate model")
         self.model.eval().cuda()
+        if self.quant_type == 'ptq':
+            return self.ptq_calibrate()
         enable_calibration(self.model)
         for _ in range(self.config['quant']['cali_batch_size']):
             batch = self.get_batch('train')
             self.model(batch)
         enable_quantization(self.model)
-        self.eval_ptq()
-        self.save_ptq()
+        self.eval_quant()
+        self.save_calib()
 
-    def eval_ptq(self):
+    def ptq_calibrate(self):
+        enable_calibration_woquantization(self.model, quantizer_type='act_fake_quant')
+        for _ in range(self.config['quant']['cali_batch_size']):
+            batch = self.get_batch('train')
+            self.model(batch)
+        enable_calibration_woquantization(self.model, quantizer_type='weight_fake_quant')
+        for _ in range(1):
+            batch = self.get_batch('train')
+            self.model(batch)
+        enable_quantization(self.model)
+        self.sync_quant_params()
+        logger.info('eval the calib model')
+        self.eval_quant()
+        self.save_calib()
+
+    def sync_quant_params(self):
+        logger.info('start quant params reduce')
+        try:
+            import spring.linklink as link
+        except:   # noqa
+            link = None
+        reduce_list = ['scale', 'zero_point', 'min_val', 'max_val']
+        reduced = []
+        for n, tensor in self.model.named_buffers():
+            for rd in reduce_list:
+                if n.endswith(rd):
+                    tensor.data = tensor.data / link.get_world_size()
+                    link.allreduce(tensor.data)
+                    reduced.append(n)
+        for n, tensor in self.model.named_parameters():
+            for rd in reduce_list:
+                if n.endswith(rd):
+                    tensor.data = tensor.data / link.get_world_size()
+                    link.allreduce(tensor.data)
+                    reduced.append(n)
+        logger.info(f'sync quant params: {reduced}.')
+
+    def eval_quant(self):
         self.model.eval()
         self.evaluate()
+
+    def save_calib(self):
+        save_dict = self.get_dump_dict()
+        save_dict['spacial_name'] = 'calib_model'
+        save_dict['quant'] = 'calib'
+        if env.is_master():
+            self.saver.save(**save_dict)
 
     def save_ptq(self):
         save_dict = self.get_dump_dict()
         save_dict['spacial_name'] = 'ptq_model'
-        save_dict['qat'] = False
+        save_dict['quant'] = 'ptq'
         if env.is_master():
             self.saver.save(**save_dict)
 
-    def save(self, auto_save=None, lns=None):
+    def save_qat(self, auto_save=None, lns=None):
         save_dict = self.get_dump_dict()
         if auto_save is not None:
             save_dict['auto_save'] = auto_save
         if lns is not None:
             save_dict['lns'] = lns
-        save_dict['qat'] = True
+        save_dict['quant'] = 'qat'
         if env.is_master():
             self.saver.save(**save_dict)
 
-    def train(self):
-        if self.config['quant']['ptq_only']:
-            return
+    def train_qat(self):
         enable_quantization(self.model)
         self.model.train()
         for iter_idx in range(self.start_iter, self.max_iter):
@@ -194,5 +276,28 @@ class QuantRunner(BaseRunner):
                 self.save_epoch_ckpt(iter_idx)
             else:
                 if self.is_save(iter_idx):
-                    self.save()
+                    self.save_qat()
             self.lr_scheduler.step()
+
+    def train_ptq(self):
+        logger.info('building data for adaround-like ptq.')
+        cali_data = []
+        for _ in range(self.config['quant']['cali_batch_size']):
+            batch = self.get_batch('train')
+            cali_data.append(batch)
+        from mqbench.advanced_ptq import ptq_reconstruction
+        from easydict import EasyDict
+        self.model.train()
+        self.model = ptq_reconstruction(self.model, cali_data, EasyDict(self.config['quant']['ptq']), self.model_list)
+        self.save_ptq()
+        self.eval_quant()
+
+    def train(self):
+        if self.quant_type == 'calib_only':
+            return
+        elif self.quant_type == 'qat':
+            self.train_qat()
+        elif self.quant_type == 'ptq':
+            self.train_ptq()
+        else:
+            raise NotImplementedError('Not supported quant training method.')
