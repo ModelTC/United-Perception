@@ -380,33 +380,72 @@ class BaseRunner(object):
         self.model.cuda().eval()
         test_loader = self.data_loaders['test']
         all_results_list = []
+        if self.memory_friendly_infer:
+            writer = self._prepare_writer()
         for _ in range(test_loader.get_epoch_size()):
             batch = self.get_batch('test')
             output = self.forward_eval(batch)
             dump_results = test_loader.dataset.dump(output)
-            all_results_list.append(dump_results)
+            if self.memory_friendly_infer:
+                self._results2disk(dump_results, writer)
+            else:
+                all_results_list.append(dump_results)
         barrier()
-        all_device_results_list = all_gather(all_results_list)
+        if not self.memory_friendly_infer:
+            all_device_results_list = all_gather(all_results_list)
+        else:
+            all_device_results_list = []
         return all_device_results_list
+
+    def merge_results(self):
+        prefix = os.path.join(self.results_dir, 'results.txt.rank')
+        world_size = env.world_size
+        merged_file = os.path.join(self.results_dir, 'results.txt')
+        logger.info(f'concat all results into:{merged_file}')
+        merged_fd = open(merged_file, 'w')
+        for rank in range(world_size):
+            res_file = prefix + str(rank)
+            assert os.path.exists(res_file), f'No such file or directory: {res_file}'
+            with open(res_file, 'r') as fin:
+                for line_idx, line in enumerate(fin):
+                    merged_fd.write(line)
+            logger.info(f'merging {res_file} {line_idx+1} results')
+        merged_fd.close()
+        return merged_file
+
+    def _prepare_writer(self):
+        os.makedirs(self.results_dir, exist_ok=True)
+        res_file = os.path.join(self.results_dir, f'results.txt.rank{env.rank}')
+        writer = open(res_file, 'w')
+        return writer
+
+    def _results2disk(self, dump_results, writer):
+        for results in dump_results:
+            writer.write(json.dumps(results, ensure_ascii=False) + '\n')
+        writer.flush()
 
     @torch.no_grad()
     def inference(self):
+        self.memory_friendly_infer = self.config['saver'].get('memory_friendly', False)
         all_device_results_list = self._inference()
         res_file = None
         if env.is_master():
-            if not self.config['saver'].get('save_result', False):
-                return res_file, all_device_results_list
-            shutil.rmtree(self.results_dir, ignore_errors=True)
-            os.makedirs(self.results_dir, exist_ok=True)
-            res_file = os.path.join(self.results_dir, 'results.txt')
-            logger.info(f'saving inference results into {res_file}')
-            writer = open(res_file, 'w')
-            for device_list in all_device_results_list:
-                for results in device_list:
-                    for item in results:
-                        print(json.dumps(item), file=writer)
-                        writer.flush()
-            writer.close()
+            if self.memory_friendly_infer:
+                res_file = self.merge_results()
+            else:
+                if not self.config['saver'].get('save_result', False):
+                    return res_file, all_device_results_list
+                shutil.rmtree(self.results_dir, ignore_errors=True)
+                os.makedirs(self.results_dir, exist_ok=True)
+                res_file = os.path.join(self.results_dir, 'results.txt')
+                logger.info(f'saving inference results into {res_file}')
+                writer = open(res_file, 'w')
+                for device_list in all_device_results_list:
+                    for results in device_list:
+                        for item in results:
+                            print(json.dumps(item), file=writer)
+                            writer.flush()
+                writer.close()
         return res_file, all_device_results_list
 
     @torch.no_grad()
