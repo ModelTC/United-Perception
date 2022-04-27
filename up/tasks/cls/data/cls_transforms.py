@@ -266,4 +266,3 @@ class BatchCutMixup(object):
         if use_cutmix:
             return cutmix(data, self.cutmix_alpha, self.num_classes)
         return mixup(data, self.mixup_alpha, self.num_classes)
-

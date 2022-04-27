@@ -98,6 +98,7 @@ class GroupSyncBatchNorm(link.nn.SyncBatchNorm2d):
                  group_size=None,
                  momentum=0.1,
                  sync_stats=True,
+                 affine=True,
                  var_mode=link.syncbnVarMode_t.L2):
 
         self.group_size = group_size

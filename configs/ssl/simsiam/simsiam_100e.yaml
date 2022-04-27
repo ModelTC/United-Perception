@@ -70,9 +70,10 @@ net: &subnet
           out_layers: [4]     # layer1...4, commonly named Conv2...5
           out_strides: [32]  # tell the strides of output features
           normalize:
-            type: solo_bn
+            type: sync_bn
           initializer:
             method: msra
+          zero_init_residual: True
 
     wrappers:
       - type: simsiam
@@ -80,6 +81,8 @@ net: &subnet
           plane: 2048    # output plance of backbone
           dim: 2048      #dim: feature dimension (default: 2048) 
           pred_dim: 512  #pred_dim: hidden dimension of the predictor (default: 512)
+          normalize:
+            type: sync_bn
 
   - name: post_process
     type: base_ssl_postprocess

@@ -1,7 +1,9 @@
 import torch.nn as nn
+import copy
 from up.utils.general.registry_factory import (
     MODULE_WRAPPER_REGISTRY
 )
+from up.utils.model.normalize import build_norm_layer
 
 
 @MODULE_WRAPPER_REGISTRY.register('simsiam')
@@ -9,7 +11,7 @@ class SimSiam(nn.Module):
     """
     Build a SimSiam model.
     """
-    def __init__(self, base_encoder, plane=2048, dim=2048, pred_dim=512):
+    def __init__(self, base_encoder, plane=2048, dim=2048, pred_dim=512, normalize={'type': 'solo_bn'}):
         """
         dim: feature dimension (default: 2048)
         pred_dim: hidden dimension of the predictor (default: 512)
@@ -18,17 +20,20 @@ class SimSiam(nn.Module):
         self.encoder = base_encoder
         # build a 3-layer projector
         prev_dim = plane
+        normalize_noaffine = copy.deepcopy(normalize)
+        normalize_noaffine.update({'kwargs' : {'affine': False}})
+        print(normalize, normalize_noaffine)
         self.encoder_fc = nn.Sequential(nn.Linear(prev_dim, prev_dim, bias=False),
-                                        nn.BatchNorm1d(prev_dim),
+                                        build_norm_layer(prev_dim, normalize)[1],
                                         nn.ReLU(inplace=True),  # first layer
                                         nn.Linear(prev_dim, prev_dim, bias=False),
-                                        nn.BatchNorm1d(prev_dim),
+                                        build_norm_layer(prev_dim, normalize)[1],
                                         nn.ReLU(inplace=True),  # second layer
                                         nn.Linear(prev_dim, dim, bias=False),
-                                        nn.BatchNorm1d(dim, affine=False))  # output layer
+                                        build_norm_layer(dim, normalize_noaffine)[1])  # output layer
         # build a 2-layer predictor
         self.predictor = nn.Sequential(nn.Linear(dim, pred_dim, bias=False),
-                                       nn.BatchNorm1d(pred_dim),
+                                       build_norm_layer(pred_dim, normalize)[1],
                                        nn.ReLU(inplace=True),  # hidden layer
                                        nn.Linear(pred_dim, dim))  # output layer
 
