@@ -84,7 +84,7 @@ dataset: # Required.
           kwargs:
             image_dir: /mnt/lustre/share/images/val
             color_mode: RGB
-        transformer: [ *torch_resize, *center_crop, *to_tensor, *normalize]
+        transformer: [ *torch_resize, *center_crop, *to_tensor, *normalize ]
         evaluator:
           type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
@@ -107,6 +107,7 @@ trainer: # Required.
   test_freq: 10
   save_freq: 10
   only_save_latest: True
+  is_eval: False
   optimizer:
     type: AdamW
     kwargs:
@@ -117,23 +118,22 @@ trainer: # Required.
       nodecay: ['ndim_is1', '.bias']
       layer_decay:
         type: vit_base
-        value: 0.65
-        base_lr: 0.002
+        value: 0.75
 
   lr_scheduler:
-    warmup_iter: 6260
+    warmup_iter: 5
     warmup_type: linear
     warmup_register_type: no_scale_lr
-    warmup_ratio: 0.0005
+    warmup_ratio: 0.05
     type: CosineLREpochScheduler
     kwargs:
         T_max: 100
         warm_epoch: 5
 
 saver: # Required.
-  save_dir: official_finetune_gn/checkpoints/mae     # dir to save checkpoints
-  pretrain_model: /mnt/lustre/baishihao/UP_Vit/ckpt_t.pth
-  results_dir: official_finetune_gn/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: vit_400e_f/checkpoints/mae     # dir to save checkpoints
+  pretrain_model: /mnt/lustre/baishihao/UP_Vit/vit_400e/ckpt_t.pth
+  results_dir: vit_400e_f/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
@@ -159,9 +159,6 @@ net: &subnet
     type: base_cls_postprocess
     kwargs:
        cls_loss:
-         type: label_smooth_ce
-         kwargs:
-            smooth_ratio: 0.1
-            num_classes: *num_classes
+         type: stce
 
 

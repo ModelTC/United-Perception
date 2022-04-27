@@ -9,13 +9,13 @@ random_resized_crop: &random_resized_crop
 random_horizontal_flip: &random_horizontal_flip
  type: torch_random_horizontal_flip
 
-
-random_augmentation: &random_augmentation
-  type: torch_random_augmentationIncre
-  kwargs:
-    n: 2  # number of augmentation operations
-    m: 9  # magnitude of each operation
-    magnitude_std: 0.5  # standard deviation of magnitude
+pil_color_jitter: &pil_color_jitter
+ type: torch_color_jitter
+ kwargs:
+  brightness: 0.2
+  contrast: 0.2
+  saturation: 0.2
+  hue: 0.1
 
 center_crop: &center_crop
   type: torch_center_crop
@@ -36,12 +36,6 @@ normalize: &normalize
    mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
    std: [0.229, 0.224, 0.225]
 
-rand_erase: &rand_erase
- type: torch_randerase
- kwargs:
-  probability: 0.25
-
-
 dataset: # Required.
   train:
     dataset:
@@ -49,53 +43,47 @@ dataset: # Required.
       kwargs:
         meta_file: /mnt/lustre/share/images/meta/train.txt
         image_reader:
-           type: fs_pillow
-           kwargs:
-             image_dir: /mnt/lustre/share/images/train
-             color_mode: RGB
-        transformer: [*random_resized_crop, *random_horizontal_flip, *random_augmentation, *to_tensor, *normalize, *rand_erase]
+          type: ceph_opencv
+          kwargs:
+            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
+            color_mode: RGB
+            memcached: True
+        transformer: [*random_resized_crop, *random_horizontal_flip, *to_tensor, *normalize]
     batch_sampler:
         type: base
         kwargs:
           sampler:
             type: dist
             kwargs: {}
-          batch_size: 64 # Use 8 GPUs to have a total 1024 batch size
+          batch_size: 512
     dataloader:
         type: cls_base
         kwargs:
           num_workers: 4
           pin_memory: True
-          batch_fn:
-            type: batch_cutmixup
-            kwargs:
-              mixup_alpha: 0.8
-              cutmix_alpha: 1.0
-              switch_prob: 0.5
-              num_classes: *num_classes
-
   test:
     dataset:
       type: cls
       kwargs:
         meta_file: /mnt/lustre/share/images/meta/val.txt
         image_reader:
-          type: fs_pillow
+          type: ceph_opencv
           kwargs:
-            image_dir: /mnt/lustre/share/images/val
+            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/val
             color_mode: RGB
-        transformer: [ *torch_resize, *center_crop, *to_tensor, *normalize]
+            memcached: True
+        transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
         evaluator:
           type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
-            topk: [ 1, 5 ]
+             topk: [1, 5]
     batch_sampler:
       type: base
       kwargs:
         sampler:
           type: dist
-          kwargs: { }
-        batch_size: 64
+          kwargs: {}
+        batch_size: 128
     dataloader:
       type: cls_base
       kwargs:
@@ -103,37 +91,31 @@ dataset: # Required.
         pin_memory: False
 
 trainer: # Required.
-  max_epoch: 100
-  test_freq: 10
-  save_freq: 10
+  max_epoch: 90
+  test_freq: 5
+  save_freq: 5
   only_save_latest: True
-  optimizer:
-    type: AdamW
+  optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
+    type: LARS
     kwargs:
-      lr: 0.002  # 5e-4 * total batch size (1024) / 256
-      weight_decay: 0.05
-      betas: [0.9, 0.95]
-    pconfig:
-      nodecay: ['ndim_is1', '.bias']
-      layer_decay:
-        type: vit_base
-        value: 0.65
-        base_lr: 0.002
-
+      lr: 3.2
+      nesterov: True
+      momentum: 0.9
+      weight_decay: 0
   lr_scheduler:
-    warmup_iter: 6260
+    warmup_iter: 0
     warmup_type: linear
     warmup_register_type: no_scale_lr
-    warmup_ratio: 0.0005
+    warmup_ratio: 0.0001
     type: CosineLREpochScheduler
     kwargs:
-        T_max: 100
-        warm_epoch: 5
+        T_max: 90
+        warm_epoch: 10  
 
 saver: # Required.
-  save_dir: official_finetune_gn/checkpoints/mae     # dir to save checkpoints
-  pretrain_model: /mnt/lustre/baishihao/UP_Vit/ckpt_t.pth
-  results_dir: official_finetune_gn/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: vit_800e_l/checkpoints/mae     # dir to save checkpoints
+  pretrain_model: /mnt/lustre/baishihao/UP_Vit/vit_800e/ckpt_t.pth
+  results_dir: vit_800e_l/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
@@ -141,6 +123,11 @@ hooks:
   - type: auto_save_best
 
 net: &subnet
+  - name: fix_layers
+    type: self   # pass arguments to ModelHelper for functional usages
+    kwargs:
+      freeze_patterns:
+        - "backbone" # prefix
   - name: backbone
     type: vit_base_patch16_224
     kwargs:
@@ -148,13 +135,15 @@ net: &subnet
       dropout: 0.0
       attention_dropout: 0.0
       qkv_bias: True
+      last_norm: False
   - name: head
     type: vit_head
     kwargs:
        num_classes: *num_classes
        in_plane: &head_out_channel 768
        input_feature_idx: -1
-       cls_type: avg_pool
+       cls_type: token
+       bn: True
   - name: post_process
     type: base_cls_postprocess
     kwargs:
@@ -163,5 +152,3 @@ net: &subnet
          kwargs:
             smooth_ratio: 0.1
             num_classes: *num_classes
-
-

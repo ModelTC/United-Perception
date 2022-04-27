@@ -167,7 +167,8 @@ class VisionTransformer(nn.Module):
                  drop_path=0.1,
                  activation='gelu',
                  qkv_bias=True,
-                 out_indices=-1):
+                 out_indices=-1,
+                 last_norm=True):
         r"""
         Arguments:
 
@@ -199,6 +200,7 @@ class VisionTransformer(nn.Module):
         self.num_layers = depth
         self.classifier = classifier
         self.embedding = nn.Conv2d(in_channel, hidden_dim, kernel_size=patch_size, stride=patch_size, padding=0)
+        self.last_norm = last_norm
 
         if classifier == 'token':
             self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, hidden_dim))
@@ -275,7 +277,7 @@ class VisionTransformer(nn.Module):
         for i, layer in enumerate(self.layers):
             x = layer(x)
 
-            if i == len(self.layers) - 1 and self.encoder_norm:
+            if i == len(self.layers) - 1 and self.encoder_norm and self.last_norm:
                 x = self.encoder_norm(x)
 
             if i in self.out_indices:

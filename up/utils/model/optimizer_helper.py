@@ -192,16 +192,16 @@ class BaseOptimizer(object):
 
         # Handel Layer Decay
         if layer_decay is not None:
-            if layer_decay['type'] is 'vit_base':
-                num_layers = len(model.blocks) + 1
-                layer_scales = list(layer_decay ** (num_layers - i) for i in range(num_layers + 1))
+            if layer_decay['type'] == 'vit_base':
+                num_layers = model.backbone.num_layers
+                layer_scales = list(layer_decay['value'] ** (num_layers - i) for i in range(num_layers + 1))
                 for n, p in model.named_parameters():
                     if not p.requires_grad:
                         continue
                     layer_id = get_layer_id_for_vit(n, num_layers)
-                    param_groups_dict[p].update({'lr_scale': layer_scales[layer_id]})
+                    param_groups_dict[p].update({'lr': layer_scales[layer_id] * layer_decay['base_lr']})
             else:
-                assert NotImplementedError, f"Not support for layer decay type: {layer_decay['type']}"
+                raise NotImplementedError(f"Not support for layer decay type: {layer_decay['type']}")
 
         # Translate param_groups_dict back to param_groups which can be used in torch.optim
         param_groups = []

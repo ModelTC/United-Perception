@@ -168,10 +168,14 @@ class ViTHead(BaseClsHead):
                  use_pool=False,
                  dropout=None,
                  cls_type='token',
-                 representation_size=None):
+                 representation_size=None,
+                 bn=None):
         super(ViTHead, self).__init__(num_classes, in_plane, input_feature_idx, use_pool, dropout)
         self.cls_type = cls_type
         self.representation_size = representation_size
+        self.bn = bn
+        if self.bn is not None:
+            self.bn = torch.nn.BatchNorm1d(in_plane, affine=False, eps=1e-6)
         # if representation_size is not None
         # a pre-logits layer is inserted before classification head
         # it means transformer will be trained from scratch
@@ -183,7 +187,7 @@ class ViTHead(BaseClsHead):
         self._init_weights()
 
     def get_pool_output(self, x):
-        x = torch.mean(x, dim=1, keepdim=False)
+        x = x.reshape(x.shape[0], x.shape[1], -1).mean(dim=-1)
         return x
 
     def forward_net(self, x):
@@ -191,12 +195,11 @@ class ViTHead(BaseClsHead):
             x = x['features'][self.input_feature_idx]
         if self.cls_type == 'token':
             x = x[1]
-        elif self.cls_type == 'mae_pool':
-            x = x[0]
-            x = x.reshape(x.shape[0], x.shape[1], -1).mean(dim=-1)
         else:
             x = x[0]
-            self.get_pool_output(x)
+            x = self.get_pool_output(x)
+        if self.bn is not None:
+            x = self.bn(x)
         if self.representation_size is not None:
             x = self.tanh(self.pre_logits(x))
         logits = self.get_logits(x)

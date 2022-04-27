@@ -315,6 +315,8 @@ class BaseRunner(object):
         max_epoch = cfg_trainer.get('max_epoch', 0)
         self.max_iter = cfg_trainer.get('max_iter', int(max_epoch * self.train_epoch_size))
         logger.info(f"max_iter: {self.max_iter}")
+        self.is_eval = cfg_trainer.get('is_eval', True)
+        logger.info(f"is_eval: {self.is_eval}")
 
     def prepare_dist_model(self):
         if env.distributed:
@@ -575,6 +577,8 @@ class BaseRunner(object):
         return batch
 
     def is_test(self, iter_idx):
+        if not self.is_eval:
+            return False
         cur_iter = iter_idx + 1
         if cur_iter == self.max_iter:
             return True

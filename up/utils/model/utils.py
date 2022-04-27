@@ -52,12 +52,12 @@ def get_layer_id_for_vit(name, num_layers):
     Assign a parameter with its layer id
     Following BEiT: https://github.com/microsoft/unilm/blob/master/beit/optim_factory.py#L33
     """
-    if name in ['cls_token', 'pos_embed']:
+    if name in ['backbone.cls_token', 'backbone.pos_embedding']:
         return 0
-    elif name.startswith('patch_embed'):
+    elif name.startswith('backbone.embedding'):
         return 0
-    elif name.startswith('blocks'):
-        return int(name.split('.')[1]) + 1
+    elif name.startswith('backbone.layers.encoder'):
+        return int(name.split('.')[2].split('_')[-1]) + 1
     else:
         return num_layers
 

@@ -43,7 +43,7 @@ dataset: # Required.
           pin_memory: True
 
 trainer: # Required.
-  max_epoch: 400
+  max_epoch: 800
   test_freq: 999999
   save_freq: 10
   only_save_latest: True
@@ -63,18 +63,18 @@ trainer: # Required.
         weight_decay: 0.0
 
   lr_scheduler:
-    warmup_iter: 6255
+    warmup_iter: 12510
     warmup_type: linear
     warmup_register_type: no_scale_lr
     warmup_ratio: 0.05
     type: CosineLREpochScheduler
     kwargs:
-        T_max: 400
-        warm_epoch: 20
+        T_max: 800
+        warm_epoch: 40
 
 saver: # Required.
-  save_dir: MAE_400/checkpoints/mae     # dir to save checkpoints
-  results_dir: MAE_400/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: MAE_800/checkpoints/mae     # dir to save checkpoints
+  results_dir: MAE_800/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
