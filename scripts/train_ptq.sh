@@ -3,13 +3,11 @@
 # cmd example: sh train_quant.sh 16 ToolChain
 
 UP=/path to up
-MQB=/path to mqbench
+MQB=/path to mqbench # github mqbench commit id after 6c222c40d1a176df78bcbf4d334698185f7cd8d8
 
-cfg=$UP/configs/det/retinanet/retinanet-r18-improve_quant_trt.yaml
+cfg=$UP/configs/det/faster_rcnn/faster_rcnn_r18_FPN_2x_quant_qdrop.yaml
 
-
-jobname=quant
-
+jobname=quant_ptq
 
 export PYTHONPATH=$UP:$PYTHONPATH
 export PYTHONPATH=$MQB:$PYTHONPATH
@@ -25,4 +23,4 @@ spring.submit run -n$1 --ntasks-per-node=$g \
 "nohup python -u -m up train \
   --config=$cfg \
   --display=10 \
-  > train_log_quant.txt 2>&1 &"
+  > train_log_ptq.txt 2>&1 &"
