@@ -41,12 +41,12 @@ class MultiTaskRunner(BaseRunner):
 
         self._multitask_debug = cfg.get('debug', False)
 
-    def set_task_idx(self, model_idx, task_idx=None):
+    def _set_task_idx(self, model, model_idx, task_idx=None):
         # model_idx: split bn
         # task_idx: module idx, to split data
         if self._multitask_debug:
             logger.info(f'model_idx: {model_idx}, task_idx: {task_idx}')
-        for _, m in self.model.named_modules():
+        for _, m in model.named_modules():
             if hasattr(m, 'set_task_idx'):
                 m.set_task_idx(model_idx)
 
@@ -56,6 +56,16 @@ class MultiTaskRunner(BaseRunner):
 
             if self._multitask_debug and hasattr(m, 'set_task_idx'):
                 logger.info(f'{_}: {m.task_idx}')
+
+    def set_task_idx(self, model_idx, task_idx=None):
+        if self._multitask_debug:
+            logger.info('setting default model')
+
+        self._set_task_idx(self.model, model_idx, task_idx)
+        if self.ema is not None:
+            if self._multitask_debug:
+                logger.info('setting ema model')
+            self._set_task_idx(self.ema.model, model_idx, task_idx)
 
     def forward_train_single_task(self, batch, idx):
         if self._train_model_idxs:
