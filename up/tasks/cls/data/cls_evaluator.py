@@ -19,9 +19,8 @@ class ImageNetEvaluator(Evaluator):
                  bad_case_analyse=False,
                  analysis_json=None,
                  image_reader=None,
-                 class_names=None,
-                 eval_class_idxs=[],
-                 num_classes=None):
+                 class_names=[],
+                 eval_class_idxs=[]):
         super(ImageNetEvaluator, self).__init__()
         self.topk = topk
         self.bad_case_analyse = bad_case_analyse
@@ -30,13 +29,8 @@ class ImageNetEvaluator(Evaluator):
             self.image_reader = build_image_reader(image_reader)
         else:
             self.image_reader = None
-        self.num_classes = num_classes
-        if len(eval_class_idxs) == 0:
-            eval_class_idxs = list(range(0, num_classes))
         self.eval_class_idxs = eval_class_idxs
         self.class_names = class_names
-        if self.class_names is None:
-            self.class_names = list(range(0, num_classes))
 
     def load_res(self, res_file, res=None):
         res_dict = {}
