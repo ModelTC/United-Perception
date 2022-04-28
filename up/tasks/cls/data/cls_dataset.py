@@ -1,6 +1,5 @@
 import json
 import numpy as np
-import math
 from up.data.datasets.base_dataset import BaseDataset
 from up.utils.general.registry_factory import DATASET_REGISTRY
 from easydict import EasyDict
@@ -9,6 +8,7 @@ from up.utils.general.petrel_helper import PetrelHelper
 from up.data.data_utils import is_numpy_image
 from up.utils.env.dist_helper import env
 from up.utils.general.registry import Registry
+from up.data.data_utils import count_dataset_size, get_rank_indices
 
 __all__ = ['ClsDataset']
 
@@ -215,13 +215,15 @@ class RankClsDataset(ClsDataset):
                  meta_type='imagenet',
                  parser_info={},
                  image_type='pil',
-                 reload_cfg={}):
+                 reload_cfg={},
+                 random=True):
         self.mini_epoch = reload_cfg.get('mini_epoch', 1)
         self.seed = reload_cfg.get('seed', 0)
         self.mini_epoch_idx = reload_cfg.get('mini_epoch_idx', 0)
         self.group = reload_cfg.get('group', 1)
         self.world_size = env.world_size
         self.rank = env.rank
+        self.random = random
         super(RankClsDataset, self).__init__(meta_file,
                                              image_reader,
                                              transformer,
@@ -230,66 +232,21 @@ class RankClsDataset(ClsDataset):
                                              parser_info,
                                              image_type)
 
-    def count_dataset_size(self, meta_files):
-        from itertools import (takewhile, repeat)
-        buffer = 1024 * 1024 * 8
-        self.dataset_sizes = []
-        for meta_file in meta_files:
-            meta_size = 0
-            with PetrelHelper.open(meta_file) as f:
-                try:
-                    buf_gen = takewhile(lambda x: x, (f.read(buffer) for _ in repeat(None)))
-                    size = sum(buf.count('\n') for buf in buf_gen)
-                except Exception as e:  # noqa
-                    size = 0
-                    for _ in f:
-                        size += 1
-                meta_size += size
-            self.dataset_sizes.append(meta_size)
-        return np.array(self.dataset_sizes).sum()
-
-    def get_rank_indices(self, meta_files):
-        dataset_size = self.count_dataset_size(meta_files)
-        indices = self.get_group_random_indices(dataset_size, group=self.group)
-        rank_num_samples = int(math.ceil(dataset_size * 1.0 / (self.world_size * self.mini_epoch)))
-        total_size = rank_num_samples * self.world_size * self.mini_epoch
-        indices += indices[:(total_size - len(indices))]
-        offset = rank_num_samples * self.rank
-        mini_epoch_offset_begin = self.mini_epoch_idx * rank_num_samples * self.world_size
-        mini_epoch_offset_end = (self.mini_epoch_idx + 1) * rank_num_samples * self.world_size
-        rank_indices = indices[mini_epoch_offset_begin:mini_epoch_offset_end][offset:offset + rank_num_samples]
-        assert len(rank_indices) == rank_num_samples
-        return rank_indices, rank_num_samples
-
-    def get_group_random_indices(self, dataset_size, group=1):
-        magic_num = 10000
-        indices = []
-        temp_indices = []
-        mini_dataset_size = int(math.ceil(dataset_size * 1.0 / group))
-        group = math.ceil(dataset_size * 1.0 / mini_dataset_size)
-        last_size = dataset_size - mini_dataset_size * (group - 1)
-        for i in range(group):
-            if i <= group - 2:
-                cur_size = mini_dataset_size
-            else:
-                cur_size = last_size
-            np.random.seed(self.seed + i + magic_num)
-            _indices = np.random.permutation(cur_size).astype(np.int32)
-            _indices += i * mini_dataset_size
-            temp_indices.append(_indices.tolist())
-        np.random.seed(self.seed + magic_num)
-        for i in np.random.permutation(group):
-            indices.extend(temp_indices[i])
-        return indices
-
     def parse_metas(self):
-        rank_indices, rank_num_samples = self.get_rank_indices(self.meta_file)
+        dataset_sizes = count_dataset_size(self.meta_file)
+        rank_indices, rank_num_samples = get_rank_indices(dataset_sizes,
+                                                          self.group,
+                                                          self.world_size,
+                                                          self.mini_epoch,
+                                                          self.rank,
+                                                          self.mini_epoch_idx,
+                                                          self.random)
         rank_indices = set(rank_indices)
         self.metas = []
         start_indexs = [0]
         # acc sum
-        for idx in range(1, len(self.dataset_sizes)):
-            start_indexs.append(start_indexs[idx - 1] + self.dataset_sizes[idx - 1])
+        for idx in range(1, len(dataset_sizes)):
+            start_indexs.append(start_indexs[idx - 1] + dataset_sizes[idx - 1])
         for idx, meta_file in enumerate(self.meta_file):
             self.meta_parser[idx].parse(meta_file, idx, self.metas, start_indexs[idx], rank_indices)
         if len(rank_indices) != rank_num_samples:
