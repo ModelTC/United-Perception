@@ -354,6 +354,7 @@ class RankCustomDataset(CustomDataset):
                                                           self.mini_epoch,
                                                           self.rank,
                                                           self.mini_epoch_idx,
+                                                          self.seed,
                                                           self.random)
         rank_indices = set(rank_indices)
         _index = 0

@@ -83,10 +83,10 @@ def count_dataset_size(meta_files):
     return dataset_sizes
 
 
-def get_rank_indices(dataset_sizes, group=1, world_size=1, mini_epoch=1, rank=0, mini_epoch_idx=0, random=True):
+def get_rank_indices(dataset_sizes, group=1, world_size=1, mini_epoch=1, rank=0, mini_epoch_idx=0, seed=0, random=True):
     dataset_size = np.array(dataset_sizes).sum()
     if random:
-        indices = get_group_random_indices(dataset_size, group=group)
+        indices = get_group_random_indices(dataset_size, group=group, seed=seed)
     else:
         return get_test_rank_indices(dataset_size, world_size, rank)
     rank_num_samples = int(math.ceil(dataset_size * 1.0 / (world_size * mini_epoch)))
