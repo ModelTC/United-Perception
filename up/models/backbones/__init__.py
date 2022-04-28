@@ -62,6 +62,11 @@ from .moco_vit import (moco_vit_small,  # noqa: F401
                        moco_vit_conv_small,
                        moco_vit_conv_base)
 
+from .mae_vit import (MaskedAutoencoderViT,  # noqa: F401
+                      mae_vit_base_patch16_dec512d8b,
+                      mae_vit_large_patch16_dec512d8b,
+                      mae_vit_huge_patch14_dec512d8b)
+
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 imported_vars = list(globals().items())

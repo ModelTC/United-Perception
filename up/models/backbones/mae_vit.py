@@ -1,23 +1,10 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
 
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-# --------------------------------------------------------
-# References:
-# timm: https://github.com/rwightman/pytorch-image-models/tree/master/timm
-# DeiT: https://github.com/facebookresearch/deit
-# --------------------------------------------------------
-
-from functools import partial
 
 import torch
 import torch.nn as nn
-
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from up.models.backbones.vision_transformer import Encoder1DBlock as Block
-
 from up.utils import get_2d_sincos_pos_embed
+from functools import partial
 
 __all__ = ['MaskedAutoencoderViT',
            'mae_vit_base_patch16_dec512d8b',
@@ -52,14 +39,13 @@ class PatchEmbed(nn.Module):
         return x
 
 
-@MODULE_ZOO_REGISTRY.register('MAE')
 class MaskedAutoencoderViT(nn.Module):
     """ Masked Autoencoder with VisionTransformer backbone
     """
     def __init__(self, img_size=224, patch_size=16, in_chans=3,
                  embed_dim=1024, depth=24, num_heads=16,
                  decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16,
-                 mlp_ratio=4., norm_layer=partial(nn.LayerNorm, eps=1e-6), norm_pix_loss=False, mask_ratio=0.75):
+                 mlp_ratio=4., norm_layer=partial(nn.LayerNorm, eps=1e-6), mask_ratio=0.75):
         super().__init__()
 
         # --------------------------------------------------------------------------
@@ -96,7 +82,6 @@ class MaskedAutoencoderViT(nn.Module):
         self.decoder_pred = nn.Linear(decoder_embed_dim, patch_size ** 2 * in_chans, bias=True)  # decoder to patch
         # --------------------------------------------------------------------------
 
-        self.norm_pix_loss = norm_pix_loss
         self.mask_ratio = mask_ratio
         self.initialize_weights()
 
@@ -232,32 +217,12 @@ class MaskedAutoencoderViT(nn.Module):
 
         return x
 
-    def forward_loss(self, imgs, pred, mask):
-        """
-        imgs: [N, 3, H, W]
-        pred: [N, L, p*p*3]
-        mask: [N, L], 0 is keep, 1 is remove,
-        """
-        target = self.patchify(imgs)
-        if self.norm_pix_loss:
-            mean = target.mean(dim=-1, keepdim=True)
-            var = target.var(dim=-1, keepdim=True)
-            target = (target - mean) / (var + 1.e-6)**.5
-
-        loss = (pred - target) ** 2
-        loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
-
-        loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
-        return loss
-
     def forward(self, input):
         if isinstance(input, dict):
             input = input['image']
         latent, mask, ids_restore = self.forward_encoder(input, self.mask_ratio)
         pred = self.forward_decoder(latent, ids_restore)  # [N, L, p*p*3]
-        loss = self.forward_loss(input, pred, mask)
-        return {'sum.loss': loss}
-        # return {'loss': loss, 'pred': pred, 'mask': mask}
+        return {'pred': pred, 'mask': mask, 'target': self.patchify(input)}
 
 
 def mae_vit_base_patch16_dec512d8b(**kwargs):

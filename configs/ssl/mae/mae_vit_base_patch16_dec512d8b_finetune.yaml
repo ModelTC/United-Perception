@@ -163,5 +163,3 @@ net: &subnet
          kwargs:
             smooth_ratio: 0.1
             num_classes: *num_classes
-
-

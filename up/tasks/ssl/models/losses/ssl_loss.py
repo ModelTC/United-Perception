@@ -75,3 +75,31 @@ class SimSiamLoss(_Loss):
         loss = -(self.cos_loss(p1, z2).mean() + self.cos_loss(p2, z1).mean()) * 0.5
 
         return loss * self.loss_weight
+
+
+@LOSSES_REGISTRY.register('mae_loss')
+class MAELoss(_Loss):
+    def __init__(self, loss_weight=1.0, norm_pix_loss=False):
+        super(MAELoss, self).__init__()
+        self.norm_pix_loss = norm_pix_loss
+        self.loss_weight = loss_weight
+
+    def forward(self, input):
+        """
+        target: [N, L, p*p*3]
+        pred: [N, L, p*p*3]
+        mask: [N, L], 0 is keep, 1 is remove,
+        """
+        target = input['target']
+        pred = input['pred']
+        mask = input['mask']
+        if self.norm_pix_loss:
+            mean = target.mean(dim=-1, keepdim=True)
+            var = target.var(dim=-1, keepdim=True)
+            target = (target - mean) / (var + 1.e-6)**.5
+
+        loss = (pred - target) ** 2
+        loss = loss.mean(dim=-1)  # [N, L], mean loss per patch
+
+        loss = (loss * mask).sum() / mask.sum()  # mean loss on removed patches
+        return loss * self.loss_weight
