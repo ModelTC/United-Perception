@@ -32,6 +32,7 @@ trainer: # Required.
   max_epoch: 200
   test_freq: 500
   save_freq: 5
+  is_eval: False
   only_save_latest: True
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
