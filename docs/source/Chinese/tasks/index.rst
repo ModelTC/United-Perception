@@ -13,6 +13,7 @@
    tasks/cls
    tasks/det
    tasks/distill
+   tasks/ssl
    tasks/seg
    tasks/keypoints
    tasks/multitask

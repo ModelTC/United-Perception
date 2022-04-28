@@ -13,6 +13,7 @@ This section introduces the supported sub-tasks and related special modules of U
    tasks/cls
    tasks/det
    tasks/distill
+   tasks/ssl
    tasks/seg
    tasks/keypoints
    tasks/multitask

@@ -35,3 +35,8 @@ Distillation
 ------------
 
 v0.1.0 基准 `distillation v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/distillation.md>`_
+
+SSL
+------------
+
+v0.1.0 基准 `self-supervised learning v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/ssl.md>`_
