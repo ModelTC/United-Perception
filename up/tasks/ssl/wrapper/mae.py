@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from up.utils.general.registry_factory import (
     MODULE_WRAPPER_REGISTRY
