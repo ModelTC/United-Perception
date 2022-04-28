@@ -91,6 +91,7 @@ net: &subnet
           dim: 128
           K: 65536
           mlp: True
+          T: 0.2
 
   - name: post_process
     type: base_ssl_postprocess
