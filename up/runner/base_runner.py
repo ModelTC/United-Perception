@@ -394,7 +394,7 @@ class BaseRunner(object):
         if not self.memory_friendly_infer:
             all_device_results_list = all_gather(all_results_list)
         else:
-            all_device_results_list = []
+            all_device_results_list = None
         return all_device_results_list
 
     def merge_results(self):
