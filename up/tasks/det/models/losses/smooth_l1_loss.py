@@ -43,6 +43,8 @@ class SmoothL1Loss(BaseLoss):
         if code_weights is not None:
             self.code_weights = np.array(code_weights, dtype=np.float32)
             self.code_weights = torch.from_numpy(self.code_weights).cuda()
+        else:
+            self.code_weights = None
 
     def forward(self, input, target, reduction, normalizer=None, weights=None):
         return smooth_l1_loss(input, target, self.sigma, reduction, normalizer, self.code_weights, weights)
