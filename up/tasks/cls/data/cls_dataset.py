@@ -130,8 +130,9 @@ class ClsDataset(BaseDataset):
         self.metas = []
         for idx, meta_file in enumerate(self.meta_file):
             self.meta_parser[idx].parse(meta_file, idx, self.metas)
-        rand_idx = np.random.choice(np.arange(len(self.metas)), int(len(self.metas) * self.fraction), replace=False)
-        self.metas = np.array(self.metas)[rand_idx].tolist()
+        if self.fraction != 1.:
+            rand_idx = np.random.choice(np.arange(len(self.metas)), int(len(self.metas) * self.fraction), replace=False)
+            self.metas = np.array(self.metas)[rand_idx].tolist()
 
     def __len__(self):
         return len(self.metas)
