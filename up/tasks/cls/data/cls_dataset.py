@@ -107,13 +107,15 @@ class ClsDataset(BaseDataset):
                  evaluator=None,
                  meta_type='imagenet',
                  parser_info={},
-                 image_type='pil'):
+                 image_type='pil',
+                 fraction=1.0):
         super(ClsDataset, self).__init__(meta_file,
                                          image_reader,
                                          transformer,
                                          evaluator)
         self.meta_type = meta_type
         self.image_type = image_type
+        self.fraction = fraction
         self._list_check()
         self.meta_parser = [CLS_PARSER_REGISTRY[m_type](**parser_info) for m_type in self.meta_type]
         self.parse_metas()
@@ -128,6 +130,8 @@ class ClsDataset(BaseDataset):
         self.metas = []
         for idx, meta_file in enumerate(self.meta_file):
             self.meta_parser[idx].parse(meta_file, idx, self.metas)
+        rand_idx = np.random.choice(np.arange(len(self.metas)), int(len(self.metas) * self.fraction), replace=False)
+        self.metas = np.array(self.metas)[rand_idx].tolist()
 
     def __len__(self):
         return len(self.metas)
