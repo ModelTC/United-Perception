@@ -25,7 +25,7 @@ The following snippet shows an example config for pretrain task.
         multi_model:  # support multiple backbones
           - name: encoder_q
             type: resnet50  # type of backbone (found in cls module)
-            kwargs:  # 其他参数
+            kwargs:  # other hyperparameters
               frozen_layers: []
               ...
           - name: encoder_k
