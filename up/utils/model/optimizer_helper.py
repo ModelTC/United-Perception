@@ -81,7 +81,7 @@ class BaseOptimizer(object):
             'ln_w': torch.nn.LayerNorm,
             'linear_w': torch.nn.Linear,
             'linear_b': torch.nn.Linear
-        }            
+        }
         # Handel Layer Decay
         if layer_decay is not None:
             if layer_decay['type'] == 'vit_base':
