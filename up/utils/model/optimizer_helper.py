@@ -12,7 +12,6 @@ import torch
 from up.utils.model import optim
 from ..general.log_helper import default_logger as logger
 from ..general.registry_factory import OPTIMIZER_REGISTRY
-from collections import defaultdict
 from up.utils.model.utils import get_layer_id_for_vit
 
 
@@ -83,7 +82,6 @@ class BaseOptimizer(object):
             'linear_w': torch.nn.Linear,
             'linear_b': torch.nn.Linear
         }            
-
         # Handel Layer Decay
         if layer_decay is not None:
             if layer_decay['type'] == 'vit_base':
@@ -95,7 +93,7 @@ class BaseOptimizer(object):
         for group_keys in config.keys():
             if group_keys not in pgroup:
                 pgroup[group_keys] = []
-        
+
         for name, m in model.named_modules():
             for group_keys in config.keys():
                 if isinstance(m, key2type[group_keys]):
@@ -111,7 +109,7 @@ class BaseOptimizer(object):
             if layer_decay is not None:
                 layer_id = get_layer_id_for_vit(name, num_layers)
                 param_groups_dict[p].update({'lr': layer_scales[layer_id] * layer_decay['base_lr']})
-            
+
             for key_nodecay in nodecay:
                 if key_nodecay == 'ndim_is1':
                     if p.ndim == 1:
