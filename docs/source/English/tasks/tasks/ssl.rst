@@ -56,6 +56,15 @@ The following snippet shows an example config for finetune task:
 
     .. code-block:: yaml
 
+        dataset:
+          type: cls
+          kwargs:
+            meta_file: ...
+            image_reader:
+               ...
+            transformer: ...
+            fraction: 0.1  # label fraction for finetuning
+
         saver:
           save_dir: moco_v1_linear_dist8/checkpoints/cls_std
           results_dir: moco_v1_linear_dist8/results_dir/cls_std
