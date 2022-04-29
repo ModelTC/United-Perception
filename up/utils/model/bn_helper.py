@@ -5,21 +5,11 @@ from torch.nn.modules._functions import SyncBatchNorm as sync_batch_norm
 
 from ..env.dist_helper import env
 from up.utils.general.log_helper import default_logger as logger
-
+from up.utils.env.dist_helper import simple_group_split
 try:
     import spring.linklink as link
 except:  # noqa
     from up.utils.general.fake_linklink import link
-
-
-def simple_group_split(world_size, rank, num_groups):
-    groups = []
-    rank_list = np.split(np.arange(world_size), num_groups)
-    rank_list = [list(map(int, x)) for x in rank_list]
-    for i in range(num_groups):
-        groups.append(link.new_group(ranks=rank_list[i]))
-    group_size = world_size // num_groups
-    return groups[rank // group_size]
 
 
 class FrozenBatchNorm2d(torch.nn.BatchNorm2d):

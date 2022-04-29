@@ -115,12 +115,18 @@ trainer: # Required.
       lr: 0.001
       weight_decay: 0.05
     pconfig:
-        ln_b:
+        ln:
+          type: bias
+          kwargs:
             weight_decay: 0.0
-        ln_w:
+        ln:
+          type: weight
+          kwargs:
             weight_decay: 0.0
-        linear_b:
-            weight_decay: 0.0
+        linear:
+            type: bias
+            kwargs:
+              weight_decay: 0.0
         nodecay: ['relative_position_bias_table']
   lr_scheduler:
     warmup_iter: 25020

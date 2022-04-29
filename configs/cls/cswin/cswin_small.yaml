@@ -125,6 +125,20 @@ trainer: # Required.
     kwargs:
       lr: 0.002
       weight_decay: 0.05
+    pconfig:
+      ln_b:
+        type: bias
+        kwargs:
+          weight_decay: 0.0
+      ln_w:
+        type: weight
+        kwargs:
+          weight_decay: 0.0
+      linear_b:
+        type: bias
+        kwargs:
+          weight_decay: 0.0
+
   lr_scheduler:
     warmup_iter: 25040
     warmup_type: linear

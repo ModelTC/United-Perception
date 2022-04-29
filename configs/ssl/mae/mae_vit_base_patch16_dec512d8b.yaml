@@ -56,11 +56,17 @@ trainer: # Required.
       betas: [0.9, 0.95]
     pconfig:
       ln_b:
-        weight_decay: 0.0
+        type: bias
+        kwargs:
+          weight_decay: 0.0
       ln_w:
-        weight_decay: 0.0
+        type: weight
+        kwargs:
+          weight_decay: 0.0
       linear_b:
-        weight_decay: 0.0
+        type: bias
+        kwargs:
+          weight_decay: 0.0
 
   lr_scheduler:
     warmup_iter: 6255

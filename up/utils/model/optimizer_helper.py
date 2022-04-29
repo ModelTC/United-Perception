@@ -56,7 +56,6 @@ class BaseOptimizer(object):
         pconfig = cfg_optim.get('pconfig', None)
         if pconfig is not None:
             return self.param_group_all(self.model, pconfig)
-        # trainable_params = [{"params": []}] + [{"params": [], "lr": spg['lr']} for spg in special_param_group]
         trainable_params = [{"params": []}]
         for spg in special_param_group:
             spg.update({'params': []})
@@ -72,142 +71,65 @@ class BaseOptimizer(object):
         return trainable_params
 
     def param_group_all(self, model, config):
-        pgroup_normal = []
-        pgroup_nodecay = []
-        pgroup = {'bn_w': [], 'bn_b': [], 'conv_b': [], 'linear_b': []}
-        names = {'bn_w': [], 'bn_b': [], 'conv_b': [], 'linear_b': []}
-        if 'conv_dw_w' in config:
-            pgroup['conv_dw_w'] = []
-            names['conv_dw_w'] = []
-        if 'conv_dw_b' in config:
-            pgroup['conv_dw_b'] = []
-            names['conv_dw_b'] = []
-        if 'conv_dense_w' in config:
-            pgroup['conv_dense_w'] = []
-            names['conv_dense_w'] = []
-        if 'conv_dense_b' in config:
-            pgroup['conv_dense_b'] = []
-            names['conv_dense_b'] = []
-        if 'linear_w' in config:
-            pgroup['linear_w'] = []
-            names['linear_w'] = []
-        if 'ln_b' in config:
-            pgroup['ln_b'] = []
-        if 'ln_w' in config:
-            pgroup['ln_w'] = []
-
-        nodecay = config.get('nodecay', [])
-        layer_decay = config.get('layer_decay', None)
-
-        names_all = []
-        type2num = defaultdict(lambda: 0)
-        for name, m in model.named_modules():
-            if isinstance(m, torch.nn.Conv2d):
-                if m.bias is not None:
-                    if 'conv_dw_b' in pgroup and m.groups == m.in_channels:
-                        pgroup['conv_dw_b'].append(m.bias)
-                        names_all.append(name + '.bias')
-                        names['conv_dw_b'].append(name + '.bias')
-                        type2num[m.__class__.__name__ + '.bias(dw)'] += 1
-                    elif 'conv_dense_b' in pgroup and m.groups == 1:
-                        pgroup['conv_dense_b'].append(m.bias)
-                        names_all.append(name + '.bias')
-                        names['conv_dense_b'].append(name + '.bias')
-                        type2num[m.__class__.__name__ + '.bias(dense)'] += 1
-                    else:
-                        pgroup['conv_b'].append(m.bias)
-                        names_all.append(name + '.bias')
-                        names['conv_b'].append(name + '.bias')
-                        type2num[m.__class__.__name__ + '.bias'] += 1
-                if 'conv_dw_w' in pgroup and m.groups == m.in_channels:
-                    pgroup['conv_dw_w'].append(m.weight)
-                    names_all.append(name + '.weight')
-                    names['conv_dw_w'].append(name + '.weight')
-                    type2num[m.__class__.__name__ + '.weight(dw)'] += 1
-                elif 'conv_dense_w' in pgroup and m.groups == 1:
-                    pgroup['conv_dense_w'].append(m.weight)
-                    names_all.append(name + '.weight')
-                    names['conv_dense_w'].append(name + '.weight')
-                    type2num[m.__class__.__name__ + '.weight(dense)'] += 1
-
-            elif isinstance(m, torch.nn.Linear):
-                if m.bias is not None and 'linear_b' in pgroup:
-                    pgroup['linear_b'].append(m.bias)
-                    names_all.append(name + '.bias')
-                    names['linear_b'].append(name + '.bias')
-                    type2num[m.__class__.__name__ + '.bias'] += 1
-                if 'linear_w' in pgroup:
-                    pgroup['linear_w'].append(m.weight)
-                    names_all.append(name + '.weight')
-                    names['linear_w'].append(name + '.weight')
-                    type2num[m.__class__.__name__ + '.weight'] += 1
-            elif (isinstance(m, torch.nn.BatchNorm2d)
-                  or isinstance(m, torch.nn.BatchNorm1d)):
-                if m.weight is not None and 'bn_w' in pgroup:
-                    pgroup['bn_w'].append(m.weight)
-                    names_all.append(name + '.weight')
-                    names['bn_w'].append(name + '.weight')
-                    type2num[m.__class__.__name__ + '.weight'] += 1
-                if m.bias is not None and 'bn_b' in pgroup:
-                    pgroup['bn_b'].append(m.bias)
-                    names_all.append(name + '.bias')
-                    names['bn_b'].append(name + '.bias')
-                    type2num[m.__class__.__name__ + '.bias'] += 1
-            elif isinstance(m, torch.nn.LayerNorm):
-                if m.weight is not None and 'ln_w' in pgroup:
-                    pgroup['ln_w'].append(m.weight)
-                    names_all.append(name + '.weight')
-                if m.bias is not None and 'ln_b' in pgroup:
-                    pgroup['ln_b'].append(m.bias)
-                    names_all.append(name + '.bias')
-
-        for name, p in model.named_parameters():
-            nodecay_sign = 0
-            for key_nodecay in nodecay:
-                if key_nodecay == 'ndim_is1':
-                    if p.ndim == 1:
-                        pgroup_nodecay.append(p)
-                        nodecay_sign = 1
-                        break
-                elif key_nodecay in name:
-                    pgroup_nodecay.append(p)
-                    nodecay_sign = 1
-                    break
-            if not nodecay_sign:
-                pgroup_normal.append(p)
-
+        pgroup = {}
         param_groups_dict = {}
-        for p in pgroup_normal:
-            param_groups_dict[p] = {}
-        for p in pgroup_nodecay:
-            param_groups_dict[p] = {'weight_decay': 0.0}
-        # param_groups_dict = [{'params': pgroup_normal}, {'params': pgroup_nodecay, 'weight_decay': 0.0}]
-        for ptype in pgroup.keys():
-            if ptype in config.keys():
-                for p in pgroup[ptype]:
-                    param_groups_dict[p].update(dict(config[ptype]))
-            else:
-                for p in pgroup[ptype]:
-                    param_groups_dict[p].update({})
+        nodecay = config.pop('nodecay', [])
+        layer_decay = config.pop('layer_decay', None)
+        key2type = {
+            'bn_b': torch.nn.BatchNorm2d,
+            'bn_w': torch.nn.BatchNorm2d,
+            'ln_b': torch.nn.LayerNorm,
+            'ln_w': torch.nn.LayerNorm,
+            'linear_w': torch.nn.Linear,
+            'linear_b': torch.nn.Linear
+        }            
 
         # Handel Layer Decay
         if layer_decay is not None:
             if layer_decay['type'] == 'vit_base':
                 num_layers = model.backbone.num_layers
                 layer_scales = list(layer_decay['value'] ** (num_layers - i) for i in range(num_layers + 1))
-                for n, p in model.named_parameters():
-                    if not p.requires_grad:
-                        continue
-                    layer_id = get_layer_id_for_vit(n, num_layers)
-                    param_groups_dict[p].update({'lr': layer_scales[layer_id] * layer_decay['base_lr']})
             else:
                 raise NotImplementedError(f"Not support for layer decay type: {layer_decay['type']}")
+
+        for group_keys in config.keys():
+            if group_keys not in pgroup:
+                pgroup[group_keys] = []
+        
+        for name, m in model.named_modules():
+            for group_keys in config.keys():
+                if isinstance(m, key2type[group_keys]):
+                    if config[group_keys]['type'] == 'bias':
+                        pgroup[group_keys].append(m.bias)
+                    elif config[group_keys]['type'] == 'weight':
+                        pgroup[group_keys].append(m.weight)
+
+        for name, p in model.named_parameters():
+            if not p.requires_grad:
+                continue
+            param_groups_dict[p] = {}
+            if layer_decay is not None:
+                layer_id = get_layer_id_for_vit(name, num_layers)
+                param_groups_dict[p].update({'lr': layer_scales[layer_id] * layer_decay['base_lr']})
+            
+            for key_nodecay in nodecay:
+                if key_nodecay == 'ndim_is1':
+                    if p.ndim == 1:
+                        param_groups_dict[p].update({'weight_decay': 0.0})
+                        break
+                elif key_nodecay in name:
+                    param_groups_dict[p].update({'weight_decay': 0.0})
+                    break
+
+        for ptype in pgroup.keys():
+            if ptype in config.keys():
+                for p in pgroup[ptype]:
+                    param_groups_dict[p].update(dict(config[ptype]['kwargs']))
 
         # Translate param_groups_dict back to param_groups which can be used in torch.optim
         param_groups = []
         for p, config in param_groups_dict.items():
             param_groups += [{'params': p, **config}]
-
         return param_groups
 
     def get_optimizer(self, cfg_optim):

@@ -113,10 +113,14 @@ trainer: # Required.
       momentum: 0.9
       weight_decay: 0.00004
     pconfig:
-        bn_b:
-            weight_decay: 0.0
-        bn_w:
-            weight_decay: 0.0
+      bn_b:
+        type: bias
+        kwargs:
+          weight_decay: 0.0
+      bn_w:
+        type: weight
+        kwargs:
+          weight_decay: 0.0
   lr_scheduler:             
     warmup_iter: 2500         # set to be 0 to disable warmup. target_lr = init_lr * total_batch_size
     warmup_type: linear
