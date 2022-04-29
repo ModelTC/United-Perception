@@ -82,8 +82,6 @@ class CustomEvaluator(Evaluator):
                     img = json.loads(line)
                     if self.label_mapping is not None:
                         img = self.set_label_mapping(img, gt_file_idx)
-                    if self.cross_cfg is not None:
-                        img = self.set_label_mapping(img, gt_file_idx)
                     image_id = img['filename']
                     original_gt[img['filename']] = copy.deepcopy(img)
                     gt_img_ids.add(image_id)
