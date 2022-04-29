@@ -392,9 +392,23 @@ class BaseRunner(object):
                 all_results_list.append(dump_results)
         barrier()
         if not self.memory_friendly_infer:
-            all_device_results_list = all_gather(all_results_list)
+            all_device_results_list = []
+            group = self.config['saver'].get('gather_group', 1)
+            if group > 1:
+                results_size = len(all_results_list)
+                begin_index = 0
+                for group_idx in range(group):
+                    num_result = len(range(group_idx, results_size, group))
+                    group_result = all_results_list[begin_index:begin_index + num_result]
+                    group_device_results_list = all_gather(group_result)
+                    if env.is_master():
+                        all_device_results_list.extend(group_device_results_list)
+                    else:
+                        group_device_results_list = None
+            else:
+                all_device_results_list = all_gather(all_results_list)
         else:
-            all_device_results_list = None
+            all_device_results_list = []
         return all_device_results_list
 
     def merge_results(self):
