@@ -1,6 +1,6 @@
 import torch
 from torch.nn.modules.loss import _Loss
-import spring.linklink as link
+from up.utils.env.dist_helper import env
 from up.utils.general.registry_factory import LOSSES_REGISTRY
 
 
@@ -33,7 +33,7 @@ class ContrastiveLoss(_Loss):
         self.tau = tau
 
     def forward(self, input):
-        rank = link.get_rank()
+        rank = env.rank
         logits = input['logits']
         N = logits.shape[1]
         label_1 = (torch.arange(N, dtype=torch.long) + N * rank).cuda()
