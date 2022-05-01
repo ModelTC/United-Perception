@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import spring.linklink as link
+from up.utils.env.dist_helper import env, broadcast, allgather
 from up.utils.env.dist_helper import simple_group_split
 from up.utils.general.registry_factory import (
     MODULE_WRAPPER_REGISTRY
@@ -48,8 +48,8 @@ class MoCo(nn.Module):
 
         self.register_buffer("queue_ptr", torch.zeros(1, dtype=torch.long))
 
-        rank = link.get_rank()
-        world_size = link.get_world_size()
+        rank = env.rank
+        world_size = env.world_size
         self.group_size = world_size if group_size is None else min(
             world_size, group_size)
 
@@ -94,13 +94,13 @@ class MoCo(nn.Module):
         idx_shuffle = torch.randperm(batch_size_all).cuda()
 
         # broadcast to all gpus
-        link.broadcast(idx_shuffle, 0, group_idx=self.group_idx)
+        broadcast(idx_shuffle, 0, group_idx=self.group_idx)
 
         # index for restoring
         idx_unshuffle = torch.argsort(idx_shuffle)
 
         # shuffled index for this gpu
-        gpu_idx = link.get_rank() % self.group_size
+        gpu_idx = env.rank % self.group_size
         idx_this = idx_shuffle.reshape(num_gpus, -1)[gpu_idx]
 
         return x_gather[idx_this], idx_unshuffle
@@ -115,7 +115,7 @@ class MoCo(nn.Module):
         num_gpus = batch_size_all // batch_size_this
 
         # restored index for this gpu
-        gpu_idx = link.get_rank() % self.group_size
+        gpu_idx = env.rank % self.group_size
         idx_this = idx_unshuffle.reshape(num_gpus, -1)[gpu_idx]
 
         return x_gather[idx_this]
@@ -187,8 +187,8 @@ class MoCo_ViT(nn.Module):
             param_m.data.copy_(param_b.data)  # initialize
             param_m.requires_grad = False  # not update by gradient
 
-        rank = link.get_rank()
-        world_size = link.get_world_size()
+        rank = env.rank
+        world_size = env.world_size
         self.group_size = world_size if group_size is None else min(
             world_size, group_size)
 
@@ -285,7 +285,7 @@ def concat_all_gather(tensor, group_size, group_idx):
     """gather the given tensor across the group"""
 
     tensors_gather = [torch.ones_like(tensor) for _ in range(group_size)]
-    link.allgather(tensors_gather, tensor, group_idx)
+    allgather(tensors_gather, tensor, group_idx)
 
     output = torch.cat(tensors_gather, dim=0)
     return output
