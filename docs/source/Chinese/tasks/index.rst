@@ -17,3 +17,6 @@
    tasks/seg
    tasks/keypoints
    tasks/multitask
+   tasks/sparse
+   tasks/3ddet
+   tasks/quant

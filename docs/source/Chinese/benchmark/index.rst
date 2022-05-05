@@ -11,6 +11,11 @@ Det
 
 v0.1.0 基准 `detection benchmark v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/detection_benchmark.md>`_
 
+3DDet
+-----
+
+v0.1.0 基准 `3D detection benchmark v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/3d_detection_benchmark.md>`_
+
 Cls
 ---
 
@@ -40,3 +45,13 @@ SSL
 ------------
 
 v0.1.0 基准 `self-supervised learning v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/ssl.md>`_
+
+Quant
+-----
+
+v0.1.0 基准 `quant v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/quant_benchmark.md>`_
+
+Sparse
+------
+
+v0.1.0 基准 `sparse training v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/sparse_benchmark.md>`_

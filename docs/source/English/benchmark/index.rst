@@ -11,6 +11,10 @@ Det
 
 v0.1.0 baseline `detection benchmark v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/detection_benchmark.md>`_
 
+3DDet
+-----
+v0.1.0 baseline `detection benchmark v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/3d_detection_benchmark.md>`_
+
 Cls
 ---
 
