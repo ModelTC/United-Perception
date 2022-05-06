@@ -402,6 +402,7 @@ class BaseRunner(object):
                 for group_idx in range(group):
                     num_result = len(range(group_idx, results_size, group))
                     group_result = all_results_list[begin_index:begin_index + num_result]
+                    begin_index += num_result
                     group_device_results_list = all_gather(group_result)
                     if env.is_master():
                         all_device_results_list.extend(group_device_results_list)
