@@ -40,7 +40,7 @@ test:
     # cls classifier
     - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/cls/deploy/res18_deploy.yaml --save_to=kestrel_model_classifier --backend=dist
     # seg psyche
-    - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/seg/pspnet_psyche.yaml --save_to=kestrel_model_psyche --backend=dist
+    - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/seg/deploy/pspnet_psyche.yaml --save_to=kestrel_model_psyche --backend=dist
     # kp raven
     - ROOT=. PYTHONPATH=$ROOT:$PYTHONPATH python -m up to_kestrel --config=configs/kp/res50_sb_raven.yaml --save_to=kestrel_model_raven --backend=dist
     # - PYTHONWARNINGS=ignore PYTHONPATH=.:./patches:$PYTHONPATH coverage run -m unittest discover tests -p 'test_[!t]*py'
