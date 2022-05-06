@@ -65,6 +65,8 @@ def get_dist_rank(*args, **kwargs):
 
 
 def get_link_rank(*args, **kwargs):
+    if link is None:
+        return 0
     if not link.is_initialized():
         return 0
     return link.get_rank(*args, **kwargs)
@@ -79,6 +81,8 @@ def get_dist_world_size(*args, **kwargs):
 
 
 def get_link_world_size(*args, **kwargs):
+    if link is None:
+        return 1
     if not link.is_initialized():
         return 1
     return link.get_world_size(*args, **kwargs)
@@ -112,6 +116,8 @@ def dist_barrier(*args, **kwargs):
 
 
 def link_barrier(*args, **kwargs):
+    if link is None:
+        return
     return link.barrier(*args, **kwargs)
 
 
