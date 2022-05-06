@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# cmd example: sh quant_deploy.sh 1 ToolChain
+# cmd example: sh qat_deploy.sh 1 ToolChain
 
 UP=/path to up
 MQB=/path to mqbench
 
-cfg=$UP/configs/det/faster_rcnn/faster_rcnn_r50_fpn_improve_trt_quant_deploy.yaml
+cfg=$UP/configs/quant/det/faster_rcnn/faster_rcnn_r50_fpn_improve_quant_trt_qat_deploy.yaml
 
-jobname=deploy
+jobname=qat_deploy
 
 
 export PYTHONPATH=$UP:$PYTHONPATH
@@ -21,4 +21,4 @@ spring.submit run -n$1 --ntasks-per-node=$g \
                       --cpus-per-task=2 \
 "nohup python -u -m up quant_deploy \
   --config=$cfg \
-  > quant_deploy.txt 2>&1 &"
+  > qat_deploy.txt 2>&1 &"

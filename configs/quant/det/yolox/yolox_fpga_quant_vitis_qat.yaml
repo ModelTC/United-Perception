@@ -6,7 +6,7 @@ runtime:
     async_norm: True
     special_bn_init: True
 quant:
-  ptq_only: False
+  quant_type: qat
   deploy_backend: vitis
   cali_batch_size: 50
 

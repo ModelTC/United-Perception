@@ -8,7 +8,7 @@ runtime:
       type: quant
 
 quant:
-    ptq_only: False
+    quant_type: qat
     deploy_backend: tensorrt
     cali_batch_size: 900
     prepare_args:

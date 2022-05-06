@@ -5,7 +5,7 @@ runtime:
     type: quant
 
 quant:
-  ptq_only: False
+  quant_type: qat
   deploy_backend: tensorrt
   cali_batch_size: 900
   prepare_args:
@@ -32,9 +32,11 @@ resize: &train_resize
    separate_wh: True
 
 resize: &test_resize
- type: fix_output_resize
+ type: keep_ar_resize
  kwargs:
-   scales: [800, 800]
+   scales: [800]
+   max_size: 1333
+   separate_wh: True
 
 mosaicv2: &mosaicv2
  type: mosaic
@@ -108,7 +110,7 @@ dataset: # Required.
       sampler:
         type: dist
         kwargs: {}
-      batch_size: 1
+      batch_size: 2
       aspect_grouping: [1,]
   dataloader:
     type: base
@@ -137,9 +139,9 @@ trainer: # Required.
       gamma: 0.1             # decay rate
 
 saver: # Required.
-  save_dir: checkpoints/fpn_6e_quant_deploy     # dir to save checkpoints
-  resume_model: checkpoints/fpn_6e_quant/ckpt_e6.pth
-  results_dir: results_dir/fpn_6e_quant_deploy # dir to save detection results. i.e., bboxes, masks, keypoints
+  save_dir: checkpoints/fpn_6e_quant     # dir to save checkpoints
+  resume_model: pretrained_fp32/faster_rcnn_r50_fpn_100e_improve.pth
+  results_dir: results_dir/fpn_6e_quant # dir to save detection results. i.e., bboxes, masks, keypoints
   auto_resume: False  # find last checkpoint from save_dir and resume from it automatically
                      
 

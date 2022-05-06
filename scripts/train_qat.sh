@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# cmd example: sh train_quant.sh 16 ToolChain
+# cmd example: sh train_qat.sh 16 ToolChain
 
 UP=/path to up
 MQB=/path to mqbench
 
-cfg=$UP/configs/det/retinanet/retinanet-r18-improve_quant_trt.yaml
+cfg=$UP/configs/quant/det/retinanet/retinanet-r18-improve_quant_trt_qat.yaml
 
 
 jobname=quant_qat

@@ -5,7 +5,7 @@ runtime:
     type: quant_ptq
 
 quant:
-  train_type: ptq
+  quant_type: ptq
   resume_quant: False
   deploy_backend: academic
   cali_batch_size: 8 # 256 / 2(bs) / n(gpus) 

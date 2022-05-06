@@ -6,7 +6,7 @@ runtime:
     type: quant
 
 quant:
-  ptq_only: False
+  quant_type: qat
   deploy_backend: tensorrt
   cali_batch_size: 900
   prepare_args:
@@ -33,11 +33,9 @@ resize: &train_resize
    separate_wh: True
 
 resize: &test_resize
- type: keep_ar_resize
+ type: fix_output_resize
  kwargs:
-   scales: [800]
-   max_size: 1333
-   separate_wh: True
+   scales: [800, 800]
 
 fix_output_resize: &fix_output_resize
   type: fix_output_resize

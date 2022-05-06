@@ -4,7 +4,7 @@ from up.utils.env.gene_env import get_env_info
 from up.utils.env.dist_helper import env
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.cfg_helper import format_cfg
-from mqbench.utils.state import enable_calibration, enable_quantization, enable_calibration_woquantization
+from mqbench.utils.state import enable_quantization, enable_calibration_woquantization
 
 __all__ = ['QuantRunner']
 
@@ -89,7 +89,7 @@ class QuantRunner(BaseRunner):
     @property
     def quant_type(self):
         if hasattr(self, '_quant_type') is False:
-            self._quant_type = self.config['quant'].get('train_type', 'calib_only')
+            self._quant_type = self.config['quant'].get('quant_type', 'calib_only')
         return self._quant_type
 
     def get_leaf_module(self, leaf_module):
@@ -148,17 +148,8 @@ class QuantRunner(BaseRunner):
                             self.set_bitwidth(_mod, specila_bit)
                             logger.info(f'set {name}.{_name} to {specila_bit} bit.')
         self.model.train().cuda()
-        self.init_quantize_node()
         if env.is_master():
             print(self.model)
-
-    def init_quantize_node(self):
-        if self.training:
-            img = self.get_batch('train')
-        else:
-            img = self.get_batch('test')
-        enable_calibration(self.model)
-        self.model(img)
 
     def set_bitwidth(self, fake_quant, bit_width):
         if fake_quant.quant_min == 0:
@@ -176,17 +167,6 @@ class QuantRunner(BaseRunner):
     def calibrate(self):
         logger.info("calibrate model")
         self.model.eval().cuda()
-        if self.quant_type == 'ptq':
-            return self.ptq_calibrate()
-        enable_calibration(self.model)
-        for _ in range(self.config['quant']['cali_batch_size']):
-            batch = self.get_batch('train')
-            self.model(batch)
-        enable_quantization(self.model)
-        self.eval_quant()
-        self.save_calib()
-
-    def ptq_calibrate(self):
         enable_calibration_woquantization(self.model, quantizer_type='act_fake_quant')
         for _ in range(self.config['quant']['cali_batch_size']):
             batch = self.get_batch('train')

@@ -2,7 +2,7 @@
 
 Based on Mqbench and UP , we provide an object detection benchmark on COCO dataset.
 
-| Model                 | Backend   | map\@fp32 | ptq\int8 | qat\int8 |
+| Model                 | Backend   | map\@fp32 | ptq\@int8 | qat\@int8 |
 |-----------------------|-----------|----------|-----------|----------|
 | retinanet-r18-improve | tensorrt  | 40.7      | 40.5     | 40.7     |
 | retinanet-r18-improve | snpe      | 40.7      | 39.7     | 40.2     |
