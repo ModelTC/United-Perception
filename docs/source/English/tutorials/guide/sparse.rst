@@ -1,5 +1,5 @@
 Object detection/classification with Msbench
-================================
+============================================
 This part, we introduce how to prune an object detection/classification model using msbench.
 
 Getting Started

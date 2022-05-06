@@ -12,7 +12,7 @@ UP支持自监督pretrain模型训练以及finetune下游任务;
 * `finetune <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
 
 pretrain相关模块
---------------
+----------------
 
 以下为pertain配置文件示例:
 
@@ -46,7 +46,7 @@ pretrain相关模块
              type: moco_loss
 
 finetune相关模块
---------------
+----------------
 
 以下为finetune配置文件示例:
 

@@ -90,7 +90,7 @@ focal loss:
 
 iou loss:
 
-  .. code-block::
+  .. code-block:: yaml
 
     loss:
       type: iou_loss
@@ -99,7 +99,7 @@ iou loss:
 
 smooth_l1_loss:
 
-  .. code-block::
+  .. code-block:: yaml
 
     loss:
       type: smooth_l1_loss
@@ -108,7 +108,7 @@ smooth_l1_loss:
 
 compose_loc_loss:
 
-  .. code-block::
+  .. code-block:: yaml
 
     loss:
       type: compose_loc_loss

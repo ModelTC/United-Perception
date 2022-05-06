@@ -35,6 +35,7 @@ Sparse training setting
 -----------------------
 
   .. code-block:: yaml
+
     runtime:
       runner:
         type: sparse

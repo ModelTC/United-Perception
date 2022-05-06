@@ -7,7 +7,7 @@ entropy_loss
 
   * softmax_cross_entropy
 
-  .. code-block::
+  .. code-block:: yaml
 
       loss:
         type: softmax_cross_entropy
@@ -16,7 +16,7 @@ entropy_loss
 
   * sigmoid_cross_entropy
   
-  .. code-block::
+  .. code-block:: yaml
      
       loss:
         type: sigmoid_cross_entropy
@@ -25,7 +25,7 @@ l1_loss
   
   * l1_loss
 
-  .. code-block::
+  .. code-block:: yaml
 
       loss:
         type: l1_loss

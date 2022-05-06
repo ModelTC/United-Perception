@@ -88,7 +88,7 @@ focal loss:
 
 iou loss:
 
-  .. code-block::
+  .. code-block:: yaml
 
     loss:
       type: iou_loss
@@ -97,7 +97,7 @@ iou loss:
 
 smooth_l1_loss:
 
-  .. code-block::
+  .. code-block:: yaml
 
     loss:
       type: smooth_l1_loss
@@ -106,7 +106,7 @@ smooth_l1_loss:
 
 compose_loc_loss:
 
-  .. code-block::
+  .. code-block:: yaml
 
     loss:
       type: compose_loc_loss
@@ -126,6 +126,7 @@ compose_loc_loss:
 转换kestrel模型时，需要使用ToKestrel，具体配置如下:
 
 1. 在配置文件中 dataset.train 下设置 class_names 字段， 以 COCO 为例：
+
   .. code-block:: yaml
 
     class_names: &class_names [
