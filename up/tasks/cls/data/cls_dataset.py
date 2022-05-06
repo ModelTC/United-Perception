@@ -32,7 +32,7 @@ class ImageNetParser(BaseParser):
                     if (start_index + index) not in rank_indices:
                         continue
                 cls_res = {}
-                filename, label = line.strip().split()
+                filename, label = line.strip().rsplit(' ', 1)
                 cls_res['filename'] = filename
                 cls_res['label'] = int(label)
                 cls_res['image_source'] = idx
