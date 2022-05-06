@@ -8,7 +8,7 @@ UP supports multi-task joint training and inference. The training pipeline first
 Configs
 -------
 
-It contains the illustrtion of common configs.
+It contains the illustration of common configs.
 
 `Configs <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/multitask>`_
 

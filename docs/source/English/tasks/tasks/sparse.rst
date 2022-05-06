@@ -1,37 +1,38 @@
-稀疏训练
-========
+Sparse training
+===============
 
-UP支持稀疏训练;
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/sparse>`_
+UP supports sparse training;
+`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/sparse>`_
 
-配置文件
---------
+Configs
+-------
 
-`代码仓库 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/sparse>`_
-其中包括常用算法配置文件
+It contains the illustration of common configs.
 
-数据集相关模块
---------------
+`Repos <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/sparse>`_
 
-1. 数据集类型包括:
+Dataset related modules
+-----------------------
+
+1. Dataset types:
 
   * imagenet
   * custom_cls
   * coco
 
-2. 数据集类型通过设置Dataset的type来选择，配置文件示例如下:
+2. The type of datasets can be chosen by setting 'type' in Dataset. The config is as followed.
 
   .. code-block:: yaml
 
     dataset:
-      type: cls * 或者 coco
+      type: cls * or coco
       kwargs:
         ...
 
-3. 后续数据集写法同选择类型。
+3. The following written should refer to the chosen dataset.
 
-稀疏训练设置
-------------
+Sparse training setting
+-----------------------
 
   .. code-block:: yaml
     runtime:

@@ -19,39 +19,39 @@ v0.1.0 基准 `3D detection benchmark v0.1.0 <https://gitlab.bj.sensetime.com/sp
 Cls
 ---
 
-v0.1.0 基准 `classification benchmark v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/classification_benchmark.md>`_
+v0.2.0 基准 `classification benchmark v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/classification_benchmark.md>`_
 
 Seg
 ---
 
-v0.1.0 基准 `segmentation v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/semantic_benchmark.md>`_
+v0.2.0 基准 `segmentation v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/semantic_benchmark.md>`_
 
 Kp
 --
 
-v0.1.0 基准 `keypoints v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/keypoint_benchmark.md>`_
+v0.2.0 基准 `keypoints v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/keypoint_benchmark.md>`_
 
 Multitask
 ---------
 
-v0.1.0 基准 `multitask v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/multitask_benchmark.md>`_
+v0.2.0 基准 `multitask v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/benchmark/multitask_benchmark.md>`_
 
 Distillation
 ------------
 
-v0.1.0 基准 `distillation v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/distillation.md>`_
+v0.2.0 基准 `distillation v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/distillation.md>`_
 
 SSL
 ------------
 
-v0.1.0 基准 `self-supervised learning v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/ssl.md>`_
+v0.2.0 基准 `self-supervised learning v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/ssl.md>`_
 
 Quant
 -----
 
-v0.1.0 基准 `quant v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/quant_benchmark.md>`_
+v0.2.0 基准 `quant v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/quant_benchmark.md>`_
 
 Sparse
 ------
 
-v0.1.0 基准 `sparse training v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/sparse_benchmark.md>`_
+v0.2.0 基准 `sparse training v0.1.0 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/benchmark/sparse_benchmark.md>`_

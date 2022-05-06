@@ -8,7 +8,7 @@ UP supports the whole pipline of training, deploying, and interfering;
 Configs
 -------
 
-It contains the illustrtion of common configs and deploying.
+It contains the illustration of common configs and deploying.
 
 `Repos <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det>`_
 
