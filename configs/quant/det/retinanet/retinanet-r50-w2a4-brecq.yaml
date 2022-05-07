@@ -10,7 +10,7 @@ quant:
   deploy_backend: academic
   cali_batch_size: 8 # 256 / 4(bs) / n(gpus) 
   tricks:
-    special: ['backbone.layer0.0', 'backbone.layer4.2.features.2', 'backbone.features.0.0', 'backbone.features.18.0']
+    special: ['backbone.layer0.0']
     bit: 8
   ptq:
     pattern: block # layer for ada, block for brecq/qdrop
