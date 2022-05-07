@@ -57,8 +57,12 @@ def parse_resize_scale(dataset_cfg, task_type='det'):
                 input_h = int(math.ceil(tf['kwargs']['size'][0] / alignment) * alignment)
                 input_w = int(math.ceil(tf['kwargs']['size'][1] / alignment) * alignment)
             else:
-                scale = int(math.ceil(tf['kwargs']['size'] / alignment) * alignment)
-                input_h = input_w = scale
+                if len(tf['kwargs']['size']) == 1:
+                    scale = int(math.ceil(tf['kwargs']['size'] / alignment) * alignment)
+                    input_h = input_w = scale
+                else:
+                    input_h = int(math.ceil(tf['kwargs']['size'][0] / alignment) * alignment)
+                    input_w = int(math.ceil(tf['kwargs']['size'][1] / alignment) * alignment)
     if input_h == 0 and input_w == 0:
         raise ValueError('No resize found')
     return input_h, input_w
