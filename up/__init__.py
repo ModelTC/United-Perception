@@ -14,7 +14,7 @@ import importlib
 # Import from third library
 import matplotlib
 
-__version__ = "0.1.0"  # Available for other modules to import
+__version__ = "0.2.0"  # Available for other modules to import
 
 # import for register
 
