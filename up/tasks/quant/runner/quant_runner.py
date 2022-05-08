@@ -231,6 +231,15 @@ class QuantRunner(BaseRunner):
         if env.is_master():
             self.saver.save(**save_dict)
 
+    def save_epoch_ckpt(self, iter_idx):
+        cur_iter = iter_idx + 1
+        epoch_size = self.train_epoch_size
+        if self.iter_base:
+            epoch_size = 1
+        assert not self.iter_base
+        if cur_iter % epoch_size == 0 and iter_idx > self.start_iter:
+            self.save_qat(auto_save='latest', lns=False)
+
     def train_qat(self):
         enable_quantization(self.model)
         self.model.train()
