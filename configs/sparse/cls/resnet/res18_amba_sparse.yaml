@@ -151,7 +151,7 @@ net: &subnet
 runtime:
   runner:
     type: sparse
-
+  task_names: sparse_cls
 sparsity:
   mask_generator:
     type: NormalMaskGenerator

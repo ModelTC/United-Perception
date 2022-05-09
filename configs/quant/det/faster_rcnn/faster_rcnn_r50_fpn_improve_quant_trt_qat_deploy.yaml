@@ -3,6 +3,7 @@ runtime:
   rank_init: True
   runner:
     type: quant
+  task_names: quant_det
 
 quant:
   quant_type: qat

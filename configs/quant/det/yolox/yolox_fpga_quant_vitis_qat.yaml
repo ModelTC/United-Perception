@@ -5,6 +5,7 @@ runtime:
     aligned: True
     async_norm: True
     special_bn_init: True
+    task_names: quant_det
 quant:
   quant_type: qat
   deploy_backend: vitis

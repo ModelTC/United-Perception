@@ -1,5 +1,8 @@
 num_classes: &num_classes 1000
 
+runtime:
+  task_names: cls
+
 to_kestrel:
   toks_type: cls
   plugin: classifier

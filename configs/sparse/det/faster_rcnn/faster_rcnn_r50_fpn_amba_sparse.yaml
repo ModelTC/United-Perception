@@ -266,7 +266,7 @@ net:
 runtime:
   runner:
     type: sparse
-
+  task_names: sparse_det
 sparsity:
   mask_generator:
     type: NormalMaskGenerator

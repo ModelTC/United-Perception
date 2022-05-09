@@ -1,5 +1,6 @@
 num_classes: &num_classes 1000
-
+runtime:
+  task_names: cls
 cutmix_mixup: &cutmix_mixup
   type: torch_cutmix_mixup
   kwargs:

@@ -5,7 +5,7 @@ runtime:
     special_bn_init: True
     fp16: True
     rank_init: True
-
+    task_names: det
 mixup: &mixup
   type: yolox_mixup_cv2
   kwargs:

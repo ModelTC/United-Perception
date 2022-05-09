@@ -2,9 +2,9 @@ num_point_features: &num_point_features 4
 class_names: &class_names ['Car', 'Pedestrian', 'Cyclist']
 
 runtime:
-   runner:
+    runner:
       type: point
-
+    task_names: 3d
 point_sampling: &point_sampling
  type: point_sampling
  kwargs:

@@ -1,7 +1,7 @@
 asses: &num_classes 81
 runtime:
   rank_init: True
-
+  task_names: det
 flip: &flip
  type: flip
  kwargs:

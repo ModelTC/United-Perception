@@ -1,5 +1,6 @@
 runtime:
   rank_init: False
+  task_names: kp
 num_kpts: &num_kpts 17
 
 keep_aspect_ratio: &keep_aspect_ratio

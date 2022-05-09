@@ -4,7 +4,8 @@ flip: &flip
  type: flip
  kwargs:
    flip_p: 0.5
-
+runtime:
+  task_names: det
 resize: &resize
  type: keep_ar_resize
  kwargs:

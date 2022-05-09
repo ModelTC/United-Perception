@@ -3,7 +3,8 @@ random_resized_crop: &random_resized_crop
  kwargs:
    size: 224
    scale: [0.08, 1]
-
+runtime:
+  task_names: ssl
 random_horizontal_flip: &random_horizontal_flip
  type: torch_random_horizontal_flip
 

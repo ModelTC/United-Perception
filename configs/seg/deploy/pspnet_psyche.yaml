@@ -1,5 +1,6 @@
 num_classes: &num_classes 19
-
+runtime:
+  task_names: seg
 to_kestrel:
   toks_type: seg
   plugin: psyche

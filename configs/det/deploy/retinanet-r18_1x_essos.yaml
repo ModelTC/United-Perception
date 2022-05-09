@@ -14,7 +14,8 @@ class_names: &class_names [
     "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors",
     "teddy bear", "hair drier", "toothbrush"
 ]
-
+runtime:
+  task_names: det
 to_kestrel:
   toks_type: det
   save_to: RETINANET  # saved file

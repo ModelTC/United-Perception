@@ -2,7 +2,7 @@ num_classes: &num_classes 81
 
 runtime:
   fp16: True
-
+  task_names: det
 flip: &flip
  type: flip
  kwargs:

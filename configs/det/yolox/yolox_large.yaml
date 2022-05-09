@@ -5,7 +5,7 @@ runtime:
     special_bn_init: True
     fp16: True
     rank_init: True
-
+    task_names: det
 mosaic: &mosaic
   type: mosaic
   kwargs:

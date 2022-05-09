@@ -1,5 +1,6 @@
 num_classes: &num_classes 19
-
+runtime:
+  task_names: seg
 seg_rand_resize: &seg_rand_resize
   type: seg_rand_resize
   kwargs:

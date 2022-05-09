@@ -1,6 +1,7 @@
 mocov3: &mocov3
   type: torch_mocov3
-
+runtime:
+  task_names: ssl
 dataset: # Required.
   train:
     dataset:

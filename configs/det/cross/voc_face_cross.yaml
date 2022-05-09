@@ -8,7 +8,7 @@ class_names: &class_names [
         "sheep", "sofa", "train", "tvmonitor",
         "face"]
 runtime:
-    fp16: True
+  task_names: det
 
 flip: &flip
  type: flip

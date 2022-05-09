@@ -1,5 +1,6 @@
 num_classes: &num_classes 10
-
+runtime:
+  task_names: det
 flip: &flip
   type: flip
   kwargs:

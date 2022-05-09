@@ -4,7 +4,7 @@ runtime:
     async_norm: True
     special_bn_init: True
     rank_init: True
-
+    task_names: det
 mosaic: &mosaic
   type: mosaic
   kwargs:
