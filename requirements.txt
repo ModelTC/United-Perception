@@ -16,4 +16,3 @@ pillow==6.2.1
 http://10.10.40.93/packages/lvis-0.5.1-py3-none-any.whl
 SharedArray
 numba==0.48.0
-http://spring.sensetime.com/pypi/dev/packages/spring_aux-0.6.7.develop.2022_05_07t08_45.333adcd0-py3-none-any.whl

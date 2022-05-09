@@ -1,5 +1,5 @@
 try:
-    from spring_aux.analytics.instrument_agent import InstrumentAgent
+    from spring_analytics.instrument_agent import InstrumentAgent
     Agent = InstrumentAgent()
     Agent.instrument_torch_model_lineage()
 except Exception:
