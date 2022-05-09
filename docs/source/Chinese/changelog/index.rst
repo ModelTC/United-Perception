@@ -5,7 +5,7 @@ v0.2.0
 -------
 
 外部依赖版本
-^^^^^^^^^^^
+^^^^^^^^^^^^
 
 * Spring2 0.6.0
 * 集群环境 s0.3.3 / s0.3.4
@@ -30,36 +30,33 @@ Breaking Changes
 Highlights
 ^^^^^^^^^^
 
-* 支持3D Point-Pillar 系列算法, 包含Pointpillar,Second, CenterPoint 等各个算法
-* 支持Vision Transformer 系列，包含 Swin-Transformer, VIT，CSWin Transformer
-* 支持分割任务最新Sota 算法，Segformer，HrNet 系列，提供超高精度Baseline
-* 支持最新检测蒸馏算法，大幅度提升模型的精度 benchmark
-* 支持稀疏训练
-* 支持量化 QAT, PTQ
-* 支持自监督算法, MOCO 系列、SimClr 系列、simsiam、MAE
-* 支持多任务训练
-* 检测、分类、分割、关键点全面支持模型部署打包，支持ADElA 进行模型评测和托管。
-* 超大规模数据集训练和测试支持，Rank dataset 扩展到其他任务，同时支持多种模式进行内存友好推理。
-* 中英文文档支持
+* 算法类型：
+    * 【3D算法】支持3D Point-Pillar 系列算法, 包含Pointpillar,Second, CenterPoint 等各个算法 `3D benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/3d_detection_benchmark.md>`_
+    * 【语义分割】支持分割任务最新Sota 算法，Segformer，HrNet 系列，提供超高精度Baseline `Seg benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/semantic_benchmark.md>`_
+    * 【目标检测】支持最新检测蒸馏算法，大幅度提升模型的精度 benchmark `Det benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/distillation.md>`_
 
-New Features
-^^^^^^^^^^^^
+* 通用特性：
+    * 【Transformer结构】支持Vision Transformer 系列，包含 Swin-Transformer, VIT，CSWin Transformer `Cls benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/classification_benchmark.md>`_
+    * 【量化与稀疏】支持Amba、Ampere 检测分类稀疏训练 ( `Spring.sparsity <https://confluence.sensetime.com/pages/viewpage.action?pageId=407432119>`_ , `Sparse benchmark <http://spring.sensetime.com/docs/sparsity/benchmark/ObjectDetection/Benchmark.html>`_ )  ；支持TensorRT、Snpe 、VITIS 等多个后端进行QAT量化 ( `spring.quant.online <https://mqbench.readthedocs.io/en/latest/?badge=latest>`_ )，同时支持检测一阶段和二阶段算法 `Quant benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/quant_benchmark.md>`_
+    * 【自监督算法】支持自监督算法, MOCO 系列、SimClr 系列、simsiam、MAE `SSL benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/ssl_benchmark.md>`_
+
+* 易用工具：
+    * 【部署打包自动化】检测、分类、分割、关键点全面支持模型部署打包，支持ADElA 进行模型评测和托管。
+    * 【大数据集训练】超大规模数据集训练和测试支持，Rank dataset 扩展到其他任务，同时支持多种模式进行内存友好推理。
+    * 【其他】英文文档支持
+
+Other Features
+^^^^^^^^^^^^^^
 
 * Condinst FCOS 添加
-* 添加ceph数据使用示例 `#16 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/16>`_
 * 支持通过环境变量进行任务隔离
-* 添加voxel_generator替代spconv中的接口
-* 支持kitti数据集的ceph读取方式
 * 分类任务添加多标签支持和多分类支持
-* 支持多个单独测试集eval功能 `#8 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/8>`_
+* 支持多个单独测试集eval功能 
 * RankDataset 重构支持分类检测等各个任务，支持推理时使用
 * 大规模数据集推理内存优化，实时写入磁盘和分组gather 模式
 * 提供每个 iteration 耗时统计的分解(数据加载/前处理/forward/backward/梯度allreuce)信息
-* 支持softer nms
-* Toonnx 接口单独支持
-* 添加CI测试并提供各任务部署示例 `#29 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/29>`_
-* 多分类任务添加mixup与cutmix数据增广支持
-* 支持检测与分类任务的错例分析 `#36 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/36>`_
+* 检测支持softer nms
+* 新增toonnx 接口，单独支持转换到onnx
 
 Bug Fixes
 ^^^^^^^^^
@@ -90,6 +87,17 @@ Bug Fixes
 * 修复了RetinaHead with IoU部署的bug
 * 修复了time logger读取环境变量的bug `#57 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/57>`_
 
+Breaking Changes
+^^^^^^^^^^^^^^^^
+
+* 本次重构了检测二阶段的结构组成，为了更加方便的进行量化和稀疏训练。具体 `Faster R-CNN <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det/faster_rcnn>`_ 可以从此处查询。
+* 修改了模型部署的参数配置。具体 `Deploy <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det/deploy>`_ 可以从此处查询。
+    * 取消了detector参数的使用
+    * 常用配置 (以det为例)：
+        to_kestrel:
+          toks_type: det  # 任务类型
+          save_to: KESTREL  # 模型保存路径
+          plugin: essos  # kestrel组件
 
 v0.1.0
 -------
