@@ -14,7 +14,7 @@ External dependency version
 Breaking Changes
 ^^^^^^^^^^^^^^^^
 
-* Structural composition of the second stage of detection is reconstructed, in order to carry out quantization and sparse training more conveniently. Cfg can be inquired from here.
+* Structural composition of the second stage of detection is reconstructed, in order to carry out quantization and sparse training more conveniently.
 * Modified model deployment config. Cfg can be inquired from here
 
   .. code-block:: bash
