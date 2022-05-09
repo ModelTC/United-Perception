@@ -393,6 +393,7 @@ class BaseRunner(object):
             else:
                 all_results_list.append(dump_results)
         barrier()
+        all_device_results_list = None
         if not self.memory_friendly_infer:
             all_device_results_list = []
             group = self.config['saver'].get('gather_group', 1)
@@ -410,8 +411,6 @@ class BaseRunner(object):
                         group_device_results_list = None
             else:
                 all_device_results_list = gather_pk(all_results_list)
-        else:
-            all_device_results_list = []
         return all_device_results_list
 
     def merge_results(self):
