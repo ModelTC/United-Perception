@@ -22,13 +22,14 @@ adela:
     platform: &platform 'cuda11.0-trt7.1-fp32-T4'
     max_batch_size: &max_batch_size 32
     quantify: False
-    quantify_dataset_name: 'imagenet_quant_100'
+    # quantify_dataset_name: 'imagenet_quant_100'
   precision_params:
-    # dataset_added: benchmark_dataset.json
-    platform: *platform # "cuda10.0-trt7.0-int8-T4"
-    max_batch_size: *max_batch_size
-    type: 0 # 0: precsion, 1: performance
-    dataset_name: "imagenet_val" 
+    kwargs:
+      # dataset_added: benchmark_dataset.json
+      platform: *platform # "cuda10.0-trt7.0-int8-T4"
+      max_batch_size: *max_batch_size
+      type: 0 # 0: precsion, 1: performance
+      dataset_name: "imagenet_val" 
 
 random_resized_crop: &random_resized_crop
  type: torch_random_resized_crop
