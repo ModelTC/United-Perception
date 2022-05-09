@@ -509,7 +509,7 @@ def gather_pk(data, dst=0, group=None):
         if DIST_BACKEND.backend == 'dist':
             gather(tensor, tensor_list, dst=dst, group=group)
         else:
-            gather(tensor, tensor_list, dst=dst)
+            gather(tensor_list, tensor, dst)
         data_list = []
         for size, tensor in zip(size_list, tensor_list):
             buffer = tensor.cpu().numpy().tobytes()[:size]
@@ -519,7 +519,7 @@ def gather_pk(data, dst=0, group=None):
         if DIST_BACKEND.backend == 'dist':
             gather(tensor, [], dst=dst, group=group)
         else:
-            gather(tensor, [], dst=dst)
+            gather([], tensor, dst)
         return []
 
 
