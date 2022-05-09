@@ -7,7 +7,6 @@ try:
     import spring.nart.tools.caffe.convert as convert
     import spring.nart.tools.caffe.utils.graph as graph
     import spring.nart.tools.kestrel.utils.scaffold as scaffold
-    import spring.nart.tools.kestrel.utils.net_transform as transform
     try:
         import spring.nart.tools.proto.caffe_pb2 as caffe_pb2
     except:  # noqa
@@ -76,8 +75,6 @@ def process_net(prototxt, model):
     for node in net_graph.nodes():
         if node.content.type == 'Reshape':
             if node.content.reshape_param.shape.dim[0] == 1:
-                # remove old reshape
-                transform.remove_layer(net, node)
                 # add new reshape
                 tmp = node
                 for i in range(5):
@@ -85,7 +82,8 @@ def process_net(prototxt, model):
                     if tmp.content.type == 'Convolution':
                         reshape_shape = tmp.content.convolution_param.num_output
                         break
-                add_reshape(net, net_graph, node, [-1, reshape_shape], insert=True)
+                node.content.reshape_param.shape.ClearField('dim')
+                node.content.reshape_param.shape.dim.extend([-1, reshape_shape])
     return net
 
 
