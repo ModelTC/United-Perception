@@ -9,7 +9,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.hook_helper import build_hooks
 from up.utils.env.gene_env import set_random_seed, to_device
-from up.utils.env.dist_helper import barrier, all_gather, env, DistModule, reduce_gradients
+from up.utils.env.dist_helper import barrier, gather_pk, env, DistModule, reduce_gradients
 from up.data.metrics.base_evaluator import Metric
 from up.utils.general.cfg_helper import merge_opts_into_cfg, format_cfg
 from up.utils.env.gene_env import get_env_info, print_network
@@ -403,13 +403,13 @@ class BaseRunner(object):
                     num_result = len(range(group_idx, results_size, group))
                     group_result = all_results_list[begin_index:begin_index + num_result]
                     begin_index += num_result
-                    group_device_results_list = all_gather(group_result)
+                    group_device_results_list = gather_pk(group_result)
                     if env.is_master():
                         all_device_results_list.extend(group_device_results_list)
                     else:
                         group_device_results_list = None
             else:
-                all_device_results_list = all_gather(all_results_list)
+                all_device_results_list = gather_pk(all_results_list)
         else:
             all_device_results_list = []
         return all_device_results_list
