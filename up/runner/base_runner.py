@@ -152,6 +152,8 @@ class BaseRunner(object):
     def set_dataset_timer(self, cfg_data):
         cfg_dataset_timer = cfg_data.get('dataset_timer', None)
         batch_size = 1
+        if len(cfg_data.get('data_pool', ['train:train', 'test:test'])) == 0:
+            return
         if cfg_data['train'].get('batch_sampler', None):
             batch_size = cfg_data['train']['batch_sampler']['kwargs']['batch_size']
         elif cfg_data['test'].get('batch_sampler', None):
