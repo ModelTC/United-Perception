@@ -21,6 +21,7 @@ to_kestrel:
   save_to: FASTER-RCNN  # saved file
   default_confidence_thresh: 0.0
   plugin: harpy   # choices = [essos, harpy, sphinx]
+  model_name: model
   version: 1.0.0
   resize_hw: 800x1333
 

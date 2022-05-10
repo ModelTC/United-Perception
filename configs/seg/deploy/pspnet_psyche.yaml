@@ -5,6 +5,7 @@ to_kestrel:
   toks_type: seg
   plugin: psyche
   save_to: PSPNET 
+  model_name: model
   version: 1.0.0
   resize_hw: 640x1024
 

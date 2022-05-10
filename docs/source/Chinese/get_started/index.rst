@@ -219,17 +219,32 @@ to_adela, 训练并转换得到kestrel模型后，UP支持调用Adela接口进�
       pid: 12 # 项目id
       server: 'adela.sensetime.com'
       dep_params:
-        # dataset_added: quantity_dataset.json  # 需要添加的量化数据集配置
-        platform: &platform 'cuda10.0-trt7.0-int8-T4' # 平台
-        max_batch_size: &max_batch_size 8
-        quantify: True # 是否进行量化
-        quantify_dataset_name: 'faces_simple_quant' # 量化数据集
+        # 支持同时部署多个平台
+        - platform: &platform 'cuda10.0-trt7.0-int8-T4' # 平台
+          max_batch_size: &max_batch_size 8
+          quantify: True # 是否进行量化
+          quantify_dataset_name: 'faces_simple_quant' # 量化数据集
+        - platform: &platform2 'cuda10.0-trt7.0-int8-T4'
+          max_batch_size: &max_batch_size2 2
+          quantify: True
+          quantify_dataset_name: 'faces_simple_quant'
+        - platform: &platform3 'cuda10.0-trt7.0-int8-T4'
+          max_batch_size: &max_batch_size3 2
+          quantify: True
+          quantify_dataset_name: 'faces_simple_quant'
       precision_params:
-        # dataset_added: benchmark_dataset.json # 需要添加的测试数据集配置
-        platform: *platform # "cuda10.0-trt7.0-int8-T4"
-        max_batch_size: *max_batch_size # 8
-        type: 0 # 0: precsion, 1: performance 测试指标
-        dataset_name: "detection_asian_celebrity" # 测试数据集
+        # 支持选择部署模型进行评测
+        didxs: [1]  # 对应从0起，模型部署的顺序
+        kwargs:
+          # 依次提供评测配置
+          - platform: *platform # "cuda10.0-trt7.0-int8-T4"
+            max_batch_size: *max_batch_size # 8
+            type: 0 # 0: precsion, 1: performance 测试指标
+            dataset_name: "detection_asian_celebrity" # 测试数据集
+      publish_params:
+        # 模型发布 (可选)
+        didxs: [1, 2]
+
 
   .. note::
 

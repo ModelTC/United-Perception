@@ -183,4 +183,4 @@ class ClassifierProcessor(BaseProcessor):
         net = process_net(self.prototxt, self.model)
         net = scaffold.merge_bn(net)
 
-        generate(net, self.save_path, self.save_path, False, 8, kestrel_param, version)
+        generate(net, self.save_path, self.name, False, 8, kestrel_param, version)
