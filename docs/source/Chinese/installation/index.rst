@@ -34,7 +34,7 @@ srun模式:
     pip install --user -r requirements.txt
 
     partition=$1
-    srun -p $partition --gres=gpu:1 python setup.py build_ext -i
+    srun -p $partition -n1 --gres=gpu:1 python setup.py build_ext -i
 
 spring.submit run模式:
 
