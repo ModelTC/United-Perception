@@ -34,7 +34,8 @@ class RoiPredictor(object):
                  roi_min_size,
                  merger=None,
                  nms=None,
-                 clip_box=True):
+                 clip_box=True,
+                 share_location=True):
         self.pre_nms_score_thresh = pre_nms_score_thresh
         # self.apply_score_thresh_above = apply_score_thresh_above
         self.pre_nms_top_n = pre_nms_top_n
@@ -42,6 +43,7 @@ class RoiPredictor(object):
         self.nms_cfg = nms
         self.roi_min_size = roi_min_size
         self.clip_box = clip_box
+        self.share_location = share_location
         if merger is not None:
             self.merger = build_merger(merger)
         else:
@@ -72,8 +74,13 @@ class RoiPredictor(object):
     def regression(self, anchors, preds, image_info):
         cls_pred, loc_pred = preds[:2]
         B, K = cls_pred.shape[:2]
-        concat_anchors = torch.stack([anchors.clone() for _ in range(B)])
-        rois = offset2bbox(concat_anchors.view(B * K, 4), loc_pred.view(B * K, 4)).view(B, K, 4)  # noqa
+        if self.share_location:
+            loc_num = 1
+        else:
+            loc_num = cls_pred.shape[2]
+        concat_anchors = torch.cat([anchors for _ in range(loc_num)], dim=1)
+        concat_anchors = torch.stack([concat_anchors for _ in range(B)])
+        rois = offset2bbox(concat_anchors.view(B * K * loc_num, 4), loc_pred.view(B * K * loc_num, 4)).view(B, K * loc_num, 4)  # noqa
         return rois
 
     def single_level_predict(self, anchors, preds, image_info, num_points, return_pos_inds=None):
@@ -107,17 +114,32 @@ class RoiPredictor(object):
             # clip rois and filter rois which are too small
             image_rois = rois[b_ix]
             image_inds = torch.arange(K, dtype=torch.int64, device=image_rois.device)
-            if self.clip_box:
-                image_rois = clip_bbox(image_rois, image_info[b_ix])
-            image_rois, filter_inds = filter_by_size(image_rois, roi_min_size)
-            image_cls_pred = cls_pred[b_ix][filter_inds]
-            image_inds = image_inds[filter_inds]
+            if self.share_location:
+                if self.clip_box:
+                    image_rois = clip_bbox(image_rois, image_info[b_ix])
+            else:
+                if self.clip_box:
+                    image_rois = clip_bbox(image_rois.view(-1, 4), image_info[b_ix])
+                image_rois = image_rois.view(-1, C, 4)
+            if self.share_location:
+                image_rois, filter_inds = filter_by_size(image_rois, roi_min_size)
+                image_cls_pred = cls_pred[b_ix][filter_inds]
+                image_inds = image_inds[filter_inds]
+
             if image_rois.numel() == 0:
                 continue  # noqa E701
 
             for cls in range(C):
-                cls_rois = image_rois
-                scores = image_cls_pred[:, cls]
+                if self.share_location:
+                    cls_rois = image_rois
+                    scores = image_cls_pred[:, cls]
+                else:
+                    cls_rois = image_rois[:, cls, :]
+                    cls_rois = clip_bbox(cls_rois, image_info[b_ix])
+                    cls_rois, filter_inds = filter_by_size(cls_rois, roi_min_size)
+                    if cls_rois.numel() == 0:
+                        continue
+                    scores = cls_pred[b_ix][filter_inds][:, cls]
                 cls_inds = image_inds
                 assert not torch.isnan(scores).any()
                 if score_thresh > 0:

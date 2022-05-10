@@ -28,11 +28,11 @@ class BaseDetPostProcess(nn.Module):
         0 is always for the background class.
     """
 
-    def __init__(self, num_classes, cfg, prefix=None):
+    def __init__(self, num_classes, cfg, prefix=None, class_first=False):
         super(BaseDetPostProcess, self).__init__()
         self.prefix = prefix if prefix is not None else self.__class__.__name__
         self.tocaffe = False
-
+        self.class_first = class_first
         self.num_classes = num_classes
         assert self.num_classes > 1
 
@@ -83,15 +83,34 @@ class BaseDetPostProcess(nn.Module):
         return mlvl_activated_preds
 
     def permute_preds(self, mlvl_preds):
-        """Permute preds from [B, A*C, H, W] to [B, H*W*A, C] """
-        mlvl_permuted_preds, mlvl_shapes = [], []
-        for lvl_idx, preds in enumerate(mlvl_preds):
-            b, _, h, w = preds[0].shape
-            k = self.num_anchors * h * w
-            preds = [p.permute(0, 2, 3, 1).contiguous().view(b, k, -1) for p in preds]
-            mlvl_permuted_preds.append(preds)
-            mlvl_shapes.append((h, w, k))
-        return mlvl_permuted_preds, mlvl_shapes
+        if not self.class_first:
+            """Permute preds from [B, A*C, H, W] to [B, H*W*A, C] """
+            mlvl_permuted_preds, mlvl_shapes = [], []
+            for lvl_idx, preds in enumerate(mlvl_preds):
+                b, _, h, w = preds[0].shape
+                k = self.num_anchors * h * w
+                preds = [p.permute(0, 2, 3, 1).contiguous().view(b, k, -1) for p in preds]
+                mlvl_permuted_preds.append(preds)
+                mlvl_shapes.append((h, w, k))
+            return mlvl_permuted_preds, mlvl_shapes
+        else:
+            """Permute preds from [B, C*A, H, W] to [B, H*W*A, C] """
+            """Permute preds from [B, C*A*4, H, W] to [B, H*W*A, C*4]"""
+            mlvl_permuted_preds, mlvl_shapes = [], []
+            for lvl_idx, preds in enumerate(mlvl_preds):
+                b, _, h, w = preds[0].shape
+                k = self.num_anchors * h * w
+
+                cls, loc = preds
+                cls = cls.view(b, -1, self.num_anchors, h, w)
+                cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
+                loc = loc.view(b, -1, self.num_anchors, 4, h, w)
+                loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
+                preds = [cls, loc]
+
+                mlvl_permuted_preds.append(preds)
+                mlvl_shapes.append((h, w, k))
+            return mlvl_permuted_preds, mlvl_shapes
 
     def export(self, mlvl_preds):
         output = {}
@@ -236,8 +255,8 @@ class IOUPostProcess(BaseDetPostProcess):
         0 is always for the background class.
     """
 
-    def __init__(self, num_classes, cfg, prefix=None):
-        super(IOUPostProcess, self).__init__(num_classes, cfg, prefix)
+    def __init__(self, num_classes, cfg, prefix=None, class_first=True):
+        super(IOUPostProcess, self).__init__(num_classes, cfg, prefix, class_first)
         self.iou_branch_loss = build_loss(cfg['iou_branch_loss'])
 
     def apply_activation(self, mlvl_preds, remove_background_channel_if_any):

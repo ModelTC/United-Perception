@@ -112,10 +112,13 @@ class RetinaSubNet(BaseNet):
                  init_prior=0.01,
                  num_anchors=9,
                  num_level=5,
-                 share_subnet=False):
+                 share_subnet=False,
+                 share_location=True):
         super(RetinaSubNet, self).__init__(inplanes, num_classes, num_level)
 
         inplanes = self.inplanes
+        self.share_location = share_location
+
         self.class_activation = class_activation
         self.num_anchors = num_anchors
         self.share_subnet = share_subnet
@@ -125,10 +128,13 @@ class RetinaSubNet(BaseNet):
             self.box_subnet = self.build(num_conv, inplanes, feat_planes, normalize)
         class_channel = {'sigmoid': -1, 'softmax': 0}[self.class_activation] + self.num_classes
         self.class_channel = class_channel
+        self.num_loc = 1
+        if not self.share_location:
+            self.num_loc = self.class_channel
         self.cls_subnet_pred = nn.Conv2d(
             feat_planes, self.num_anchors * class_channel, kernel_size=3, stride=1, padding=1)
         self.box_subnet_pred = nn.Conv2d(
-            feat_planes, self.num_anchors * 4, kernel_size=3, stride=1, padding=1)
+            feat_planes, self.num_anchors * 4 * self.num_loc, kernel_size=3, stride=1, padding=1)
 
         initialize_from_cfg(self, initializer)
         init_bias_focal(self.cls_subnet_pred, self.class_activation, init_prior, self.num_classes)
@@ -183,7 +189,9 @@ class RetinaHeadWithIOU(RetinaSubNet):
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=1,
-                 num_level=5):
+                 num_level=5,
+                 share_subnet=False,
+                 share_location=True):
         """
         Implementation for ATSS https://arxiv.org/abs/1912.02424
         """
@@ -196,7 +204,9 @@ class RetinaHeadWithIOU(RetinaSubNet):
                                                 class_activation,
                                                 init_prior,
                                                 num_anchors,
-                                                num_level)
+                                                num_level,
+                                                share_subnet,
+                                                share_location)
         assert num_level is not None, "num_level must be provided !!!"
         self.iou_pred = nn.Conv2d(feat_planes, self.num_anchors, kernel_size=3, stride=1, padding=1)
         initialize_from_cfg(self, initializer)
@@ -228,7 +238,8 @@ class RetinaHeadWithBN(RetinaSubNet):
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
-                 share_subnet=False):
+                 share_subnet=False,
+                 share_location=True):
         self.num_level = num_level
         super(RetinaHeadWithBN, self).__init__(inplanes,
                                                feat_planes,
@@ -240,7 +251,8 @@ class RetinaHeadWithBN(RetinaSubNet):
                                                init_prior,
                                                num_anchors,
                                                num_level,
-                                               share_subnet)
+                                               share_subnet,
+                                               share_location)
 
         assert num_level is not None, "num_level must be provided !!!"
 
@@ -292,7 +304,8 @@ class RetinaHeadWithBNSep(RetinaSubNet):
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
-                 share_subnet=False):
+                 share_subnet=False,
+                 share_location=True):
         self.num_level = num_level
         super(RetinaHeadWithBNSep, self).__init__(inplanes,
                                                   feat_planes,
@@ -304,7 +317,8 @@ class RetinaHeadWithBNSep(RetinaSubNet):
                                                   init_prior,
                                                   num_anchors,
                                                   num_level,
-                                                  share_subnet)
+                                                  share_subnet,
+                                                  share_location)
 
         assert num_level is not None, "num_level must be provided !!!"
 
@@ -350,7 +364,8 @@ class RetinaHeadWithBNIOU(RetinaHeadWithBN):
                  class_activation='sigmoid',
                  init_prior=0.01,
                  num_anchors=9,
-                 share_subnet=False):
+                 share_subnet=False,
+                 share_location=True):
         self.num_level = num_level
         super(RetinaHeadWithBNIOU, self).__init__(inplanes,
                                                   feat_planes,
@@ -362,7 +377,8 @@ class RetinaHeadWithBNIOU(RetinaHeadWithBN):
                                                   class_activation,
                                                   init_prior,
                                                   num_anchors,
-                                                  share_subnet)
+                                                  share_subnet,
+                                                  share_location)
         assert num_level is not None, "num_level must be provided !!!"
         self.iou_pred = nn.Conv2d(feat_planes, self.num_anchors, kernel_size=3, stride=1, padding=1)
         initialize_from_cfg(self, initializer)
