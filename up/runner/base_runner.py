@@ -36,6 +36,7 @@ from up.utils.general.global_flag import (
     DIST_BACKEND,
     FP16_FLAG
 )
+from up.utils.general.tocaffe_utils import get_model_hash, rewrite_onnx
 
 
 __all__ = ['BaseRunner']
@@ -489,7 +490,9 @@ class BaseRunner(object):
                                                      input_size,
                                                      model,
                                                      input_channel)
+        model_hash = get_model_hash(self.model.state_dict())
         caffemodel_name = tocaffe_ins.process()
+        rewrite_onnx(tocaffe_ins.save_prefix, model_hash)
         cfg_gdbp = self.config.get('gdbp', None)
         if cfg_gdbp is not None:
             onnx_file = tocaffe_ins.save_prefix + '.onnx'

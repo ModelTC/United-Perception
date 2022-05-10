@@ -27,6 +27,30 @@ def detach(x):
         return x
 
 
+def get_model_hash(model_state_dict):
+    try:
+        from spring_analytics.model_lineage import get_model_meta
+        model_hash = get_model_meta(model_state_dict)
+    except Exception:
+        return None
+    return model_hash
+
+
+def rewrite_onnx(onnx_prefix, model_hash):
+    if model_hash is None:
+        return
+    try:
+        import onnx
+        onnx_file = onnx_prefix + '.onnx'
+        onnx_model = onnx.load(onnx_file)
+        onnx_model.doc_string += f'''
+            model_hash: {model_hash}
+        '''
+        onnx.save(onnx_model, onnx_file)
+    except Exception:
+        return
+
+
 class ToCaffe(object):
     _tocaffe = False
 
