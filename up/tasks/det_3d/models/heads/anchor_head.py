@@ -13,7 +13,7 @@ class BaseAnchorHead(nn.Module):
         super(BaseAnchorHead, self).__init__()
         self.prefix = self.__class__.__name__
         self.num_classes = num_classes
-        assert self.num_classes > 1
+        assert self.num_classes > 0
 
         if isinstance(inplanes, list):
             inplanes_length = len(inplanes)
