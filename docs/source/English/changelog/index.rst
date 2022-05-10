@@ -30,36 +30,33 @@ Breaking Changes
 Highlights
 ^^^^^^^^^^
 
-* Support 3D Point-Pillar series such as Pointpillar,Second, CenterPoint and so on
-* Support Vision Transformer series such as Swin-Transformer, VIT，CSWin Transformer
-* Support segmentation sota: Segformer，HrNet and high performance baseline
-* Support newest detetion distillation and improve performance largely
-* Support Sparse training
-* Support quantify pipeline QAT and PTQ
-* Support self-supervise pipeline such as MOCO, SimClr, simsiam, MAE
-* Support Multi-task training
-* Support detection, classification, segmentation, keypoint model deployment, and evaluting and publishing on Adela
-* Support large dataset training and testing on multi-task (Rank dataset) and memory-friendly interface
-* Support Chinese and English docs
+* Algorithms:
+    * [3D detection] Support 3D Point-Pillar series such as Pointpillar,Second, CenterPoint and so on `3D benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/3d_detection_benchmark.md>`_
+    * [Segmentation] Support segmentation sota: Segformer，HrNet and high performance baseline `Seg benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/semantic_benchmark.md>`_
+    * [Detection] Support newest detetion distillation and improve performance largely `Det benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/distillation.md>`_
+
+* General:
+    * [Transformer] Support Vision Transformer series such as Swin-Transformer, VIT，CSWin Transformer `Cls benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/classification_benchmark.md>`_
+    * [Quant and Sparse] Support Sparse training for classification and detection including Amba and Ampere ( `Spring.sparsity <https://confluence.sensetime.com/pages/viewpage.action?pageId=407432119>`_ , `Sparse benchmark <http://spring.sensetime.com/docs/sparsity/benchmark/ObjectDetection/Benchmark.html>`_ ); support quant of backbends such as TensorRT, Snpe, VITIS, and so on ( `spring.quant.online <https://mqbench.readthedocs.io/en/latest/?badge=latest>`_ ), and the one stage and two stage algorithms ( `Quant benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/quant_benchmark.md>`_ )
+    * [SSL] Support self-supervise pipeline such as MOCO, SimClr, simsiam, MAE `SSL benchmark <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/benchmark/ssl_benchmark.md>`_
+
+* Useful tools:
+    * [Auto deploy] Support detection, classification, segmentation, keypoint model deployment, and evaluting and publishing on Adela
+    * [Large dataset training] Support large dataset training and testing on multi-task (Rank dataset) and memory-friendly interface
+    * [Others] Support Chinese and English docs
 
 New Features
 ^^^^^^^^^^^^
 
 * Add Condinst FCOS
-* Add ceph example `#16 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/16>`_
 * Support task isolation by setting environment variable
-* Add voxel generator to replace spconv interface
-* Support ceph reading for kitti dataset
 * Support multi-label and multi-classifier for class task
-* Support evaluating multiple test datasets respectively `#8 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/8>`_
+* Support evaluating multiple test datasets respectively
 * Refactor Rank dataset to support training and inferencing in classification and detection
-* Large dataset memory optimization
-* Support time logger for every step in training
+* Large dataset memory optimization such as Real-time writing in the disk, and grouping and gathering mode.
+* Support time logger for every iteration in training including data loading, preprocessing, forward, backward, gradient allreuce.
 * Support Softer NMS
 * Support torch Toonnx
-* Add CI testing and deploying examples for all tasks `#29 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/29>`_
-* Support mixup and cutmix augmentations for multicls task.
-* Support bad case analyse for detection and classification `#36 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/36>`_
 
 Bug Fixes
 ^^^^^^^^^
@@ -89,6 +86,19 @@ Bug Fixes
 * Support setting nart config for adela deployment `#44 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/44>`_
 * Fix deploying bug in RetinaHead with IoU
 * Fix loading environment variable bug in time logger `#57 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/57>`_
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+
+* In this version, we refactor the structure of two stage detection algorithms for better quant  and sparse training. `Faster R-CNN <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det/faster_rcnn>`_ for illustration.
+* Revising the parameter setting of deploying. `Deploy <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det/deploy>`_ for illustration.
+    * Cancel the parameter in detectors
+    * Config (det for example):
+        to_kestrel:
+          toks_type: det  # task type
+          save_to: KESTREL  # save path
+          plugin: essos  # kestrel module
+
 
 v0.1.0
 -------
