@@ -29,8 +29,10 @@ def detach(x):
 
 def get_model_hash(model_state_dict):
     try:
-        from spring_analytics.model_lineage import get_model_meta
-        model_hash, model_short_hash, model_size_bytes = get_model_meta(model_state_dict)
+        from spring_analytics.model_lineage import get_model_meta, update_model_kestrel
+        model_meta = get_model_meta(model_state_dict)
+        update_model_kestrel(model_meta)
+        model_hash, model_short_hash, model_size_bytes = model_meta
     except Exception:
         return None
     return model_hash
