@@ -666,6 +666,7 @@ class MemoryAnalysis(Hook):
         super(MemoryAnalysis, self).__init__(runner)
         self.freq = runner.args.get('display', freq)
         node_list = split_node()
+        logdir = logdir + '/mem/%d' % (env.rank // 8)
         if env.rank in node_list:
             self.summary_writer = get_summary_writer_class(summary_writer)(os.path.join(runner.work_dir, logdir))
 

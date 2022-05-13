@@ -5,7 +5,7 @@ from .dist_helper import env
 def get_sigle_node_memory_info(get_total=False, node=0):
     mem = psutil.virtual_memory()
     memory_info = {}
-    prefix = f'node_{node}'
+    prefix = f'node'
     if get_total:
         mem_total = mem.total / 1024 / 1024 / 1024.
         memory_info[f'{prefix}_mem_total'] = round(mem_total, 3)
