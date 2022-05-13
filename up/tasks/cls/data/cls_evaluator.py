@@ -57,9 +57,6 @@ class ImageNetEvaluator(Evaluator):
 
     def get_pred_correct(self, pred, label):
         num = pred.size(0)
-        maxk = max(self.topk)
-        maxk = min(maxk, pred.size(1))
-        _, pred = pred.topk(maxk, 1, True, True)
         pred = pred.t()
         correct = pred.eq(label.reshape(1, -1).expand_as(pred))
         return correct, num
@@ -114,13 +111,13 @@ class ImageNetEvaluator(Evaluator):
             for attr_idx in range(label.shape[1]):
                 temp = []
                 for b_idx in range(label.shape[0]):
-                    temp.append(res_dict['score'][b_idx][attr_idx])
+                    temp.append(res_dict['topk_idx'][b_idx][attr_idx])
                 preds.append(temp)
-            pred = [torch.from_numpy(np.array(score)) for score in preds]
+            pred = [torch.from_numpy(np.array(idx)) for idx in preds]
             metric = self.multicls_eval(pred, label)
         else:
-            pred = torch.from_numpy(np.array(res_dict['score']))
-            metric = self.single_eval(pred, label, res_dict)
+            topk_idx = torch.from_numpy(np.array(res_dict['topk_idx']))
+            metric = self.single_eval(topk_idx, label, res_dict)
         return metric
 
     def analyze_bad_case(self, original_data):

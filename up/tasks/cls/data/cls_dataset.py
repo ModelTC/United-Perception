@@ -1,4 +1,5 @@
 import json
+import torch
 import numpy as np
 from up.data.datasets.base_dataset import BaseDataset
 from up.utils.general.registry_factory import DATASET_REGISTRY
@@ -108,11 +109,17 @@ class ClsDataset(BaseDataset):
                  meta_type='imagenet',
                  parser_info={},
                  image_type='pil',
-                 fraction=1.0):
+                 fraction=1.0,
+                 save_score=False):
         super(ClsDataset, self).__init__(meta_file,
                                          image_reader,
                                          transformer,
                                          evaluator)
+        if evaluator:
+            self.topk = evaluator.get('kwargs', {}).get('topk', [1, 5])
+        else:
+            self.topk = [1, 5]
+        self.save_score = save_score
         self.meta_type = meta_type
         self.image_type = image_type
         self.fraction = fraction
@@ -172,6 +179,7 @@ class ClsDataset(BaseDataset):
         return input
 
     def dump(self, output):
+        maxk = max(self.topk)
         prediction = self.tensor2numpy(output['preds'])
         label = self.tensor2numpy(output['gt'])
         multicls = False
@@ -188,24 +196,34 @@ class ClsDataset(BaseDataset):
         else:
             score = self.tensor2numpy(output['scores'])
         out_res = []
+        _topk_idx = []
         for b_idx in range(label.shape[0]):
             if multicls:
                 _prediction = [int(item) for item in prediction[:, b_idx]]
                 _label = [int(item) for item in label[b_idx][:]]
                 _score = []
+                _filename = filenames[b_idx]
                 for idx, item in enumerate(score):
                     _score.append([float('%.8f' % s) for s in item[b_idx]])
+                    maxk = min(maxk, len(item[0]))
+                    _, _topk_idx_temp = torch.tensor(_score[idx]).topk(maxk, 0, True, True)
+                    _topk_idx.append(_topk_idx_temp.tolist())
             else:
                 _prediction = int(prediction[b_idx])
                 _label = int(label[b_idx])
                 _score = [float('%.8f' % s) for s in score[b_idx]]
+                maxk = min(maxk, len(_score))
+                _, _topk_idx = torch.tensor(_score).topk(maxk, 0, True, True)
+                _topk_idx = _topk_idx.tolist()
                 _filename = filenames[b_idx]
             res = {
                 'prediction': _prediction,
                 'label': _label,
-                'score': _score,
+                'topk_idx': _topk_idx,
                 'filename': _filename
             }
+            if self.save_score:
+                res['score'] = _score
             out_res.append(res)
         return out_res
 
