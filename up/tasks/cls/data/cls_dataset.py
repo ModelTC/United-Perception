@@ -196,8 +196,8 @@ class ClsDataset(BaseDataset):
         else:
             score = self.tensor2numpy(output['scores'])
         out_res = []
-        _topk_idx = []
         for b_idx in range(label.shape[0]):
+            _topk_idx, _topk_score = [], []
             if multicls:
                 _prediction = [int(item) for item in prediction[:, b_idx]]
                 _label = [int(item) for item in label[b_idx][:]]
@@ -205,21 +205,24 @@ class ClsDataset(BaseDataset):
                 _filename = filenames[b_idx]
                 for idx, item in enumerate(score):
                     _score.append([float('%.8f' % s) for s in item[b_idx]])
-                    maxk = min(maxk, len(item[0]))
-                    _, _topk_idx_temp = torch.tensor(_score[idx]).topk(maxk, 0, True, True)
+                    maxk_temp = min(maxk, len(item[0]))
+                    _topk_score_temp, _topk_idx_temp = torch.tensor(_score[-1]).topk(maxk_temp, 0, True, True)
+                    _topk_score.append(_topk_score_temp.tolist())
                     _topk_idx.append(_topk_idx_temp.tolist())
             else:
                 _prediction = int(prediction[b_idx])
                 _label = int(label[b_idx])
                 _score = [float('%.8f' % s) for s in score[b_idx]]
                 maxk = min(maxk, len(_score))
-                _, _topk_idx = torch.tensor(_score).topk(maxk, 0, True, True)
+                _topk_score, _topk_idx = torch.tensor(_score).topk(maxk, 0, True, True)
+                _topk_score = _topk_score.tolist()
                 _topk_idx = _topk_idx.tolist()
                 _filename = filenames[b_idx]
             res = {
                 'prediction': _prediction,
                 'label': _label,
                 'topk_idx': _topk_idx,
+                'score': _topk_score,
                 'filename': _filename
             }
             if self.save_score:
