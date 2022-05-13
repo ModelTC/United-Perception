@@ -3,13 +3,13 @@ self-supervision
 
 UP supports self-supervision to train pretrained model and finetune downstream task;
 
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/up/tasks/ssl>`_
+`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/ssl>`_
 
 Config
 ------
 
-* `pretrain <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/configs/ssl/mocov1/moco_v1.yaml>`_
-* `finetune <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
+* `pretrain <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/ssl/mocov1/moco_v1.yaml>`_
+* `finetune <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
 
 pretrain module
 ---------------

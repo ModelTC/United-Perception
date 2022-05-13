@@ -3,13 +3,13 @@
 
 UP支持自监督pretrain模型训练以及finetune下游任务;
 
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/up/tasks/ssl>`_
+`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/ssl>`_
 
 配置文件
 --------
 
-* `pretrain <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/configs/ssl/mocov1/moco_v1.yaml>`_
-* `finetune <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
+* `pretrain <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/ssl/mocov1/moco_v1.yaml>`_
+* `finetune <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
 
 pretrain相关模块
 ----------------
