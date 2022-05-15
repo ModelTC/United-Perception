@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import json
 import numpy as np
@@ -35,6 +36,7 @@ class AnchorHeadSingle(BaseAnchorHead):
         super(AnchorHeadSingle, self).__init__(inplanes, num_classes)
 
         self.class_activation = class_activation
+        self.base_anchors_file = base_anchors_file
         with open(base_anchors_file, 'r') as f:
             anchor_classes = np.array(json.load(f))
         num_anchors_per_location = []
@@ -44,6 +46,7 @@ class AnchorHeadSingle(BaseAnchorHead):
             num_class = len(anchor_class['anchor_bottom_heights'])
             num_anchors_per_location.append(num_rotations * num_size * num_class)
         self.num_anchors = sum(num_anchors_per_location)
+        self.tocaffe = False
 
         self.cls_subnet_pred = nn.Conv2d(
             inplanes, self.num_anchors * self.num_classes, kernel_size=1)
@@ -76,6 +79,12 @@ class AnchorHeadSingle(BaseAnchorHead):
         features = input['spatial_features_2d']
         output = {}
         cls_preds, box_preds, dir_cls_preds = self.forward_net(features)
-        output.update({'cls_preds': cls_preds, 'box_preds': box_preds,
-                      'dir_pred': dir_cls_preds, 'num_anchors': self.num_anchors})
+
+        if self.tocaffe:
+            cls_preds = torch.sigmoid(cls_preds)
+            output.update({'blobs.rpn_cls': cls_preds, 'blobs.rpn_reg': box_preds,
+                           'blobs.rpn_dir': dir_cls_preds})
+        else:
+            output.update({'cls_preds': cls_preds, 'box_preds': box_preds,
+                           'dir_pred': dir_cls_preds, 'num_anchors': self.num_anchors})
         return output

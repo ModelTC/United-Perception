@@ -26,13 +26,16 @@ class VFETemplate(nn.Module):
 
 @MODULE_ZOO_REGISTRY.register('pillar_vfe')
 class PillarVFE(VFETemplate):
-    def __init__(self, num_point_features, num_filters, with_distance=False, use_absolute_xyz=True, use_norm=True):
+    def __init__(self, num_point_features, num_filters, with_distance=False,
+                 use_absolute_xyz=True, use_norm=True, tocaffe=False):
         super().__init__()
         self.with_distance = with_distance
         self.use_absolute_xyz = use_absolute_xyz
         self.use_norm = use_norm
+        self.tocaffe = tocaffe
 
-        num_point_features += 6 if self.use_absolute_xyz else 3
+        # num_point_features += 6 if self.use_absolute_xyz else 3
+        num_point_features += 5 if self.use_absolute_xyz else 3
         if self.with_distance:
             num_point_features += 1
 
@@ -45,7 +48,8 @@ class PillarVFE(VFETemplate):
             in_filters = num_filters[i]
             out_filters = num_filters[i + 1]
             pfn_layers.append(
-                PFNLayer(in_filters, out_filters, self.use_norm, last_layer=(i >= len(num_filters) - 2))
+                PFNLayer(in_filters, out_filters, self.use_norm,
+                         last_layer=(i >= len(num_filters) - 2), tocaffe=tocaffe)
             )
         self.pfn_layers = nn.ModuleList(pfn_layers)
         self.out_planes = num_filters[-1]
@@ -69,19 +73,33 @@ class PillarVFE(VFETemplate):
         y_offset = voxel_y / 2 + point_cloud_range[1]
         z_offset = voxel_z / 2 + point_cloud_range[2]
 
-        f_center = torch.zeros_like(voxel_features[:, :, :3])
-        f_center[:, :, 0] = voxel_features[:, :, 0] - \
-            (coords[:, 3].to(voxel_features.dtype).unsqueeze(1) * voxel_x + x_offset)
-        f_center[:, :, 1] = voxel_features[:, :, 1] - \
-            (coords[:, 2].to(voxel_features.dtype).unsqueeze(1) * voxel_y + y_offset)
-        f_center[:, :, 2] = voxel_features[:, :, 2] - \
-            (coords[:, 1].to(voxel_features.dtype).unsqueeze(1) * voxel_z + z_offset)
+        if self.tocaffe:
+            f_center = torch.zeros_like(voxel_features[:, :, :3, :])
+            f_center[:, :, 0, :] = voxel_features[:, :, 0, :] - \
+                (coords[:, 3].to(voxel_features.dtype).unsqueeze(1).unsqueeze(-1) * voxel_x + x_offset)
+            f_center[:, :, 1, :] = voxel_features[:, :, 1, :] - \
+                (coords[:, 2].to(voxel_features.dtype).unsqueeze(1).unsqueeze(-1) * voxel_y + y_offset)
+            f_center[:, :, 2, :] = voxel_features[:, :, 2, :] - \
+                (coords[:, 1].to(voxel_features.dtype).unsqueeze(1).unsqueeze(-1) * voxel_z + z_offset)
+        else:
+            f_center = torch.zeros_like(voxel_features[:, :, :3])
+            f_center[:, :, 0] = voxel_features[:, :, 0] - \
+                (coords[:, 3].to(voxel_features.dtype).unsqueeze(1) * voxel_x + x_offset)
+            f_center[:, :, 1] = voxel_features[:, :, 1] - \
+                (coords[:, 2].to(voxel_features.dtype).unsqueeze(1) * voxel_y + y_offset)
+            f_center[:, :, 2] = voxel_features[:, :, 2] - \
+                (coords[:, 1].to(voxel_features.dtype).unsqueeze(1) * voxel_z + z_offset)
         return f_center
 
     def get_pillar_features(self, voxel_infos, voxel_features, coords, voxel_num_points):
         voxel_size, point_cloud_range = voxel_infos['voxel_size'], voxel_infos['point_cloud_range']
-        points_mean = torch.sum(voxel_features[:, :, :3], dim=1, keepdim=True) / \
-            voxel_num_points.type_as(voxel_features).view(-1, 1, 1)
+
+        if self.tocaffe:
+            points_mean = torch.sum(voxel_features[:, :, :3, :], dim=1, keepdim=True) / \
+                voxel_num_points.type_as(voxel_features).view(-1, 1, 1, 1)
+        else:
+            points_mean = torch.sum(voxel_features[:, :, :3], dim=1, keepdim=True) / \
+                voxel_num_points.type_as(voxel_features).view(-1, 1, 1)
         f_cluster = voxel_features[:, :, :3] - points_mean
         f_center = self.get_f_center(voxel_features, coords, voxel_size, point_cloud_range)
         if self.use_absolute_xyz:
@@ -92,15 +110,25 @@ class PillarVFE(VFETemplate):
             points_dist = torch.norm(voxel_features[:, :, :3], 2, 2, keepdim=True)
             features.append(points_dist)
 
-        features = torch.cat(features, dim=-1)
+        if self.tocaffe:
+            features[-1] = features[-1][:, :, :2]
+            features = torch.cat(features, dim=-2)
+        else:
+            features = torch.cat(features, dim=-1)
         voxel_count = features.shape[1]
         mask = self.get_paddings_indicator(voxel_num_points, voxel_count, axis=0)
-        mask = torch.unsqueeze(mask, -1).type_as(voxel_features)
+
+        if self.tocaffe:
+            mask = torch.unsqueeze(mask, -1).unsqueeze(-1).type_as(voxel_features)
+        else:
+            mask = torch.unsqueeze(mask, -1).type_as(voxel_features)
         features *= mask
 
         for pfn in self.pfn_layers:
             features = pfn(features)
         features = features.squeeze()
+        if self.tocaffe:
+            return features, pfn
         return features
 
     def scatter(self, voxel_infos, pillar_features, coords):
@@ -130,7 +158,14 @@ class PillarVFE(VFETemplate):
     def forward(self, input):
         voxel_infos = input['voxel_infos']
         voxel_features, coords, voxel_num_points = input['voxels'], input['voxel_coords'], input['voxel_num_points']
-        pillar_features = self.get_pillar_features(voxel_infos, voxel_features, coords, voxel_num_points)
+
+        if self.tocaffe:
+            pillar_features, pfn = self.get_pillar_features(
+                voxel_infos, voxel_features, coords, voxel_num_points)
+            return {'blobs.pfn_output': pillar_features, 'blobs.pfn': pfn}
+        else:
+            pillar_features = self.get_pillar_features(voxel_infos, voxel_features, coords, voxel_num_points)
+
         spatial_features = self.scatter(voxel_infos, pillar_features, coords)
         return {'spatial_features': spatial_features}
 
@@ -143,43 +178,72 @@ class PFNLayer(nn.Module):
                  in_channels,
                  out_channels,
                  use_norm=True,
-                 last_layer=False):
+                 last_layer=False,
+                 tocaffe=False):
         super().__init__()
 
         self.last_vfe = last_layer
         self.use_norm = use_norm
         if not self.last_vfe:
             out_channels = out_channels // 2
+        self.tocaffe = tocaffe
 
-        if self.use_norm:
-            self.linear = nn.Linear(in_channels, out_channels, bias=False)
-            self.norm = nn.BatchNorm1d(out_channels, eps=1e-3, momentum=0.01)
+        if self.tocaffe:
+            if self.use_norm:
+                self.linear = nn.Conv2d(in_channels, out_channels, 1, bias=False)
+                self.norm = nn.BatchNorm2d(out_channels, eps=1e-3, momentum=0.01)
+            else:
+                self.linear = nn.Conv2d(in_channels, out_channels, 1, bias=True)
         else:
-            self.linear = nn.Linear(in_channels, out_channels, bias=True)
+            if self.use_norm:
+                self.linear = nn.Linear(in_channels, out_channels, bias=False)
+                self.norm = nn.BatchNorm1d(out_channels, eps=1e-3, momentum=0.01)
+            else:
+                self.linear = nn.Linear(in_channels, out_channels, bias=True)
 
         self.part = 50000
         self.out_planes = out_channels
 
     def forward(self, inputs):
-        if inputs.shape[0] > self.part:
-            # nn.Linear performs randomly when batch size is too large
-            num_parts = inputs.shape[0] // self.part
-            part_linear_out = [self.linear(inputs[num_part * self.part:(num_part + 1) * self.part])
-                               for num_part in range(num_parts + 1)]
-            x = torch.cat(part_linear_out, dim=0)
-        else:
+        if self.tocaffe:
+            inputs = inputs.permute(0, 2, 1, 3)  # N, C, P, 1
             x = self.linear(inputs)
-        torch.backends.cudnn.enabled = False
-        x = self.norm(x.permute(0, 2, 1)).permute(0, 2, 1) if self.use_norm else x
-        torch.backends.cudnn.enabled = True
+            x = self.norm(x) if self.use_norm else x
+            x = x.squeeze(-1).permute(0, 2, 1)
+        else:
+            if inputs.shape[0] > self.part:
+                # nn.Linear performs randomly when batch size is too large
+                num_parts = inputs.shape[0] // self.part
+                part_linear_out = [self.linear(inputs[num_part * self.part:(num_part + 1) * self.part])
+                                   for num_part in range(num_parts + 1)]
+                x = torch.cat(part_linear_out, dim=0)
+            else:
+                x = self.linear(inputs)
+            torch.backends.cudnn.enabled = False
+            x = self.norm(x.permute(0, 2, 1)).permute(0, 2, 1) if self.use_norm else x
+            torch.backends.cudnn.enabled = True
+
         x = F.relu(x)
-        x_max = torch.max(x, dim=1, keepdim=True)[0]
+        if self.tocaffe:
+            max_points_per_voxel = x.shape[1]
+            x = x.unsqueeze(0)  # N, P, C => 1, N, P, C
+            mp2d = nn.MaxPool2d(
+                kernel_size=(max_points_per_voxel, 1),
+                stride=1, padding=(0, 0))
+            x_max = mp2d(x)  # 1, N, 1, C
+            x_max = x_max.squeeze(0).squeeze(1)   # N, 1, C
+        else:
+            x_max = torch.max(x, dim=1, keepdim=True)[0]
 
         if self.last_vfe:
             return x_max
         else:
-            x_repeat = x_max.repeat(1, inputs.shape[1], 1)
-            x_concatenated = torch.cat([x, x_repeat], dim=2)
+            if self.tocaffe:
+                x_repeat = x_max.repeat(1, 1, inputs.shape[2], 1)
+                x_concatenated = torch.cat([x, x_repeat], dim=3)
+            else:
+                x_repeat = x_max.repeat(1, inputs.shape[1], 1)
+                x_concatenated = torch.cat([x, x_repeat], dim=2)
             return x_concatenated
 
     def get_outplanes(self):

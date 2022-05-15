@@ -14,7 +14,8 @@ class BaseBEVBackbone(nn.Module):
                  num_filters=None,
                  upsample_strides=None,
                  num_upsample_filters=None,
-                 normalize={'type': 'solo_bn'}):
+                 normalize={'type': 'solo_bn'},
+                 tocaffe=False):
         super().__init__()
         if layer_nums is not None:
             assert len(layer_nums) == len(layer_strides) == len(num_filters)
@@ -30,16 +31,27 @@ class BaseBEVBackbone(nn.Module):
         c_in_list = [inplanes, *num_filters[:-1]]
         self.blocks = nn.ModuleList()
         self.deblocks = nn.ModuleList()
+        self.tocaffe = tocaffe
         for idx in range(num_levels):
-            cur_layers = [
-                nn.ZeroPad2d(1),
-                nn.Conv2d(
-                    c_in_list[idx], num_filters[idx], kernel_size=3,
-                    stride=layer_strides[idx], padding=0, bias=False
-                ),
-                build_norm_layer(num_filters[idx], normalize)[1],
-                nn.ReLU()
-            ]
+            if self.tocaffe:
+                cur_layers = [
+                    nn.Conv2d(
+                        c_in_list[idx], num_filters[idx], kernel_size=3,
+                        stride=layer_strides[idx], padding=1, bias=False
+                    ),
+                    build_norm_layer(num_filters[idx], normalize)[1],
+                    nn.ReLU()
+                ]
+            else:
+                cur_layers = [
+                    nn.ZeroPad2d(1),
+                    nn.Conv2d(
+                        c_in_list[idx], num_filters[idx], kernel_size=3,
+                        stride=layer_strides[idx], padding=0, bias=False
+                    ),
+                    build_norm_layer(num_filters[idx], normalize)[1],
+                    nn.ReLU()
+                ]
             for k in range(layer_nums[idx]):
                 cur_layers.extend([
                     nn.Conv2d(num_filters[idx], num_filters[idx], kernel_size=3, padding=1, bias=False),
