@@ -222,6 +222,10 @@ def generate_config(train_cfg):
         strides = strides.tolist()
     if not hasattr(model, 'post_process') and hasattr(model, 'roi_head'):
         setattr(model, 'post_process', model.roi_head)
+    if not hasattr(model, 'bbox_head_post_process') and hasattr(model, 'bbox_head'):
+        setattr(model, 'bbox_head_post_process', model.bbox_head)
+    if not hasattr(model, 'bbox_head_pre_process') and hasattr(model, 'bbox_head'):
+        setattr(model, 'bbox_head_pre_process', model.bbox_head)
     kestrel_param['with_background_rpn'] = False
     kestrel_param['with_background_head'] = False
     if model.post_process.cls_loss.activation_type == 'softmax':
@@ -251,15 +255,15 @@ def generate_config(train_cfg):
     kestrel_net_param['rpn_bbox_score_thresh'] = predictor.pre_nms_score_thresh
 
     # bbox_head
-    if model.bbox_head.cls_loss.activation_type == 'softmax':
+    if model.bbox_head_post_process.cls_loss.activation_type == 'softmax':
         kestrel_param['with_background_head'] = True
-    predictor = model.bbox_head.predictor
+    predictor = model.bbox_head_post_process.predictor
     kestrel_net_param['det_nms_thresh'] = predictor.nms_cfg['nms_iou_thresh']
     kestrel_net_param['share_location'] = predictor.share_location
     kestrel_net_param['detect_top_k'] = predictor.top_n
     kestrel_net_param['det_bbox_score_thresh'] = predictor.bbox_score_thresh
-    kestrel_net_param['base_scale'] = model.bbox_head.cfg['fpn']['base_scale']
-    kestrel_net_param['bbox_head_fpn_levels'] = model.bbox_head.cfg['fpn']['fpn_levels']
+    kestrel_net_param['base_scale'] = model.bbox_head_pre_process.cfg['fpn']['base_scale']
+    kestrel_net_param['bbox_head_fpn_levels'] = model.bbox_head_pre_process.cfg['fpn']['fpn_levels']
     kestrel_net_param['backbone_output_num'] = len(kestrel_net_param['bbox_head_fpn_levels'])
     kestrel_net_param['roipooling_sample_num'] = model.bbox_head.cfg['roipooling']['sampling_ratio']
     kestrel_param.update(kestrel_net_param)

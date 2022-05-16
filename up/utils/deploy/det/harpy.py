@@ -150,6 +150,8 @@ def generate_config(train_cfg):
         strides = strides.tolist()
     if not hasattr(model, 'post_process') and hasattr(model, 'roi_head'):
         setattr(model, 'post_process', model.roi_head)
+    if not hasattr(model, 'bbox_head_post_process') and hasattr(model, 'bbox_head'):
+        setattr(model, 'bbox_head_post_process', model.bbox_head)
 
     kestrel_net_param = dict()
     # strides = model.backbone.get_outstrides()
@@ -169,7 +171,7 @@ def generate_config(train_cfg):
     kestrel_net_param['pre_top_k'] = model.post_process.test_predictor.pre_nms_top_n
     kestrel_net_param['aft_top_k'] = model.post_process.test_predictor.post_nms_top_n
     kestrel_net_param['rpn_nms_thresh'] = model.post_process.test_predictor.nms_cfg['nms_iou_thresh']
-    kestrel_net_param['det_nms_thresh'] = model.bbox_head.predictor.nms_cfg['nms_iou_thresh']
+    kestrel_net_param['det_nms_thresh'] = model.bbox_head_post_process.predictor.nms_cfg['nms_iou_thresh']
 
     kestrel_param.update(kestrel_net_param)
 
@@ -181,7 +183,7 @@ def generate_config(train_cfg):
 
     # parse parameters for softer nms
     for temp in train_cfg['net']:
-        if temp['name'] == 'bbox_head':
+        if temp['name'] == 'bbox_head_post_process':
             nms_cfg = temp['kwargs']['cfg']['bbox_predictor']['kwargs']['nms']
             if nms_cfg['type'] == 'soft':
                 soft_nms_cfg = {}
