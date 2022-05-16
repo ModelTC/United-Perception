@@ -36,7 +36,8 @@ from up.utils.general.global_flag import (
     DIST_BACKEND,
     FP16_FLAG
 )
-
+from up.utils.general.tocaffe_utils import get_model_hash, rewrite_model
+from up.utils.env.analysis_utils import get_memory_info
 
 __all__ = ['BaseRunner']
 
@@ -59,7 +60,13 @@ class BaseRunner(object):
         self.device = self.config['runtime']['device']
         self.aligned = self.config['runtime']['aligned']
         self.fp16 = False
+        node_info, node_list = get_memory_info(get_total=True)
+        if env.rank in node_list:
+            print("node memory info before build", node_info)
         self.build()
+        node_info, node_list = get_memory_info(get_total=True)
+        if env.rank in node_list:
+            print("node memory info after build", node_info)
 
     def prepare_fp16(self):
         if self.config['runtime'].get('fp16', False):
@@ -489,7 +496,9 @@ class BaseRunner(object):
                                                      input_size,
                                                      model,
                                                      input_channel)
+        model_hash = get_model_hash(self.model.state_dict())
         caffemodel_name = tocaffe_ins.process()
+        rewrite_model(tocaffe_ins.save_prefix, model_hash)
         cfg_gdbp = self.config.get('gdbp', None)
         if cfg_gdbp is not None:
             onnx_file = tocaffe_ins.save_prefix + '.onnx'

@@ -27,6 +27,48 @@ def detach(x):
         return x
 
 
+def get_model_hash(model_state_dict):
+    try:
+        from spring_analytics.model_lineage import get_model_meta, update_model_kestrel
+        model_meta = get_model_meta(model_state_dict)
+        update_model_kestrel(model_meta)
+        model_hash, model_short_hash, model_size_bytes = model_meta
+    except Exception:
+        return None
+    return model_hash
+
+
+def rewrite_onnx(onnx_prefix, model_hash):
+    import onnx
+    onnx_file = onnx_prefix + '.onnx'
+    onnx_model = onnx.load(onnx_file)
+    onnx_model.doc_string += f'''
+        model_hash: {model_hash}
+    '''
+    onnx.save(onnx_model, onnx_file)
+
+
+def rewrite_caffe(caffe_prefix, model_hash):
+    from spring.nart.tools.proto import caffe_pb2
+    caffe_file = caffe_prefix + '.caffemodel'
+    caffe_model = caffe_pb2.NetParameter()
+    with open(caffe_file, "rb") as f:
+        caffe_model.ParseFromString(f.read())
+    caffe_model.name += f'\n# model_hash: {model_hash}'
+    with open(caffe_file, 'wb') as f:
+        f.write(caffe_model.SerializeToString())
+
+
+def rewrite_model(prefix, model_hash):
+    if model_hash is None:
+        return
+    try:
+        rewrite_onnx(prefix, model_hash)
+        rewrite_caffe(prefix, model_hash)
+    except Exception:
+        return
+
+
 class ToCaffe(object):
     _tocaffe = False
 

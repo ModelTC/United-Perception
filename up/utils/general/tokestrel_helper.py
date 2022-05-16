@@ -105,6 +105,8 @@ class KpToKestrel(object):
         prototxt = '{}.prototxt'.format(prefix)
 
         config = copy.deepcopy(self.config)
+        model_name = config['to_kestrel'].get('model_name', 'model')
+
         to_kestrel_yml = 'temp_to_kestrel.yml'
         version = config['to_kestrel'].get('version', "1.0.0")
         with open(to_kestrel_yml, 'w') as f:
@@ -114,7 +116,7 @@ class KpToKestrel(object):
             self.save_to = config['to_kestrel']['save_to']
 
         cmd = 'python -m spring.nart.tools.kestrel.raven {} {} -v {} -c {} -n {} -p {}'.format(
-            prototxt, caffemodel, version, to_kestrel_yml, self.save_to, self.save_to)
+            prototxt, caffemodel, version, to_kestrel_yml, model_name, self.save_to)
         if self.serialize:
             logger.info('spring.nart.tools.kestrel.raven not support serialization')
             raise NotImplementedError
@@ -147,6 +149,7 @@ class SegToKestrel(object):
 
         config = copy.deepcopy(self.config)
         plugin = config['to_kestrel']['plugin']
+        model_name = config['to_kestrel'].get('model_name', 'model')
 
         version = config['to_kestrel'].get('version', "1.0.0")
         parameters_json = 'tmp_parameters_json'
@@ -163,7 +166,7 @@ class SegToKestrel(object):
 
         ks_processor = KS_PROCESSOR_REGISTRY[plugin](prototxt,
                                                      caffemodel, b=1,
-                                                     n=self.save_to, v=version,
+                                                     n=model_name, v=version,
                                                      p=self.save_to,
                                                      k=parameters_json,
                                                      i=self.input_channel,
@@ -197,6 +200,7 @@ class DetToKestrel(object):
         # we get anchors.json, $prefix.prototxt, $prefix.caffemodel
         config = copy.deepcopy(self.config)
         plugin = config['to_kestrel']['plugin']
+        model_name = config['to_kestrel'].get('model_name', 'model')
         nnie_cfg = config['to_kestrel'].get('nnie', None)
 
         if config['to_kestrel'].get('sigmoid', None) is not None:
@@ -228,7 +232,7 @@ class DetToKestrel(object):
 
         ks_processor = KS_PROCESSOR_REGISTRY[plugin](prototxt,
                                                      caffemodel, b=1,
-                                                     n=self.save_to, v=version,
+                                                     n=model_name, v=version,
                                                      p=self.save_to,
                                                      k=parameters_json,
                                                      i=self.input_channel,
@@ -279,6 +283,7 @@ class ClsToKestrel(object):
 
         config = copy.deepcopy(self.config)
         nnie_cfg = config['to_kestrel'].get('nnie', None)
+        model_name = config['to_kestrel'].get('model_name', 'model')
 
         version = self.config['to_kestrel'].get('version', '1.0.0')
         to_kestrel_yml = 'temp_to_kestrel.yml'
@@ -300,7 +305,7 @@ class ClsToKestrel(object):
         plugin = config['to_kestrel']['plugin']
         ks_processor = KS_PROCESSOR_REGISTRY[plugin](prototxt,
                                                      caffemodel, b=1,
-                                                     n=self.save_to, v=version,
+                                                     n=model_name, v=version,
                                                      p=self.save_to,
                                                      k=parameters_json,
                                                      i=self.input_channel,

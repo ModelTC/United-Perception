@@ -90,6 +90,7 @@ Cutmix + Mixup:
     to_kestrel:
       toks_type: cls   # 通过设置toks_type
       plugin: classifier
+      model_name: model  # 设置meta.json中的model_name
       pixel_means: [123.675, 116.28, 103.53]
       pixel_stds: [58.395, 57.12, 57.375]
       is_rgb: True

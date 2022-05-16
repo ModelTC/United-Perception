@@ -22,6 +22,7 @@ to_kestrel:
   save_to: RETINANET  # saved file
   default_confidence_thresh: 0.05
   plugin: essos   # choices = [essos, harpy, sphinx]
+  model_name: model
   version: 1.0.0
   resize_hw: 800x1333
 

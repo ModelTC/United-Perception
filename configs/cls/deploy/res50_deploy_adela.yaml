@@ -7,6 +7,7 @@ to_kestrel:
   toks_type: cls
   plugin: classifier
   save_to: Res50
+  model_name: model
   add_softmax: False
   pixel_means: [123.675, 116.28, 103.53]
   pixel_stds: [58.395, 57.12, 57.375]

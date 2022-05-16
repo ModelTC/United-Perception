@@ -43,7 +43,8 @@ class CustomDataset(BaseDataset):
                  label_mapping=None,
                  cache=None,
                  clip_box=True,
-                 cross_cfg=None):
+                 cross_cfg=None,
+                 check_label=False):
         super(CustomDataset, self).__init__(
             meta_file,
             image_reader,
@@ -61,6 +62,8 @@ class CustomDataset(BaseDataset):
         self.cross_cfg = cross_cfg
         self._normal_init()
         self.clip_box = clip_box
+        if check_label:
+            self._check_label()
 
         if len(self.aspect_ratios) == 0:
             self.aspect_ratios = [1] * len(self.metas)
@@ -132,6 +135,13 @@ class CustomDataset(BaseDataset):
         if r != 1:
             img = cv2.resize(img, (int(w0 * r), int(h0 * r)), interpolation=interp)
         return img
+
+    def _check_label(self):
+        for meta in self.metas:
+            instances = meta.get('instances', [])
+            for instance in instances:
+                if "label" in instance:
+                    assert instance['label'] < self.num_classes
 
     def get_cache_image(self, data):
         image_dir = get_cur_image_dir(self.image_reader.image_dir, data.get('image_source', 0))
@@ -323,7 +333,8 @@ class RankCustomDataset(CustomDataset):
                  label_mapping=None,
                  cross_cfg=None,
                  reload_cfg={},
-                 random=True):
+                 random=True,
+                 check_label=False):
         self.mini_epoch = reload_cfg.get('mini_epoch', 1)
         self.seed = reload_cfg.get('seed', 0)
         self.mini_epoch_idx = reload_cfg.get('mini_epoch_idx', 0)
@@ -339,7 +350,8 @@ class RankCustomDataset(CustomDataset):
             class_names=class_names,
             evaluator=evaluator,
             label_mapping=label_mapping,
-            cross_cfg=cross_cfg)
+            cross_cfg=cross_cfg,
+            check_label=check_label)
 
     def _normal_init(self):
         if not isinstance(self.meta_file, list):

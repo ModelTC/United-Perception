@@ -13,10 +13,10 @@ from torch.nn.utils import clip_grad_norm_
 
 from .registry_factory import HOOK_REGISTRY, VISUALIZER_REGISTRY
 from up.data.metrics.base_evaluator import Metric
-from ..env.dist_helper import allreduce
+from ..env.dist_helper import allreduce, env
+from up.utils.env.analysis_utils import get_memory_info, split_node
 
 # Import from local
-from ..env.dist_helper import env
 from .log_helper import MetricLogger, SmoothedValue
 from .log_helper import default_logger as logger
 from .global_flag import (
@@ -648,6 +648,47 @@ class ReloadDataloader(Hook):
                 runner.data_iterators = {}
             runner.build_dataloaders(reload_cfg=reload_cfg)
             runner.data_iterators['train'] = iter(runner.data_loaders["train"])
+
+
+@HOOK_REGISTRY.register('memory_ayalysis')
+class MemoryAnalysis(Hook):
+    """Log time, loss, etc.
+    """
+
+    def __init__(self, runner, freq=20, logdir='log', summary_writer='tensorboard'):
+        """
+        Arguments:
+            - runner (:obj:`Runner`): used as to accecss other variables
+            - freq (:obj:`int`): frequency that output log messages
+            - logdir (:obj:`str`): tensorboard events dir
+            - summary_writer (:obj:`str`): "tensorboard" or "pavi"
+        """
+        super(MemoryAnalysis, self).__init__(runner)
+        self.freq = runner.args.get('display', freq)
+        node_list = split_node()
+        logdir = logdir + '/mem/%d' % (env.rank // 8)
+        if env.rank in node_list:
+            self.summary_writer = get_summary_writer_class(summary_writer)(os.path.join(runner.work_dir, logdir))
+
+    def after_update(self, cur_iter):
+        cur_iter += 1
+        if cur_iter % self.freq != 0:
+            return
+        node_info, node_list = get_memory_info(get_total=False)
+        if env.rank in node_list:
+            print(f"node memory info after iter {cur_iter}", node_info)
+            for k, v in node_info.items():
+                self.summary_writer.add_scalar('train/' + k, v, cur_iter)
+
+    def after_eval_forward(self, cur_iter, output):
+        cur_iter += 1
+        if cur_iter % self.freq != 0:
+            return
+        node_info, node_list = get_memory_info(get_total=False)
+        if env.rank in node_list:
+            print(f"node memory info after iter {cur_iter}", node_info)
+            for k, v in node_info.items():
+                self.summary_writer.add_scalar('val/' + k, v, cur_iter)
 
 
 class ComposeHook(object):
