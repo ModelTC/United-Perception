@@ -183,7 +183,8 @@ def generate_config(train_cfg):
 
     # parse parameters for softer nms
     for temp in train_cfg['net']:
-        if temp['name'] == 'bbox_head_post_process':
+        if temp['name'] == 'bbox_head_post_process' or (not hasattr(
+                model, 'bbox_head_post_process') and temp['name'] == 'bbox_head'):
             nms_cfg = temp['kwargs']['cfg']['bbox_predictor']['kwargs']['nms']
             if nms_cfg['type'] == 'soft':
                 soft_nms_cfg = {}
