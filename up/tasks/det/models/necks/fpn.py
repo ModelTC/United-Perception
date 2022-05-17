@@ -30,7 +30,6 @@ class FPN(nn.Module):
                  downsample,
                  upsample,
                  normalize=None,
-                 tocaffe_friendly=False,
                  initializer=None,
                  align_corners=True,
                  use_p5=False,
@@ -62,7 +61,6 @@ class FPN(nn.Module):
         self.num_level = num_level
         self.downsample = downsample
         self.upsample = upsample
-        self.tocaffe_friendly = tocaffe_friendly
         if upsample == 'nearest':
             align_corners = None
         self.align_corners = align_corners
@@ -152,11 +150,6 @@ class FPN(nn.Module):
             if lvl_idx < len(self.inplanes) - 1:
                 if self.upsample == 'deconv':
                     laterals[lvl_idx] += self.deconv(laterals[lvl_idx + 1])
-                elif self.tocaffe_friendly:
-                    laterals[lvl_idx] += F.interpolate(laterals[lvl_idx + 1],
-                                                       scale_factor=2,
-                                                       mode=self.upsample,
-                                                       align_corners=self.align_corners)
                 else:
                     # nart_tools may not support to interpolate to the size of other feature
                     # you may need to modify upsample or interp layer in prototxt manually.

@@ -22,7 +22,3 @@ FP16模式配置
   runtime:
     # dist 
     fp16: True
-    # linklink
-    fp16:
-      keep_batchnorm_fp32: True
-      scale_factor: dynamic

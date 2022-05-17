@@ -3,14 +3,14 @@ Knowledge distillation
 
 UP supports knowledge distillation. The specific pipline is improving the student model by distilling multiple feature maps between teacher models and student models.
 
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/dev/up/tasks/distill>`_
+`Codes <https://github.com/ModelTC/EOD/-/tree/dev/up/tasks/distill>`_
 
 
 Config of sub-task
 ------------------
 
-* `classification <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/resnet/res18_kd.yaml>`_
-* `detection <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/det/distill/faster_rcnn_r152_50_1x_feature_mimic.yaml>`_
+* `classification <https://github.com/ModelTC/EOD/-/blob/dev/configs/cls/resnet/res18_kd.yaml>`_
+* `detection <https://github.com/ModelTC/EOD/-/blob/dev/configs/det/distill/faster_rcnn_r152_50_1x_feature_mimic.yaml>`_
 
 Configs
 -------

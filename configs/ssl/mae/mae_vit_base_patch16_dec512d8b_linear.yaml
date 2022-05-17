@@ -2,21 +2,21 @@ num_classes: &num_classes 1000
 runtime:
   task_names: ssl
 random_resized_crop: &random_resized_crop
- type: torch_random_resized_crop
- kwargs:
-   size: 224
-   scale: [0.08, 1]
+  type: torch_random_resized_crop
+  kwargs:
+    size: 224
+    scale: [0.08, 1]
 
 random_horizontal_flip: &random_horizontal_flip
- type: torch_random_horizontal_flip
+  type: torch_random_horizontal_flip
 
-pil_color_jitter: &pil_color_jitter
- type: torch_color_jitter
- kwargs:
-  brightness: 0.2
-  contrast: 0.2
-  saturation: 0.2
-  hue: 0.1
+pil_color_jitter:
+  type: torch_color_jitter
+  kwargs:
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.2
+    hue: 0.1
 
 center_crop: &center_crop
   type: torch_center_crop
@@ -32,52 +32,52 @@ to_tensor: &to_tensor
   type: to_tensor
 
 normalize: &normalize
- type: normalize
- kwargs:
-   mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
-   std: [0.229, 0.224, 0.225]
+  type: normalize
+  kwargs:
+    mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
+    std: [0.229, 0.224, 0.225]
 
 dataset: # Required.
   train:
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_file: images/meta/train.txt
         image_reader:
-          type: ceph_opencv
+          type: fs_pillow
           kwargs:
-            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
+            image_dir: images/train
             color_mode: RGB
-            memcached: True
+            memcached: true
         transformer: [*random_resized_crop, *random_horizontal_flip, *to_tensor, *normalize]
     batch_sampler:
-        type: base
-        kwargs:
-          sampler:
-            type: dist
-            kwargs: {}
-          batch_size: 512
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 512
     dataloader:
-        type: cls_base
-        kwargs:
-          num_workers: 4
-          pin_memory: True
+      type: cls_base
+      kwargs:
+        num_workers: 4
+        pin_memory: true
   test:
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/val.txt
+        meta_file: images/meta/val.txt
         image_reader:
-          type: ceph_opencv
+          type: fs_pillow
           kwargs:
-            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/val
+            image_dir: images/val
             color_mode: RGB
-            memcached: True
+            memcached: true
         transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
         evaluator:
           type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
-             topk: [1, 5]
+            topk: [1, 5]
     batch_sampler:
       type: base
       kwargs:
@@ -89,18 +89,18 @@ dataset: # Required.
       type: cls_base
       kwargs:
         num_workers: 4
-        pin_memory: False
+        pin_memory: false
 
 trainer: # Required.
   max_epoch: 90
   test_freq: 5
   save_freq: 5
-  only_save_latest: True
+  only_save_latest: true
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: LARS
     kwargs:
       lr: 3.2
-      nesterov: True
+      nesterov: true
       momentum: 0.9
       weight_decay: 0
   lr_scheduler:
@@ -110,47 +110,47 @@ trainer: # Required.
     warmup_ratio: 0.0001
     type: CosineAnnealingLR
     kwargs:
-        T_max: 100
-        eta_min: 0.0
-        warmup_iter: 1563
+      T_max: 100
+      eta_min: 0.0
+      warmup_iter: 1563
 
 saver: # Required.
   save_dir: vit_official_linear/checkpoints/mae     # dir to save checkpoints
-  pretrain_model: /mnt/lustre/baishihao/UP_Vit/ckpt_t.pth
+  pretrain_model: pretrain_path
   results_dir: vit_official_linear/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  auto_resume: true  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:
-  - type: auto_save_best
+- type: auto_save_best
 
-net: &subnet
-  - name: fix_layers
-    type: self   # pass arguments to ModelHelper for functional usages
-    kwargs:
-      freeze_patterns:
-        - "backbone" # prefix
-  - name: backbone
-    type: vit_base_patch16_224
-    kwargs:
-      drop_path: 0.1
-      dropout: 0.0
-      attention_dropout: 0.0
-      qkv_bias: True
-      last_norm: False
-  - name: head
-    type: vit_head
-    kwargs:
-       num_classes: *num_classes
-       in_plane: &head_out_channel 768
-       input_feature_idx: -1
-       cls_type: token
-       bn: True
-  - name: post_process
-    type: base_cls_postprocess
-    kwargs:
-       cls_loss:
-         type: label_smooth_ce
-         kwargs:
-            smooth_ratio: 0.1
-            num_classes: *num_classes
+net:
+- name: fix_layers
+  type: self     # pass arguments to ModelHelper for functional usages
+  kwargs:
+    freeze_patterns:
+    - backbone       # prefix
+- name: backbone
+  type: vit_base_patch16_224
+  kwargs:
+    drop_path: 0.1
+    dropout: 0.0
+    attention_dropout: 0.0
+    qkv_bias: true
+    last_norm: false
+- name: head
+  type: vit_head
+  kwargs:
+    num_classes: *num_classes
+    in_plane: &head_out_channel 768
+    input_feature_idx: -1
+    cls_type: token
+    bn: true
+- name: post_process
+  type: base_cls_postprocess
+  kwargs:
+    cls_loss:
+      type: label_smooth_ce
+      kwargs:
+        smooth_ratio: 0.1
+        num_classes: *num_classes

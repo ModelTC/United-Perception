@@ -3,14 +3,14 @@ Segmentation
 
 UP supports the whole pipline of training, deploying, and interfering;
 
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/seg>`_
+`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/seg>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Repos <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/seg>`_
+`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/seg>`_
 
 Dataset related modules
 -----------------------
@@ -27,16 +27,16 @@ Dataset related modules
       type: cls
       kwargs:
         seg_type: cityscapes    # Default is cityscapes. Options: [cityscapes]
-        meta_file: /mnt/lustre/share/HiLight/dataset/cityscapes/fine_train.txt
+        meta_file: cityscapes/fine_train.txt
         image_reader:
            type: fs_opencv
            kwargs:
-             image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
+             image_dir: cityscapes
              color_mode: RGB
         seg_label_reader:
            type: fs_opencv
            kwargs:
-             image_dir: /mnt/lustre/share/HiLight/dataset/cityscapes
+             image_dir: cityscapes
              color_mode: GRAY
         transformer: [*seg_rand_resize, *flip, *seg_crop_train, *to_tensor, *normalize]
         num_classes: *num_classes

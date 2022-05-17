@@ -53,26 +53,6 @@ UP 通过将 DEFAULT_TASKS, EXCLUDE_TASKS 加入环境变量来控制任务加�
      tasks_names = os.environ.get("DEFAULT_TASKS", os.listdir(pwd)) # loading all tasks.
      exclude_tasks = os.environ.get("EXCLUDE_TASKS", '').split(":") # excluding the writing task.
 
-up.utils.env.dist_helper
-------------------------
-
-UP 将 SLURM_PROCID, MV2_COMM_WORLD_RANK, PMI_RANK, SLURM_NTASKS, MV2_COMM_WORLD_SIZE, PMI_SIZE 加入环境变量。
-
-* proc_id (进程ID)可以被环境变量中的 SLURM_PROCID 改变。
-
-* node_list (节点清单)可以被环境变量中的 SLURM_NODELIST 改变。
-
-* up 将 MASTER_ADDR, MASTER_PORT 加入环境变量。
-
-  .. code-block:: python
-
-     os.environ['MASTER_ADDR'] = addr or os.environ.get('MASTER_ADDR', addr)
-     os.environ['MASTER_PORT'] = str(port) or os.environ.get('MASTER_PORT', str(port))
-
-* local_id （本地ID）由环境变量中的 SLURM_LOCALID, PMI_RANK 共同决定
-
-* ntasks （任务数量）由环境变量中的 SLURM_NTASKS, PMI_SIZE 共同决定。
-
 up.utils.general.petrel_helper
 ------------------------------
 

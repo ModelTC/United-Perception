@@ -33,7 +33,8 @@ class Mosaic_p():
 
 class DistBackend():
     def __init__(self):
-        self.backend = 'linklink'
+        # self.backend = 'linklink'
+        self.backend = 'dist'
 
 
 ITER_BASE_FLAG = IterBase()

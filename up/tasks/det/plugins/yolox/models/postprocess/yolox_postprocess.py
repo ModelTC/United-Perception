@@ -28,7 +28,6 @@ class YoloxPostProcess(nn.Module):
         super(YoloxPostProcess, self).__init__()
         self.prefix = prefix if prefix is not None else self.__class__.__name__
         self.num_classes = num_classes
-        self.tocaffe = False
         self.norm_on_bbox = norm_on_bbox
         test_cfg = copy.deepcopy(cfg)
         test_cfg.update(test_cfg.get('test', {}))

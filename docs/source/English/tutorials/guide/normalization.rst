@@ -26,15 +26,6 @@ Normalization supports 5 modes.
       kwargs:
         group_size: 8
 
-* sync_bn: synchronizing mean and var by multiple GPUs by linklink.
-
-  .. code-block:: yaml
-
-    normalize:
-      type: sycn_bn
-      kwargs:
-        bn_group_size: 8
-
 * gn: Group Normalization
 
   .. code-block:: yaml

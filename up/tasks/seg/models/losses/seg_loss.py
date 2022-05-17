@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from up.utils.general.registry_factory import LOSSES_REGISTRY
 from up.utils.general.log_helper import default_logger as logger
 
-__all__ = ["CriterionOhem", "CriterionBiSegNet", "CriterionICNet", "SegCrossEntropyLoss"]
+__all__ = ["CriterionOhem", "SegCrossEntropyLoss"]
 
 
 @LOSSES_REGISTRY.register('seg_ohem')
@@ -84,67 +84,6 @@ class OhemCrossEntropy2dTensor(nn.Module):
         target = target.view(b, h, w)
 
         return self.criterion(pred, target)
-
-
-@LOSSES_REGISTRY.register('seg_icnet')
-class CriterionICNet(nn.Module):
-    """
-    ICNet loss
-    """
-
-    def __init__(self, ignore_index=255, thresh=0.7, min_kept=100000, reduce=True):
-        super(CriterionICNet, self).__init__()
-        self.ignore_index = ignore_index
-        self.criterion1 = OhemCrossEntropy2dTensor(ignore_index, thresh=thresh, min_kept=min_kept)
-
-        if not reduce:
-            logger.info("disabled the reduce.")
-
-    def forward(self, preds, target):
-        h, w = target.size(1), target.size(2)
-
-        scale_pred = F.upsample(input=preds[0], size=(h, w), mode='bilinear', align_corners=True)
-        loss1 = self.criterion1(scale_pred, target)
-
-        scale_pred = F.upsample(input=preds[1], size=(h, w), mode='bilinear', align_corners=True)
-        loss2 = self.criterion1(scale_pred, target)
-
-        scale_pred = F.upsample(input=preds[2], size=(h, w), mode='bilinear', align_corners=True)
-        loss3 = self.criterion1(scale_pred, target)
-
-        scale_pred = F.upsample(input=preds[3], size=(h, w), mode='bilinear', align_corners=True)
-        loss4 = self.criterion1(scale_pred, target)
-
-        return loss1 + 0.4 * loss2 + 0.4 * loss3 + 0.4 * loss4
-
-
-@LOSSES_REGISTRY.register('seg_bisegnet')
-class CriterionBiSegNet(nn.Module):
-    """
-    BiSegNet loss
-    """
-
-    def __init__(self, ignore_index=255, thresh=0.7, min_kept=100000, reduce=True):
-        super(CriterionBiSegNet, self).__init__()
-        self.ignore_index = ignore_index
-        self.criterion1 = OhemCrossEntropy2dTensor(ignore_index, thresh=thresh, min_kept=min_kept)
-
-        if not reduce:
-            logger.info("disabled the reduce.")
-
-    def forward(self, preds, target):
-        h, w = target.size(1), target.size(2)
-
-        scale_pred = F.upsample(input=preds[0], size=(h, w), mode='bilinear', align_corners=True)
-        loss1 = self.criterion1(scale_pred, target)
-
-        scale_pred = F.upsample(input=preds[1], size=(h, w), mode='bilinear', align_corners=True)
-        loss2 = self.criterion1(scale_pred, target)
-
-        scale_pred = F.upsample(input=preds[2], size=(h, w), mode='bilinear', align_corners=True)
-        loss3 = self.criterion1(scale_pred, target)
-
-        return loss1 + loss2 + loss3
 
 
 @LOSSES_REGISTRY.register('seg_ce')

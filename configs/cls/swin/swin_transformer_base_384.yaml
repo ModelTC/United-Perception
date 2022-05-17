@@ -48,11 +48,11 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_file: 
         image_reader:
           type: fs_pillow
           kwargs:
-            image_dir: /mnt/lustre/share/images/train
+            image_dir: 
             color_mode: RGB
             memcached: True
         transformer: [*random_resized_crop, *auto_augment, *to_tensor, *normalize, *rand_erase]
@@ -79,11 +79,11 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/val.txt
+        meta_file: 
         image_reader:
           type: fs_pillow
           kwargs:
-            image_dir: /mnt/lustre/share/images/val
+            image_dir:
             color_mode: RGB
             memcached: false
         transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]

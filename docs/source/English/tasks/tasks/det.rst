@@ -3,14 +3,14 @@ Detection
 
 UP supports the whole pipline of training, deploying, and interfering;
 
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/det>`_
+`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/det>`_
 
 Configs
 -------
 
 It contains the illustration of common configs and deploying.
 
-`Repos <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det>`_
+`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/det>`_
 
 Dataset related modules
 -----------------------
@@ -28,11 +28,11 @@ Dataset related modules
     dataset:
       type: coco   # [coco, custom, lvis]
       kwargs:
-        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
+        meta_file: coco/annotations/instances_train2017.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+            image_dir: coco/train2017
             color_mode: RGB
         transformer: [*stitch_expand, *crop, *flip, *color_jitter, *fix_output_resize,*to_tensor, *normalize]
 
@@ -152,12 +152,12 @@ Deploying modules
         dataset:
           type: coco
           kwargs:
-            meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
+            meta_file: coco/annotations/instances_train2017.json
             class_names: *class_names
             image_reader:
               type: fs_opencv
               kwargs:
-                image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+                image_dir: coco/train2017
                 color_mode: RGB
             transformer: [*flip, *train_resize, *to_tensor, *normalize]
 

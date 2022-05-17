@@ -3,14 +3,14 @@ Classification
 
 UP supports the whole pipline of training, deploying, and interfering;
 
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/cls>`_
+`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/cls>`_
 
 Configs
 -------
 
 It contains the illustration of common configs and deploying.
 
-`Repos <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/cls>`_
+`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/cls>`_
 
 Dataset related modules
 -----------------------
@@ -28,11 +28,11 @@ Dataset related modules
       type: cls
       kwargs:
         meta_type: imagenet    # Default is imagenet. Options: [imagenet, custom_cls]
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_file: train.txt
         image_reader:
            type: fs_pillow
            kwargs:
-             image_dir: /mnt/lustre/share/images/train
+             image_dir: train
              color_mode: RGB
         transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize]
 

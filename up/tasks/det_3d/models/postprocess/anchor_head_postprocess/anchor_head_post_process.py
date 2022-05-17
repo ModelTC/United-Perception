@@ -28,7 +28,6 @@ class AnchorHeadSingle(nn.Module):
         super(AnchorHeadSingle, self).__init__()
         self.predict_boxes_when_training = predict_boxes_when_training
         self.prefix = prefix if prefix is not None else self.__class__.__name__
-        self.tocaffe = False
 
         self.num_dir_bins = num_dir_bins
         self.dir_offset = dir_offset

@@ -3,13 +3,13 @@ self-supervision
 
 UP supports self-supervision to train pretrained model and finetune downstream task;
 
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/ssl>`_
+`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/ssl>`_
 
 Config
 ------
 
-* `pretrain <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/ssl/mocov1/moco_v1.yaml>`_
-* `finetune <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
+* `pretrain <https://github.com/ModelTC/EOD/-/blob/master/configs/ssl/mocov1/moco_v1.yaml>`_
+* `finetune <https://github.com/ModelTC/EOD/-/blob/master/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
 
 pretrain module
 ---------------
@@ -65,4 +65,4 @@ The following snippet shows an example config for finetune task:
           save_dir: moco_v1_linear_dist8/checkpoints/cls_std
           results_dir: moco_v1_linear_dist8/results_dir/cls_std
           auto_resume: True
-          pretrain_model: /mnt/lustre/baishihao/UP_MOCO/moco_v1_bs512/checkpoints/cls_std/ckpt.pth  # dir of pretrained model parameters
+          pretrain_model: moco_v1_bs512/checkpoints/cls_std/ckpt.pth  # dir of pretrained model parameters

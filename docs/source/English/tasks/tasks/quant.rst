@@ -3,14 +3,14 @@ Quant
 
 UP supports the whole pipline of training and interfering;
 
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/quant>`_
+`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/quant>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Repos <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/quant>`_
+`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/quant>`_
 
 Dataset related modules
 -----------------------

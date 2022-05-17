@@ -31,7 +31,6 @@ class YoloV5PostProcess(nn.Module):
         self.num_classes = num_classes - 1
         self.single_cls = (num_classes == 2)
 
-        self.tocaffe = False
         self.num_level = num_level
         self.num_anchors_per_level = num_anchors_per_level
         # P3-5 or P3-6 loss weight

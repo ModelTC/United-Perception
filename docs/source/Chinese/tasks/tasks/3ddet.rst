@@ -2,12 +2,12 @@
 ======
 
 UP支持3D检测任务训练、推理的全部流程;
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/det_3d>`_
+`具体代码 <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/det_3d>`_
 
 配置文件
 --------
 
-`代码仓库 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det_3d>`_
+`代码仓库 <https://github.com/ModelTC/EOD/-/tree/master/configs/det_3d>`_
 其中包括常用算法配置文件
 
 数据集相关模块
@@ -24,7 +24,7 @@ UP支持3D检测任务训练、推理的全部流程;
     dataset:
       type: kitti
       kwargs:
-        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti/kitti_infos/kitti_infos_train.pkl
+        meta_file: kitti/kitti_infos/kitti_infos_train.pkl
         class_names: *class_names
         get_item_list: &get_item_list ['points']
         training: True
@@ -32,5 +32,5 @@ UP支持3D检测任务训练、推理的全部流程;
         image_reader:
           type: kitti
           kwargs:
-            image_dir: /mnt/lustre/share/wangxiaodan/data/kitti/training/
+            image_dir: kitti/training/
             color_mode: None

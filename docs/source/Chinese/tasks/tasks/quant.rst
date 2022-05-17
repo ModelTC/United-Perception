@@ -2,12 +2,12 @@
 ====
 
 UP支持量化任务训练、推理的全部流程;
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/quant>`_
+`具体代码 <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/quant>`_
 
 配置文件
 --------
 
-`代码仓库 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/quant>`_
+`代码仓库 <https://github.com/ModelTC/EOD/-/tree/master/configs/quant>`_
 其中包括常用算法配置文件
 
 数据集相关模块

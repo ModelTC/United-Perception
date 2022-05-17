@@ -31,7 +31,6 @@ class BaseDetPostProcess(nn.Module):
     def __init__(self, num_classes, cfg, prefix=None, class_first=False):
         super(BaseDetPostProcess, self).__init__()
         self.prefix = prefix if prefix is not None else self.__class__.__name__
-        self.tocaffe = False
         self.class_first = class_first
         self.num_classes = num_classes
         assert self.num_classes > 1
@@ -144,9 +143,6 @@ class BaseDetPostProcess(nn.Module):
         mlvl_anchors = self.anchor_generator.get_anchors(mlvl_shapes, device=device)
         self.mlvl_anchors = mlvl_anchors
         output = {}
-        # export preds
-        if self.tocaffe:
-            output = self.export(mlvl_raw_preds)
 
         if self.training:
             targets = self.supervisor.get_targets(mlvl_anchors, input, mlvl_preds)

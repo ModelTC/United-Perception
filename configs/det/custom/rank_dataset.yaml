@@ -78,11 +78,11 @@ dataset:
     kwargs:
       num_workers: 4
       alignment: 32
-      worker_init: True
+      worker_init: true
       pad_type: batch_pad
 
 # special for rank_dataset
 hooks:
-  - type: reload
-    kwargs: 
-      group: *group
+- type: reload
+  kwargs:
+    group: *group

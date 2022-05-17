@@ -18,7 +18,6 @@ class Bbox_PreProcess(nn.Module):
     def __init__(self, cfg, with_drp=False):
         super(Bbox_PreProcess, self).__init__()
 
-        self.tocaffe = False
         self.supervisor = build_bbox_supervisor(cfg['bbox_supervisor'])
 
         cfg_fpn = cfg.get('fpn', None)
@@ -49,7 +48,7 @@ class Bbox_PreProcess(nn.Module):
         if self.cfg.get('fpn', None):
             # assign rois and targets to each level
             fpn = self.cfg['fpn']
-            if self.tocaffe and not self.training:
+            if not self.training:
                 # to save memory
                 # if rois.numel() > 0:
                 # rois = rois[0:1]
@@ -90,7 +89,7 @@ class Bbox_PreProcess(nn.Module):
                 mlvl_features.append(x_features[lvl_idx])
                 mlvl_strides.append(x_strides[lvl_idx])
         assert len(mlvl_rois) > 0, "No rois provided for second stage"
-        if self.tocaffe and torch.is_tensor(mlvl_strides[0]):
+        if torch.is_tensor(mlvl_strides[0]):
             mlvl_strides = [int(s) for s in mlvl_strides]
         pooled_feats = self.roi_extractor(mlvl_rois, mlvl_features, mlvl_strides)
         # pred_cls, pred_loc = self.forward_net(pooled_feats)
@@ -117,7 +116,6 @@ class BboxNet(nn.Module):
         """
         super(BboxNet, self).__init__()
         self.prefix = 'BboxNet'
-        self.tocaffe = False
         self.num_classes = num_classes
 
         self.class_activation = cfg.get('class_activation', 'softmax')
@@ -153,7 +151,7 @@ class FC_PreProcess(Bbox_PreProcess):
         super(FC_PreProcess, self).__init__(cfg, with_drp)
 
     def roi_extractor(self, mlvl_rois, mlvl_features, mlvl_strides):
-        if not QUANT_FLAG.flag and not self.tocaffe:
+        if not QUANT_FLAG.flag:
             if isinstance(mlvl_strides, list):
                 mlvl_strides = [int(s) for s in mlvl_strides]
             else:
@@ -326,7 +324,7 @@ class RFCN_PreProcess(Bbox_PreProcess):
         super(RFCN_PreProcess, self).__init__(cfg, with_drp)
 
     def roi_extractor(self, mlvl_rois, mlvl_features, mlvl_strides):
-        if not QUANT_FLAG.flag and not self.tocaffe:
+        if not QUANT_FLAG.flag:
             if isinstance(mlvl_strides, list):
                 mlvl_strides = [int(s) for s in mlvl_strides]
             else:

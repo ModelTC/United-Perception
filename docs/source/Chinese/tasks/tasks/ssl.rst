@@ -3,13 +3,13 @@
 
 UP支持自监督pretrain模型训练以及finetune下游任务;
 
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/ssl>`_
+`具体代码 <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/ssl>`_
 
 配置文件
 --------
 
-* `pretrain <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/ssl/mocov1/moco_v1.yaml>`_
-* `finetune <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/master/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
+* `pretrain <https://github.com/ModelTC/EOD/-/blob/master/configs/ssl/mocov1/moco_v1.yaml>`_
+* `finetune <https://github.com/ModelTC/EOD/-/blob/master/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
 
 pretrain相关模块
 ----------------
@@ -65,5 +65,5 @@ finetune相关模块
           save_dir: moco_v1_linear_dist8/checkpoints/cls_std
           results_dir: moco_v1_linear_dist8/results_dir/cls_std
           auto_resume: True
-          pretrain_model: /mnt/lustre/baishihao/UP_MOCO/moco_v1_bs512/checkpoints/cls_std/ckpt.pth  # pretrain模型参数地址
+          pretrain_model: cls_std/ckpt.pth  # pretrain模型参数地址
 
