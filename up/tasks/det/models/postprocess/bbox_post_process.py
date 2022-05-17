@@ -18,7 +18,6 @@ class Bbox_PostProcess(nn.Module):
         super(Bbox_PostProcess, self).__init__()
 
         self.prefix = 'BboxNet'
-        self.tocaffe = False
 
         self.predictor = build_bbox_predictor(cfg['bbox_predictor'])
 
@@ -110,7 +109,4 @@ class Bbox_PostProcess(nn.Module):
             start_idx = 0 if self.cls_loss.activation_type == 'sigmoid' else 1
             output = self.predictor.predict(rois, (cls_pred, loc_pred), image_info, start_idx=start_idx)
 
-            if self.tocaffe:
-                output[self.prefix + '.blobs.classification'] = cls_pred
-                output[self.prefix + '.blobs.localization'] = loc_pred
             return output

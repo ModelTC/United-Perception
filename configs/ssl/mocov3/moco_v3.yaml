@@ -7,34 +7,34 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_file: images/meta/train.txt
         meta_type: moco_imagenet
         image_reader:
-          type: ceph_opencv
+          type: fs_pillow
           kwargs:
-            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
+            image_dir: images/train
             color_mode: RGB
-            memcached: True
+            memcached: true
         transformer: [*mocov3]
     batch_sampler:
-        type: base
-        kwargs:
-          sampler:
-            type: dist
-            kwargs: {}
-          batch_size: 128
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 128
     dataloader:
-        type: cls_base
-        kwargs:
-          num_workers: 12
-          pin_memory: True
+      type: cls_base
+      kwargs:
+        num_workers: 12
+        pin_memory: true
 
 trainer: # Required.
   max_epoch: 300
   test_freq: 500
   save_freq: 5
-  is_eval: False
-  only_save_latest: True
+  is_eval: false
+  only_save_latest: true
   optimizer: # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: AdamW
     kwargs:
@@ -54,34 +54,34 @@ trainer: # Required.
 saver: # Required.
   save_dir: moco_v3_bs1024/checkpoints/cls_std     # dir to save checkpoints
   results_dir: moco_v3_bs1024/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  auto_resume: true  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:
-  - type: auto_save_best
+- type: auto_save_best
 
-net: &subnet
-  - name: backbone
-    type: ssl
-    multi_model:
-      - name: encoder_q
-        type: moco_vit_small
-        kwargs:
-          stop_grad_conv1: True
-      - name: encoder_k
-        type: moco_vit_small
-        kwargs:
-          stop_grad_conv1: True
-    wrappers:
-      - type: moco_vit
-        kwargs:
-          T: 0.2
-
-  - name: post_process
-    type: base_ssl_postprocess
+net:
+- name: backbone
+  type: ssl
+  multi_model:
+  - name: encoder_q
+    type: moco_vit_small
     kwargs:
-       ssl_loss:
-         type: contrastive_loss
-         kwargs:
-           tau: 0.2
+      stop_grad_conv1: true
+  - name: encoder_k
+    type: moco_vit_small
+    kwargs:
+      stop_grad_conv1: true
+  wrappers:
+  - type: moco_vit
+    kwargs:
+      T: 0.2
+
+- name: post_process
+  type: base_ssl_postprocess
+  kwargs:
+    ssl_loss:
+      type: contrastive_loss
+      kwargs:
+        tau: 0.2
 

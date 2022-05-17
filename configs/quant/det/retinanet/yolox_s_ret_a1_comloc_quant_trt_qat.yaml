@@ -1,43 +1,43 @@
 num_classes: &num_classes 81
 runtime:
-    aligned: True
+  aligned: true
     # async_norm: True
-    special_bn_init: True
-    task_names: quant_det
-    runner:
-      type: quant
+  special_bn_init: true
+  task_names: quant_det
+  runner:
+    type: quant
 
 quant:
-    quant_type: qat
-    deploy_backend: tensorrt
-    cali_batch_size: 900
-    prepare_args:
-      extra_qconfig_dict:
-        w_observer: MinMaxObserver
-        a_observer: EMAMinMaxObserver
-        w_fakequantize: FixedFakeQuantize
-        a_fakequantize: FixedFakeQuantize
-      leaf_module: [Space2Depth, FrozenBatchNorm2d]
-      extra_quantizer_dict:
-        additional_module_type: [ConvFreezebn2d, ConvFreezebnReLU2d]
+  quant_type: qat
+  deploy_backend: tensorrt
+  cali_batch_size: 900
+  prepare_args:
+    extra_qconfig_dict:
+      w_observer: MinMaxObserver
+      a_observer: EMAMinMaxObserver
+      w_fakequantize: FixedFakeQuantize
+      a_fakequantize: FixedFakeQuantize
+    leaf_module: [Space2Depth, FrozenBatchNorm2d]
+    extra_quantizer_dict:
+      additional_module_type: [ConvFreezebn2d, ConvFreezebnReLU2d]
 
 
-mixup: &mixup
+mixup:
   type: yolox_mixup_cv2
   kwargs:
-    extra_input: True
+    extra_input: true
     input_size: [640, 640]
     mixup_scale: [0.8, 1.6]
     fill_color: 0
 
-mosaic: &mosaic
+mosaic:
   type: mosaic
   kwargs:
-    extra_input: True
+    extra_input: true
     tar_size: 640
     fill_color: 0
 
-random_perspective: &random_perspective
+random_perspective:
   type: random_perspective_yolox
   kwargs:
     degrees: 10.0 # 0.0
@@ -48,15 +48,15 @@ random_perspective: &random_perspective
     fill_color: 0  # 0
     border: [-320, -320]
 
-augment_hsv: &augment_hsv
+augment_hsv:
   type: augment_hsv
   kwargs:
     hgain: 0.015
     sgain: 0.7
     vgain: 0.4
-    color_mode: 'BGR'
+    color_mode: BGR
 
-flip: &flip
+flip:
   type: flip
   kwargs:
     flip_p: 0.5
@@ -102,7 +102,7 @@ dataset:
     dataset:
       type: coco
       kwargs:
-        meta_file: &gt_file coco/annotations/instances_val2017.json
+        meta_file: coco/annotations/instances_val2017.json
         image_reader:
           type: fs_opencv
           kwargs:
@@ -112,7 +112,7 @@ dataset:
         evaluator:
           type: COCO
           kwargs:
-            gt_file: *gt_file
+            gt_file: coco/annotations/instances_val2017.json
             iou_types: [bbox]
     batch_sampler:
       type: base
@@ -126,21 +126,21 @@ dataset:
     kwargs:
       num_workers: 8
       alignment: 32
-      worker_init: True
+      worker_init: true
       pad_type: batch_pad
 
 trainer: # Required.
   max_epoch: &max_epoch 6             # total epochs for the training
   save_freq: 1
   test_freq: 1
-  only_save_latest: False
+  only_save_latest: false
   optimizer:                 # optimizer = SGD(params,lr=0.01,momentum=0.937,weight_decay=0.0005)
     register_type: yolov5
     type: SGD
     kwargs:
       lr: 0.0000003125
       momentum: 0.9
-      nesterov: True
+      nesterov: true
       weight_decay: 0.0      # weight_decay = 0.0005 * batch_szie / 64
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
     warmup_epochs: 0        # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
@@ -154,86 +154,87 @@ trainer: # Required.
 saver:
   save_dir: checkpoints/yolox_s_ret_a1_comloc_quant_trt
   results_dir: results_dir/yolox_s_ret_a1_comloc_quant_trt
-  resume_model: pretrained_fp32/ckpt_best.pth
-  auto_resume: False
+  resume_model: resume_path
+  auto_resume: false
 
 
 
 ema:
-  enable: False
+  enable: false
   ema_type: exp
   kwargs:
     decay: 0.9998
 
 net:
-  - name: backbone
-    type: yolox_s
-    kwargs:
-      out_layers: [2, 3, 4]
-      out_strides: [8, 16, 32]
-      normalize: {'type': 'mqbench_freeze_bn' }
-      act_fn: {'type': 'Silu' }
-  - name: neck
-    prev: backbone
-    type: YoloxPAFPN
-    kwargs:
-      depth: 0.33
-      out_strides: [8, 16, 32]
-      normalize: {'type': 'mqbench_freeze_bn' }
-      act_fn: {'type': 'Silu'}
-  - name: roi_head
-    prev: neck
-    type: YoloXHead
-    kwargs:
-      num_classes: *num_classes
-      width: 0.5
-      num_point: &dense_points 1
-      normalize: {'type': 'mqbench_freeze_bn' }
-      act_fn: {'type': 'Silu'}
-  - name: post_process
-    prev: roi_head
-    type: retina_post_iou
-    kwargs:
-      num_classes: *num_classes   # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
-      cfg:
-        cls_loss:
-          type: quality_focal_loss
-          kwargs:
-            gamma: 2.0
-        iou_branch_loss: 
-          type: sigmoid_cross_entropy
-        loc_loss:
-           type: compose_loc_loss
-           kwargs:
-              loss_cfg:
-                 - type: iou_loss
-                   kwargs:
-                      loss_type: giou
-                      loss_weight: 1.0
-                 - type: l1_loss
-                   kwargs:
-                      loss_weight: 1.0
-        anchor_generator:
-          type: hand_craft
-          kwargs:
-            anchor_ratios: [1]  # anchor strides are provided as feature strides by feature extractor
-            anchor_scales: [4] # scale of anchors relative to feature map
-        roi_supervisor:
-          type: atss
-          kwargs:
-            top_n: 9
-            use_iou: True
-        roi_predictor:
-          type: base
-          kwargs:
-            pre_nms_score_thresh: 0.05  # to reduce computation
-            pre_nms_top_n: 1000
-            post_nms_top_n: 1000
-            roi_min_size: 0               # minimum scale of a valid roi
-            merger:
-              type: retina
-              kwargs:
-                top_n: 100
-                nms:
-                  type: naive
-                  nms_iou_thresh: 0.65  
+- name: backbone
+  type: yolox_s
+  kwargs:
+    out_layers: [2, 3, 4]
+    out_strides: [8, 16, 32]
+    normalize: {type: mqbench_freeze_bn}
+    act_fn: {type: Silu}
+- name: neck
+  prev: backbone
+  type: YoloxPAFPN
+  kwargs:
+    depth: 0.33
+    out_strides: [8, 16, 32]
+    normalize: {type: mqbench_freeze_bn}
+    act_fn: {type: Silu}
+- name: roi_head
+  prev: neck
+  type: YoloXHead
+  kwargs:
+    num_classes: *num_classes
+    width: 0.5
+    num_point: &dense_points 1
+    normalize: {type: mqbench_freeze_bn}
+    act_fn: {type: Silu}
+- name: post_process
+  prev: roi_head
+  type: retina_post_iou
+  kwargs:
+    num_classes: *num_classes
+                                  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+    cfg:
+      cls_loss:
+        type: quality_focal_loss
+        kwargs:
+          gamma: 2.0
+      iou_branch_loss:
+        type: sigmoid_cross_entropy
+      loc_loss:
+        type: compose_loc_loss
+        kwargs:
+          loss_cfg:
+          - type: iou_loss
+            kwargs:
+              loss_type: giou
+              loss_weight: 1.0
+          - type: l1_loss
+            kwargs:
+              loss_weight: 1.0
+      anchor_generator:
+        type: hand_craft
+        kwargs:
+          anchor_ratios: [1]    # anchor strides are provided as feature strides by feature extractor
+          anchor_scales: [4]   # scale of anchors relative to feature map
+      roi_supervisor:
+        type: atss
+        kwargs:
+          top_n: 9
+          use_iou: true
+      roi_predictor:
+        type: base
+        kwargs:
+          pre_nms_score_thresh: 0.05    # to reduce computation
+          pre_nms_top_n: 1000
+          post_nms_top_n: 1000
+          roi_min_size: 0                 # minimum scale of a valid roi
+          merger:
+            type: retina
+            kwargs:
+              top_n: 100
+              nms:
+                type: naive
+                nms_iou_thresh: 0.65

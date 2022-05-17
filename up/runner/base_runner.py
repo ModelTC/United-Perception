@@ -22,13 +22,7 @@ from up.utils.general.registry_factory import (
     DATA_BUILDER_REGISTY,
     OPTIMIZER_REGISTRY,
     LR_SCHEDULER_REGISTY,
-    MODEL_HELPER_REGISTRY,
-    TOCAFFE_REGISTRY,
-    TOONNX_REGISTRY,
-    TOKESTREL_REGISTRY,
-    KS_PARSER_REGISTRY,
-    LATENCY_REGISTRY,
-    TOADELA_REGISTRY
+    MODEL_HELPER_REGISTRY
 )
 from up.utils.general.global_flag import (
     ALIGNED_FLAG,
@@ -36,7 +30,6 @@ from up.utils.general.global_flag import (
     DIST_BACKEND,
     FP16_FLAG
 )
-from up.utils.general.tocaffe_utils import get_model_hash, rewrite_model
 from up.utils.env.analysis_utils import get_memory_info
 
 __all__ = ['BaseRunner']
@@ -486,76 +479,6 @@ class BaseRunner(object):
         self._hooks('after_eval', metrics)
         self.set_cur_eval_iter()
         return metrics
-
-    @torch.no_grad()
-    def to_caffe(self, save_prefix='model', input_size=None, input_channel=3):
-        model = self.ema.model if self.ema is not None else self.model
-        tocaffe_type = self.config.pop('tocaffe_type', 'base')
-        tocaffe_ins = TOCAFFE_REGISTRY[tocaffe_type](self.config,
-                                                     save_prefix,
-                                                     input_size,
-                                                     model,
-                                                     input_channel)
-        model_hash = get_model_hash(self.model.state_dict())
-        caffemodel_name = tocaffe_ins.process()
-        rewrite_model(tocaffe_ins.save_prefix, model_hash)
-        cfg_gdbp = self.config.get('gdbp', None)
-        if cfg_gdbp is not None:
-            onnx_file = tocaffe_ins.save_prefix + '.onnx'
-            self.latency_test(cfg_gdbp, onnx_file)
-        return caffemodel_name
-
-    @torch.no_grad()
-    def to_onnx(self, save_prefix='model', input_size=None, input_channel=3):
-        model = self.ema.model if self.ema is not None else self.model
-        toonnx_type = self.config.pop('toonnx_type', 'base')
-        toonnx_ins = TOONNX_REGISTRY[toonnx_type](self.config,
-                                                  save_prefix,
-                                                  input_size,
-                                                  model,
-                                                  input_channel)
-        toonnx_ins.process()
-
-    def latency_test(self, cfg_gdbp, onnx_file):
-        latency_type = cfg_gdbp.pop('latency_type', 'base')
-        latency_ins = LATENCY_REGISTRY[latency_type](cfg_gdbp, onnx_file)
-        latency_ins.process()
-
-    @torch.no_grad()
-    def to_kestrel(self, save_to=None, serialize=False):
-        input_channel = self.config['to_kestrel'].get('input_channel', 3)
-        resize_hw = None
-        if self.config['to_kestrel'].get('resize_hw', '') != '':
-            resize_hw = self.config['to_kestrel'].get('resize_hw', '640x1024')
-            resize_hw = (int(i) for i in resize_hw.strip().split("x"))
-            resize_hw = (input_channel, *resize_hw)
-        caffemodel_name = self.to_caffe(input_size=resize_hw, input_channel=input_channel)
-        toks_type = self.config['to_kestrel'].get('toks_type', 'det')
-        parameters = self.get_kestrel_parameters()
-        logger.info(f'parameters:{parameters}')
-        tokestrel_ins = TOKESTREL_REGISTRY[toks_type](self.config,
-                                                      caffemodel_name,
-                                                      parameters,
-                                                      save_to,
-                                                      serialize,
-                                                      input_channel)
-        save_to = tokestrel_ins.process()
-        logger.info(f'kestrel_model_path:{save_to}')
-        # adela
-        if self.config.get('adela', None):
-            self.to_adela(save_to)
-
-    def get_kestrel_parameters(self):
-        plugin = self.config['to_kestrel']['plugin']
-        parser = KS_PARSER_REGISTRY[plugin](self.config)
-        return parser.get_kestrel_parameters()
-
-    def to_adela(self, save_to):
-        cfg_adela = self.config.get('adela', None)
-        assert cfg_adela is not None, 'need adela configuration.'
-        toadela_type = self.config.pop('toadela_type', 'base')
-        toadela_ins = TOADELA_REGISTRY[toadela_type](cfg_adela, save_to)
-        toadela_ins.process()
 
     def batch2device(self, batch):
         model_dtype = torch.float32

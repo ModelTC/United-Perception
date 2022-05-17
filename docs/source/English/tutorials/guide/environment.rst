@@ -53,26 +53,6 @@ UP adds DEFAULT_TASKS and EXCLUDE_TASKS into environment variables to control th
      tasks_names = os.environ.get("DEFAULT_TASKS", os.listdir(pwd)) # loading all tasks.
      exclude_tasks = os.environ.get("EXCLUDE_TASKS", '').split(":") # excluding the writing task.
 
-up.utils.env.dist_helper
-------------------------
-
-UP adds SLURM_PROCID, MV2_COMM_WORLD_RANK, PMI_RANK, SLURM_NTASKS, MV2_COMM_WORLD_SIZE, and PMI_SIZE into environment variables.
-
-* proc_id (Processing ID) can be changed by SLURM_PROCID.
-
-* node_list (list of nodes) can be changed by SLURM_NODELIST.
-
-* up adds MASTER_ADDR and MASTER_PORT into environment variables.
-
-  .. code-block:: python
-
-     os.environ['MASTER_ADDR'] = addr or os.environ.get('MASTER_ADDR', addr)
-     os.environ['MASTER_PORT'] = str(port) or os.environ.get('MASTER_PORT', str(port))
-
-* local_id (local I) is decided by SLURM_LOCALID and PMI_RANK.
-
-* ntasks (number of tasks) is decided by SLURM_NTASKS and PMI_SIZE.
-
 up.utils.general.petrel_helper
 ------------------------------
 

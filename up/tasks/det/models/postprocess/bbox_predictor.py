@@ -9,7 +9,6 @@ from up.tasks.det.models.utils.bbox_helper import (
 )
 from up.utils.general.fp16_helper import to_float32
 from up.utils.general.registry_factory import BBOX_PREDICTOR_REGISTRY
-from up.utils.general.tocaffe_utils import ToCaffe
 from up.utils.general.log_helper import default_logger as logger
 
 __all__ = ['BboxPredictor', 'BboxPredictorMultiCls']
@@ -36,7 +35,6 @@ class BboxPredictor(object):
         self.nms_cfg = nms
         self.bbox_vote_cfg = bbox_vote
 
-    @ToCaffe.disable_trace
     @torch.no_grad()
     @to_float32
     def predict(self, proposals, preds, image_info, start_idx):
@@ -134,7 +132,6 @@ class BboxPredictorMultiCls(BboxPredictor):
         logger.warning(f"using pre_nms_top_n {pre_nms_top_n} to speed up nms")
         assert self.bbox_vote_cfg is None, "bbox vote is not support!!!"
 
-    @ToCaffe.disable_trace
     @torch.no_grad()
     @to_float32
     def predict(self, proposals, preds, image_info, start_idx):

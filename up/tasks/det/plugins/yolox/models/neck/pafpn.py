@@ -25,15 +25,13 @@ class YoloxPAFPN(nn.Module):
                  upsample='nearest',
                  align_corners=True,
                  normalize={'type': 'solo_bn'},
-                 downsample_plane=256,
-                 tocaffe_friendly=False):
+                 downsample_plane=256):
         super(YoloxPAFPN, self).__init__()
         self.inplanes = inplanes
         in_channels = copy.deepcopy(inplanes)
         self.outplanes = copy.deepcopy(inplanes)
         self.out_strides = out_strides
         self.num_level = len(out_strides)
-        self.tocaffe_friendly = tocaffe_friendly
         Conv = DWConv if depthwise else ConvBnAct
 
         self.upsample = upsample
@@ -97,31 +95,19 @@ class YoloxPAFPN(nn.Module):
         features = []
 
         fpn_out0 = self.lateral_conv0(x0)  # 1024->512/32
-        if self.tocaffe_friendly:
-            f_out0 = F.interpolate(fpn_out0,
-                                   scale_factor=2,
-                                   mode=self.upsample,
-                                   align_corners=self.align_corners)
-        else:
-            f_out0 = F.interpolate(fpn_out0,
-                                   size=x1.shape[-2:],
-                                   mode=self.upsample,
-                                   align_corners=self.align_corners)
+        f_out0 = F.interpolate(fpn_out0,
+                               size=x1.shape[-2:],
+                               mode=self.upsample,
+                               align_corners=self.align_corners)
         f_out0 = torch.cat([f_out0, x1], 1)  # 512->1024/16
         f_out0 = self.C3_p4(f_out0)  # 1024->512/16
         # features.append(f_out0)
 
         fpn_out1 = self.reduce_conv1(f_out0)  # 512->256/16
-        if self.tocaffe_friendly:
-            f_out1 = F.interpolate(fpn_out1,
-                                   scale_factor=2,
-                                   mode=self.upsample,
-                                   align_corners=self.align_corners)
-        else:
-            f_out1 = F.interpolate(fpn_out1,
-                                   size=x2.shape[-2:],
-                                   mode=self.upsample,
-                                   align_corners=self.align_corners)
+        f_out1 = F.interpolate(fpn_out1,
+                               size=x2.shape[-2:],
+                               mode=self.upsample,
+                               align_corners=self.align_corners)
         f_out1 = torch.cat([f_out1, x2], 1)  # 256->512/8
         pan_out2 = self.C3_p3(f_out1)  # 512->256/8
         features.append(pan_out2)

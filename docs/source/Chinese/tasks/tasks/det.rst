@@ -2,12 +2,12 @@
 ====
 
 UP支持检测任务训练、部署、推理的全部流程;
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/det>`_
+`具体代码 <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/det>`_
 
 配置文件
 --------
 
-`代码仓库 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det>`_
+`代码仓库 <https://github.com/ModelTC/EOD/-/tree/master/configs/det>`_
 其中包括常用算法配置文件与部署示例
 
 数据集相关模块
@@ -26,11 +26,11 @@ UP支持检测任务训练、部署、推理的全部流程;
     dataset:
       type: coco   # [coco, custom, lvis]
       kwargs:
-        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
+        meta_file: coco/annotations/instances_train2017.json
         image_reader:
           type: fs_opencv
           kwargs:
-            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+            image_dir: coco/train2017
             color_mode: RGB
         transformer: [*stitch_expand, *crop, *flip, *color_jitter, *fix_output_resize,*to_tensor, *normalize]
 
@@ -150,12 +150,12 @@ compose_loc_loss:
         dataset:
           type: coco
           kwargs:
-            meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
+            meta_file: coco/annotations/instances_train2017.json
             class_names: *class_names
             image_reader:
               type: fs_opencv
               kwargs:
-                image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+                image_dir: coco/train2017
                 color_mode: RGB
             transformer: [*flip, *train_resize, *to_tensor, *normalize]
 

@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 from torch.nn.modules._functions import SyncBatchNorm as sync_batch_norm
 
 from ..env.dist_helper import env
@@ -215,15 +216,43 @@ class TorchSyncTaskBatchNorm2d(PyTorchSyncBN):
             exponential_average_factor = 0.0
         else:
             exponential_average_factor = self.momentum
-        y = sync_batch_norm.apply(x,
-                                  self.weight,
-                                  self.bias,
-                                  self.task_bn[0].running_mean,
-                                  self.task_bn[0].running_var,
-                                  exponential_average_factor,
-                                  self.eps,
-                                  self.process_group,
-                                  env.world_size)
+        if self.training:
+            bn_training = True
+        else:
+            bn_training = (self.task_bn[0].running_mean is None) and (self.task_bn[0].running_var is None)
+
+        # Don't sync batchnorm stats in inference mode (model.eval()).
+        need_sync = (bn_training and self.training)
+        if need_sync:
+            process_group = torch.distributed.group.WORLD
+            if self.process_group:
+                process_group = self.process_group
+            world_size = torch.distributed.get_world_size(process_group)
+            need_sync = world_size > 1
+
+        # fallback to framework BN when synchronization is not necessary
+        if not need_sync:
+            y = F.batch_norm(
+                x,
+                self.task_bn[0].running_mean,
+                self.task_bn[0].running_var,
+                self.weight,
+                self.bias,
+                bn_training,
+                exponential_average_factor,
+                self.eps,
+            )
+        else:
+            assert bn_training
+            y = sync_batch_norm.apply(x,
+                                      self.weight,
+                                      self.bias,
+                                      self.task_bn[0].running_mean,
+                                      self.task_bn[0].running_var,
+                                      exponential_average_factor,
+                                      self.eps,
+                                      self.process_group,
+                                      env.world_size)
         return y
 
     @property

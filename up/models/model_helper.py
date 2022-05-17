@@ -230,6 +230,10 @@ class ModelHelper(nn.Module):
 
     def train(self, mode=True):
         self.training = mode
+        if len(self.freeze_patterns) == 0:
+            for submodule in self.children():
+                submodule.train(mode)
+            return self
         for name, m in self.named_modules():
             if name == "":  # self
                 continue

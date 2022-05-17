@@ -2,14 +2,14 @@ Sparse training
 ===============
 
 UP supports sparse training;
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/sparse>`_
+`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/sparse>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Repos <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/sparse>`_
+`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/sparse>`_
 
 Dataset related modules
 -----------------------

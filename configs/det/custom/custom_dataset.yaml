@@ -43,7 +43,7 @@ dataset:
         sampler:
           type: dist
           kwargs:
-            fix_seed: False
+            fix_seed: false
         batch_size: 8
   test:
     dataset:
@@ -75,5 +75,5 @@ dataset:
     kwargs:
       num_workers: 4
       alignment: 32
-      worker_init: True
+      worker_init: true
       pad_type: batch_pad

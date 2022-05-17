@@ -3,7 +3,6 @@ import torch
 
 from up.extensions import nms
 # from up.tasks.det.models.utils.nms_wrapper import nms
-from up.utils.general.tocaffe_utils import ToCaffe
 from up.utils.general.fp16_helper import to_float32
 from up.utils.general.registry_factory import ROI_MERGER_REGISTRY, ROI_PREDICTOR_REGISTRY
 from up.tasks.det.models.utils.bbox_helper import (
@@ -49,7 +48,6 @@ class RoiPredictor(object):
         else:
             self.merger = None
 
-    @ToCaffe.disable_trace
     @torch.no_grad()
     @to_float32
     def predict(self, mlvl_anchors, mlvl_preds, image_info, return_pos_inds=None):

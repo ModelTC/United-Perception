@@ -3,14 +3,14 @@
 
 UP supports the whole pipline of training and interfering;
 
-`Codes <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/det_3d>`_
+`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/det_3d>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Repos <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/det_3d>`_
+`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/det_3d>`_
 
 Dataset related modules
 -----------------------
@@ -26,7 +26,7 @@ Dataset related modules
     dataset:
       type: kitti
       kwargs:
-        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti/kitti_infos/kitti_infos_train.pkl
+        meta_file: kitti/kitti_infos/kitti_infos_train.pkl
         class_names: *class_names
         get_item_list: &get_item_list ['points']
         training: True
@@ -34,5 +34,5 @@ Dataset related modules
         image_reader:
           type: kitti
           kwargs:
-            image_dir: /mnt/lustre/share/wangxiaodan/data/kitti/training/
+            image_dir: kitti/training/
             color_mode: None

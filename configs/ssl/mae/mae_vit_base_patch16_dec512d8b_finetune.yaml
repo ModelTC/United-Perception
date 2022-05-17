@@ -2,13 +2,13 @@ num_classes: &num_classes 1000
 runtime:
   task_names: ssl
 random_resized_crop: &random_resized_crop
- type: torch_random_resized_crop
- kwargs:
-   size: 224
-   scale: [0.08, 1]
+  type: torch_random_resized_crop
+  kwargs:
+    size: 224
+    scale: [0.08, 1]
 
 random_horizontal_flip: &random_horizontal_flip
- type: torch_random_horizontal_flip
+  type: torch_random_horizontal_flip
 
 
 random_augmentation: &random_augmentation
@@ -32,15 +32,15 @@ to_tensor: &to_tensor
   type: to_tensor
 
 normalize: &normalize
- type: normalize
- kwargs:
-   mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
-   std: [0.229, 0.224, 0.225]
+  type: normalize
+  kwargs:
+    mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
+    std: [0.229, 0.224, 0.225]
 
 rand_erase: &rand_erase
- type: torch_randerase
- kwargs:
-  probability: 0.25
+  type: torch_randerase
+  kwargs:
+    probability: 0.25
 
 
 dataset: # Required.
@@ -48,66 +48,67 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/train.txt
-        image_reader:
-           type: fs_pillow
-           kwargs:
-             image_dir: /mnt/lustre/share/images/train
-             color_mode: RGB
-        transformer: [*random_resized_crop, *random_horizontal_flip, *random_augmentation, *to_tensor, *normalize, *rand_erase]
-    batch_sampler:
-        type: base
-        kwargs:
-          sampler:
-            type: dist
-            kwargs: {}
-          batch_size: 64 # Use 8 GPUs to have a total 1024 batch size
-    dataloader:
-        type: cls_base
-        kwargs:
-          num_workers: 4
-          pin_memory: True
-          batch_fn:
-            type: batch_cutmixup
-            kwargs:
-              mixup_alpha: 0.8
-              cutmix_alpha: 1.0
-              switch_prob: 0.5
-              num_classes: *num_classes
-
-  test:
-    dataset:
-      type: cls
-      kwargs:
-        meta_file: /mnt/lustre/share/images/meta/val.txt
+        meta_file: images/meta/train.txt
         image_reader:
           type: fs_pillow
           kwargs:
-            image_dir: /mnt/lustre/share/images/val
+            image_dir: images/train
             color_mode: RGB
-        transformer: [ *torch_resize, *center_crop, *to_tensor, *normalize]
-        evaluator:
-          type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
-          kwargs:
-            topk: [ 1, 5 ]
+        transformer: [*random_resized_crop, *random_horizontal_flip, *random_augmentation,
+          *to_tensor, *normalize, *rand_erase]
     batch_sampler:
       type: base
       kwargs:
         sampler:
           type: dist
-          kwargs: { }
+          kwargs: {}
+        batch_size: 64   # Use 8 GPUs to have a total 1024 batch size
+    dataloader:
+      type: cls_base
+      kwargs:
+        num_workers: 4
+        pin_memory: true
+        batch_fn:
+          type: batch_cutmixup
+          kwargs:
+            mixup_alpha: 0.8
+            cutmix_alpha: 1.0
+            switch_prob: 0.5
+            num_classes: *num_classes
+
+  test:
+    dataset:
+      type: cls
+      kwargs:
+        meta_file: images/meta/val.txt
+        image_reader:
+          type: fs_pillow
+          kwargs:
+            image_dir: images/val
+            color_mode: RGB
+        transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
+        evaluator:
+          type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
+          kwargs:
+            topk: [1, 5]
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
         batch_size: 64
     dataloader:
       type: cls_base
       kwargs:
         num_workers: 4
-        pin_memory: False
+        pin_memory: false
 
 trainer: # Required.
   max_epoch: 100
   test_freq: 10
   save_freq: 10
-  only_save_latest: True
+  only_save_latest: true
   optimizer:
     type: AdamW
     kwargs:
@@ -115,7 +116,7 @@ trainer: # Required.
       weight_decay: 0.05
       betas: [0.9, 0.95]
     pconfig:
-      nodecay: ['ndim_is1', '.bias']
+      nodecay: [ndim_is1, .bias]
       layer_decay:
         type: vit_base
         value: 0.65
@@ -128,39 +129,39 @@ trainer: # Required.
     warmup_ratio: 0.0005
     type: CosineLREpochScheduler
     kwargs:
-        T_max: 100
-        warm_epoch: 5
+      T_max: 100
+      warm_epoch: 5
 
 saver: # Required.
   save_dir: official_finetune_gn/checkpoints/mae     # dir to save checkpoints
-  pretrain_model: /mnt/lustre/baishihao/UP_Vit/ckpt_t.pth
+  pretrain_model: pretrain_path
   results_dir: official_finetune_gn/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  auto_resume: true  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:
-  - type: auto_save_best
+- type: auto_save_best
 
-net: &subnet
-  - name: backbone
-    type: vit_base_patch16_224
-    kwargs:
-      drop_path: 0.1
-      dropout: 0.0
-      attention_dropout: 0.0
-      qkv_bias: True
-  - name: head
-    type: vit_head
-    kwargs:
-       num_classes: *num_classes
-       in_plane: &head_out_channel 768
-       input_feature_idx: -1
-       cls_type: avg_pool
-  - name: post_process
-    type: base_cls_postprocess
-    kwargs:
-       cls_loss:
-         type: label_smooth_ce
-         kwargs:
-            smooth_ratio: 0.1
-            num_classes: *num_classes
+net:
+- name: backbone
+  type: vit_base_patch16_224
+  kwargs:
+    drop_path: 0.1
+    dropout: 0.0
+    attention_dropout: 0.0
+    qkv_bias: true
+- name: head
+  type: vit_head
+  kwargs:
+    num_classes: *num_classes
+    in_plane: &head_out_channel 768
+    input_feature_idx: -1
+    cls_type: avg_pool
+- name: post_process
+  type: base_cls_postprocess
+  kwargs:
+    cls_loss:
+      type: label_smooth_ce
+      kwargs:
+        smooth_ratio: 0.1
+        num_classes: *num_classes

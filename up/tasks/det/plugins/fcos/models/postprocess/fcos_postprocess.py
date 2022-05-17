@@ -83,7 +83,6 @@ class FcosPostProcess(nn.Module):
         self.cls_loss = build_loss(cfg['cls_loss'])
         self.loc_loss = build_loss(cfg['loc_loss'])
         self.center_loss = build_loss(cfg['center_loss'])
-        self.tocaffe = False
         self.cfg = copy.deepcopy(cfg)
         self.has_mask = has_mask
         self.cls_loss_type = self.cls_loss.activation_type

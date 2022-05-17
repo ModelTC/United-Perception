@@ -1,21 +1,21 @@
 random_resized_crop: &random_resized_crop
- type: torch_random_resized_crop
- kwargs:
-   size: 224
-   scale: [0.08, 1]
+  type: torch_random_resized_crop
+  kwargs:
+    size: 224
+    scale: [0.08, 1]
 runtime:
   task_names: ssl
 random_horizontal_flip: &random_horizontal_flip
- type: torch_random_horizontal_flip
+  type: torch_random_horizontal_flip
 
 to_tensor: &to_tensor
   type: to_tensor
 
 normalize: &normalize
- type: normalize
- kwargs:
-   mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
-   std: [0.229, 0.224, 0.225]
+  type: normalize
+  kwargs:
+    mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
+    std: [0.229, 0.224, 0.225]
 
 
 dataset: # Required.
@@ -23,32 +23,32 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_file: images/meta/train.txt
         image_reader:
-           type: fs_pillow
-           kwargs:
-             image_dir: /mnt/lustre/share/images/train
-             color_mode: RGB
+          type: fs_pillow
+          kwargs:
+            image_dir: images/train
+            color_mode: RGB
         transformer: [*random_resized_crop, *random_horizontal_flip, *to_tensor, *normalize]
     batch_sampler:
-        type: base
-        kwargs:
-          sampler:
-            type: dist
-            kwargs: {}
-          batch_size: 128 # Use 32 GPUs to have a total 4096 batch size
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 128   # Use 32 GPUs to have a total 4096 batch size
     dataloader:
-        type: cls_base
-        kwargs:
-          num_workers: 4
-          pin_memory: True
+      type: cls_base
+      kwargs:
+        num_workers: 4
+        pin_memory: true
 
 trainer: # Required.
   max_epoch: 800
   test_freq: 999999
   save_freq: 10
-  only_save_latest: True
-  is_eval: False
+  only_save_latest: true
+  is_eval: false
   optimizer:
     type: AdamW
     kwargs:
@@ -75,32 +75,32 @@ trainer: # Required.
     warmup_ratio: 0.05
     type: CosineLREpochScheduler
     kwargs:
-        T_max: 800
-        warm_epoch: 40
+      T_max: 800
+      warm_epoch: 40
 
 saver: # Required.
   save_dir: MAE_800/checkpoints/mae     # dir to save checkpoints
   results_dir: MAE_800/results_dir/mae  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  auto_resume: true  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:
-  - type: auto_save_best
+- type: auto_save_best
 
 net:
-  - name: backbone
-    type: ssl
-    multi_model:
-      - name: model
-        type: mae_vit_base_patch16_dec512d8b
-        kwargs:
-          mask_ratio: 0.75
-    wrappers:
-      - type: MAE
-
-  - name: post_process
-    type: base_ssl_postprocess
+- name: backbone
+  type: ssl
+  multi_model:
+  - name: model
+    type: mae_vit_base_patch16_dec512d8b
     kwargs:
-       ssl_loss:
-         type: mae_loss
-         norm_pix_loss: False  # Baseline --> False, Set to True will improve downstream performance
+      mask_ratio: 0.75
+  wrappers:
+  - type: MAE
+
+- name: post_process
+  type: base_ssl_postprocess
+  kwargs:
+    ssl_loss:
+      type: mae_loss
+      norm_pix_loss: false     # Baseline --> False, Set to True will improve downstream performance

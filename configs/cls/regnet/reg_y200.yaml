@@ -4,21 +4,21 @@ runtime:
   task_names: cls
 
 random_resized_crop: &random_resized_crop
- type: torch_random_resized_crop
- kwargs:
-   size: 224
-   scale: [0.08, 1]
+  type: torch_random_resized_crop
+  kwargs:
+    size: 224
+    scale: [0.08, 1]
 
 random_horizontal_flip: &random_horizontal_flip
- type: torch_random_horizontal_flip
+  type: torch_random_horizontal_flip
 
 pil_color_jitter: &pil_color_jitter
- type: torch_color_jitter
- kwargs:
-  brightness: 0.2
-  contrast: 0.2
-  saturation: 0.2
-  hue: 0.1
+  type: torch_color_jitter
+  kwargs:
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.2
+    hue: 0.1
 
 center_crop: &center_crop
   type: torch_center_crop
@@ -34,50 +34,51 @@ to_tensor: &to_tensor
   type: to_tensor
 
 normalize: &normalize
- type: normalize
- kwargs:
-   mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
-   std: [0.229, 0.224, 0.225]
+  type: normalize
+  kwargs:
+    mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
+    std: [0.229, 0.224, 0.225]
 
 dataset: # Required.
   train:
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_file: images/meta/train.txt
         image_reader:
-           type: fs_pillow
-           kwargs:
-             image_dir: /mnt/lustre/share/images/train
-             color_mode: RGB
-        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize]
+          type: fs_pillow
+          kwargs:
+            image_dir: images/train
+            color_mode: RGB
+        transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter,
+          *to_tensor, *normalize]
     batch_sampler:
-        type: base
-        kwargs:
-          sampler:
-            type: dist
-            kwargs: {}
-          batch_size: 64
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 64
     dataloader:
-        type: cls_base
-        kwargs:
-          num_workers: 4
-          pin_memory: True
+      type: cls_base
+      kwargs:
+        num_workers: 4
+        pin_memory: true
   test:
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/val.txt
+        meta_file: images/meta/val.txt
         image_reader:
           type: fs_pillow
           kwargs:
-            image_dir: /mnt/lustre/share/images/val
+            image_dir: images/val
             color_mode: RGB
         transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
         evaluator:
           type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
-             topk: [1, 5]
+            topk: [1, 5]
     batch_sampler:
       type: base
       kwargs:
@@ -89,10 +90,10 @@ dataset: # Required.
       type: cls_base
       kwargs:
         num_workers: 4
-        pin_memory: True
+        pin_memory: true
 
 fp16:
-  keep_batchnorm_fp32: True
+  keep_batchnorm_fp32: true
   scale_factor: dynamic
 
 
@@ -105,7 +106,7 @@ trainer: # Required.
     type: SGD
     kwargs:
       lr: 0.8
-      nesterov: True
+      nesterov: true
       momentum: 0.9
       weight_decay: 0.00005
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
@@ -121,33 +122,33 @@ trainer: # Required.
 saver: # Required.
   save_dir: regy200m_init/checkpoints/cls     # dir to save checkpoints
   results_dir: regy200m_init/results_dir/cls  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  auto_resume: true  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:
-  - type: auto_save_best
+- type: auto_save_best
 
-net: &subnet
-  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: regnety_200m
-    kwargs:
-      out_layers: [4]     # layer1...4, commonly named Conv2...5
-      out_strides: [32]  # tell the strides of output features
-      normalize:
-        type: solo_bn
+net:
+- name: backbone                # backbone = resnet50(frozen_layers, out_layers, out_strides)
+  type: regnety_200m
+  kwargs:
+    out_layers: [4]       # layer1...4, commonly named Conv2...5
+    out_strides: [32]    # tell the strides of output features
+    normalize:
+      type: solo_bn
       #initializer:
       #  method: 
-  - name: head
-    type: base_cls_head
-    kwargs:
-       num_classes: *num_classes
-       in_plane: 368 
-       input_feature_idx: -1
-  - name: post_process
-    type: base_cls_postprocess
-    kwargs:
-       cls_loss:
-         type: label_smooth_ce
-         kwargs:
-            smooth_ratio: 0.1
-            num_classes: *num_classes
+- name: head
+  type: base_cls_head
+  kwargs:
+    num_classes: *num_classes
+    in_plane: 368
+    input_feature_idx: -1
+- name: post_process
+  type: base_cls_postprocess
+  kwargs:
+    cls_loss:
+      type: label_smooth_ce
+      kwargs:
+        smooth_ratio: 0.1
+        num_classes: *num_classes

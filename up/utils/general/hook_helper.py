@@ -650,7 +650,7 @@ class ReloadDataloader(Hook):
             runner.data_iterators['train'] = iter(runner.data_loaders["train"])
 
 
-@HOOK_REGISTRY.register('memory_ayalysis')
+@HOOK_REGISTRY.register('memory_analysis')
 class MemoryAnalysis(Hook):
     """Log time, loss, etc.
     """

@@ -20,7 +20,7 @@ Getting Started
     # Prepare your float pretrained model.
     cd united-perception/scripts
     # Follow the prompts to set config in train_quant.sh.
-    sh train_quant.sh
+    sh dist_train_quant.sh
 
 
 **We have several examples of qat config in united-perception repository:**
@@ -55,7 +55,7 @@ For yolox-vitis:
 
     cd united-perception/scripts
     # just set resume_model in config file to your model, we will do all the rest.
-    sh train_quant.sh
+    sh dist_train_quant.sh
 
 
 **4**. **Evaluate your quantized model.**
@@ -65,18 +65,7 @@ For yolox-vitis:
     cd united-perception/scripts
     # set resume_model in config file to your model
     # add -e to train_quant.sh
-    sh train_quant.sh
-
-
-**5**. **Deploy.**
-
-.. code-block:: python
-
-    cd united-perception/scripts
-    # Follow the prompts to set config in quant_deploy.sh.
-    sh quant_deploy.sh
-
-
+    sh dist_train_quant.sh
 
 Introduction of UP-Mqbench Project
 ----------------------------------------

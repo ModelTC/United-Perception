@@ -131,9 +131,9 @@ def barrier(*args, **kwargs):
 
 
 def get_rank(*args, **kwargs):
-    rank = get_rank_from_env()
-    if rank is not None:
-        return rank
+    # rank = get_rank_from_env()
+    # if rank is not None:
+    #     return rank
     if DIST_BACKEND.backend == 'linklink':
         return get_link_rank(*args, **kwargs)
     elif DIST_BACKEND.backend == 'dist':
@@ -143,9 +143,9 @@ def get_rank(*args, **kwargs):
 
 
 def get_world_size(*args, **kwargs):
-    world_size = get_world_size_from_env()
-    if world_size is not None:
-        return world_size
+    # world_size = get_world_size_from_env()
+    # if world_size is not None:
+    #     return world_size
     if DIST_BACKEND.backend == 'linklink':
         return get_link_world_size(*args, **kwargs)
     elif DIST_BACKEND.backend == 'dist':

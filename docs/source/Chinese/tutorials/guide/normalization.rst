@@ -26,15 +26,6 @@ normalization支持五种模式
       kwargs:
         group_size: 8
 
-* sync_bn：linklink 多卡同步mean和var
-
-  .. code-block:: yaml
-
-    normalize:
-      type: sycn_bn
-      kwargs:
-        bn_group_size: 8
-
 * gn: Group Normalization
 
   .. code-block:: yaml

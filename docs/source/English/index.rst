@@ -22,7 +22,3 @@ United-perception (UP) is an universal-perception task framework based on the Di
    tasks/index
    benchmark/index
    usefultools/index
-   explanation/index
-   faq/index
-   changelog/index
-   update/index

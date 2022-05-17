@@ -14,7 +14,6 @@ class CenterPostProcess(nn.Module):
     def __init__(self, cfg):
         super(CenterPostProcess, self).__init__()
         self.prefix = self.__class__.__name__
-        self.tocaffe = False
         self.supervisor = build_roi_supervisor(cfg['roi_supervisor'])
         self.predictor = build_roi_predictor(cfg['roi_predictor'])
         self.hm_loss = build_loss(cfg['hm_loss'])

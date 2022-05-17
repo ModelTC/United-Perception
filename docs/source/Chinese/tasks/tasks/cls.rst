@@ -2,12 +2,12 @@
 ====
 
 UP支持分类任务训练、部署、推理的全部流程;
-`具体代码 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/up/tasks/cls>`_
+`具体代码 <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/cls>`_
 
 配置文件
 --------
 
-`代码仓库 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/tree/master/configs/cls>`_
+`代码仓库 <https://github.com/ModelTC/EOD/-/tree/master/configs/cls>`_
 其中包括常用算法配置文件与部署示例
 
 数据集相关模块
@@ -26,11 +26,11 @@ UP支持分类任务训练、部署、推理的全部流程;
       type: cls
       kwargs:
         meta_type: imagenet    # 默认为imagenet，选项包括: [imagenet, custom_cls]
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_file: train.txt
         image_reader:
            type: fs_pillow
            kwargs:
-             image_dir: /mnt/lustre/share/images/train
+             image_dir: train
              color_mode: RGB
         transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize]
 

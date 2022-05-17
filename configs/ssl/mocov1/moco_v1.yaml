@@ -7,39 +7,39 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: /mnt/lustre/share/images/meta/train.txt
+        meta_file: images/meta/train.txt
         meta_type: moco_imagenet
         image_reader:
-          type: ceph_opencv
+          type: fs_pillow
           kwargs:
-            image_dir: ceph-sh1424-det:s3://det.acedimic/images_1k/train
+            image_dir: images/train
             color_mode: RGB
-            memcached: True
+            memcached: true
         transformer: [*mocov1]
     batch_sampler:
-        type: base
-        kwargs:
-          sampler:
-            type: dist
-            kwargs: {}
-          batch_size: 64
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 64
     dataloader:
-        type: cls_base
-        kwargs:
-          num_workers: 12
-          pin_memory: True
+      type: cls_base
+      kwargs:
+        num_workers: 12
+        pin_memory: true
 
 trainer: # Required.
   max_epoch: 200
   test_freq: 500
   save_freq: 5
-  is_eval: False
-  only_save_latest: True
+  is_eval: false
+  only_save_latest: true
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: SGD
     kwargs:
       lr: 0.06
-      nesterov: True
+      nesterov: true
       momentum: 0.9
       weight_decay: 0.0001
   lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
@@ -55,45 +55,45 @@ trainer: # Required.
 saver: # Required.
   save_dir: moco_v1_bs512/checkpoints/cls_std     # dir to save checkpoints
   results_dir: moco_v1_bs512/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+  auto_resume: true  # find last checkpoint from save_dir and resume from it automatically
                      # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
 
 hooks:
-  - type: auto_save_best
+- type: auto_save_best
 
-net: &subnet
-  - name: backbone
-    type: ssl
-    multi_model:
-      - name: encoder_q
-        type: resnet50
-        kwargs:
-          frozen_layers: []
-          out_layers: [4]     # layer1...4, commonly named Conv2...5
-          out_strides: [32]  # tell the strides of output features
-          normalize:
-            type: solo_bn
-          initializer:
-            method: msra
-      - name: encoder_k
-        type: resnet50
-        kwargs:
-          frozen_layers: []
-          out_layers: [4]     # layer1...4, commonly named Conv2...5
-          out_strides: [32]  # tell the strides of output features
-          normalize:
-            type: solo_bn
-          initializer:
-            method: msra
-    wrappers:
-      - type: moco
-        kwargs:
-          dim: 128
-          K: 65536
-
-  - name: post_process
-    type: base_ssl_postprocess
+net:
+- name: backbone
+  type: ssl
+  multi_model:
+  - name: encoder_q
+    type: resnet50
     kwargs:
-       ssl_loss:
-         type: moco_loss
+      frozen_layers: []
+      out_layers: [4]         # layer1...4, commonly named Conv2...5
+      out_strides: [32]      # tell the strides of output features
+      normalize:
+        type: solo_bn
+      initializer:
+        method: msra
+  - name: encoder_k
+    type: resnet50
+    kwargs:
+      frozen_layers: []
+      out_layers: [4]         # layer1...4, commonly named Conv2...5
+      out_strides: [32]      # tell the strides of output features
+      normalize:
+        type: solo_bn
+      initializer:
+        method: msra
+  wrappers:
+  - type: moco
+    kwargs:
+      dim: 128
+      K: 65536
+
+- name: post_process
+  type: base_ssl_postprocess
+  kwargs:
+    ssl_loss:
+      type: moco_loss
 

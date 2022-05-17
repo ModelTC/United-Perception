@@ -73,6 +73,7 @@ class Saver(object):
                     st = state['ema']['ema_state_dict']
                 else:
                     st = state['model']
+                output['ema'] = state['ema']
             else:
                 st = state['model']
             output['model'] = st
