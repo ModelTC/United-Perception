@@ -1,6 +1,4 @@
 num_classes: &num_classes 81
-runtime:
-  task_names: kd_det
 flip: &flip
  type: flip
  kwargs:
@@ -13,7 +11,7 @@ resize: &train_resize
    max_size: 1333
    separate_wh: True
 
-resize: &test_resize
+test_resize: &test_resize
  type: keep_ar_resize
  kwargs:
    scales: [800]
@@ -450,3 +448,4 @@ mimic:
 runtime:
   runner:
     type: kd
+  task_names: kd_det

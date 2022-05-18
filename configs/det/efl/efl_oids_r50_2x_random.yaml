@@ -12,7 +12,7 @@ resize: &train_resize
    scales: [800]
    max_size: 1333
 
-resize: &test_resize
+test_resize: &test_resize
  type: keep_ar_resize
  kwargs:
    scales: [800]

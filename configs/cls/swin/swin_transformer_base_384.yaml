@@ -116,11 +116,11 @@ trainer: # Required.
       lr: 0.001
       weight_decay: 0.05
     pconfig:
-        ln:
+        ln_b:
           type: bias
           kwargs:
             weight_decay: 0.0
-        ln:
+        ln_w:
           type: weight
           kwargs:
             weight_decay: 0.0

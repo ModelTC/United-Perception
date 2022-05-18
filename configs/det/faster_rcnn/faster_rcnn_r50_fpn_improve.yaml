@@ -14,7 +14,7 @@ resize: &train_resize
    max_size: 1333
    separate_wh: True
 
-resize: &test_resize
+test_resize: &test_resize
  type: keep_ar_resize
  kwargs:
    scales: [800]

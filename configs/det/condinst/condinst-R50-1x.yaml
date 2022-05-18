@@ -6,7 +6,7 @@ flip: &flip
  kwargs:
    flip_p: 0.5
 
-resize: &resize
+train_resize: &resize
  type: keep_ar_resize
  kwargs:
    scales: [640, 672, 704, 736, 768, 800]
