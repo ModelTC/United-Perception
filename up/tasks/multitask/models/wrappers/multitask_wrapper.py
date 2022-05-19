@@ -45,3 +45,27 @@ def multitask_wrapper(module, inplanes=None, cfg={}):
     if add_prefix:
         module.prefix += add_prefix
     return module
+
+
+@MODULE_WRAPPER_REGISTRY.register('key_replace')
+def key_replace_wrapper(module, cfg={}):
+    add_prefix = cfg.get('add_prefix', '')
+    module.input_replace_dict = cfg.get('input', {})
+    module.outpu_replace_dict = cfg.get('output', {})
+
+    def forward(self, inputs):
+        for k, v in self.input_replace_dict.items():
+            inputs[v] = inputs.pop(k)
+        outputs = self._forward(inputs)
+        for k, v in self.outpu_replace_dict.items():
+            outputs[v] = outputs[k]
+        return outputs
+
+    if isinstance(module, dict):
+        module = build_model(module['type'], module['kwargs'])
+
+    module._forward = module.forward
+    module.forward = instance_method(forward, module)
+    if add_prefix:
+        module.prefix += add_prefix
+    return module
