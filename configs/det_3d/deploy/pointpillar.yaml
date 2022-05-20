@@ -1,20 +1,22 @@
-num_point_features: &num_point_features 3 # 4
-point_cloud_range: &point_cloud_range [0, -39.68, -3, 69.12, 39.68, 1]
+num_point_features: &num_point_features 3  # 4
 class_names: &class_names ['Car', 'Pedestrian', 'Cyclist']
+point_cloud_range: &point_cloud_range [0, -46.0, -1, 92, 46.0, 4]
+voxel_size: &voxel_size [0.5, 0.5, 5]
 
 runtime:
-    runner:
-      type: point
-    task_names: 3d
+   runner:
+     type: point
+   task_names: det_3d
 
-tocaffe_type: point   # point_temp
+tocaffe_type: det_3d
+tocaffe: &tocaffe True
 
 point_sampling: &point_sampling
  type: point_sampling
  kwargs:
-    root_path: /mnt/lustre/share/wangxiaodan/data/kitti/
+    root_path: "/mnt/lustre/share_data/sense_perception/datasets/3D_lidar"
     class_names: *class_names
-    db_info_paths: ['/mnt/lustre/share/wangxiaodan/data/kitti/kitti_infos/kitti_dbinfos_train.pkl']
+    db_info_paths: ['/mnt/lustre/share_data/sense_perception/datasets/3D_lidar/kitti_dbinfos_train.pkl']
     db_info_filters: {
         filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
         filter_by_difficulty: [-1],
@@ -30,11 +32,12 @@ point_flip: &point_flip
  type: point_flip
  kwargs:
    along_axis_list: ['x']
+   center: *point_cloud_range
 
 point_rotation: &point_rotation
  type: point_rotation
  kwargs:
-    rot_range: [-0.78539816, 0.78539816]
+    center: *point_cloud_range
 
 point_scaling: &point_scaling
   type: point_scaling
@@ -46,9 +49,9 @@ to_voxel_train: &to_voxel_train
   kwargs:
     point_cloud_range: *point_cloud_range
     num_point_features: *num_point_features
-    voxel_size: &voxel_size [0.16, 0.16, 4]
-    max_points_per_voxel: &max_points_per_voxel 32
-    max_number_of_voxels: &max_number_of_voxels 16000
+    voxel_size: *voxel_size
+    max_points_per_voxel: &max_points_per_voxel 100
+    max_number_of_voxels: &max_number_of_voxels 100000
     shuffle_enabled: True
 
 to_voxel_test: &to_voxel_test
@@ -58,19 +61,20 @@ to_voxel_test: &to_voxel_test
     num_point_features: *num_point_features
     voxel_size: *voxel_size
     max_points_per_voxel: *max_points_per_voxel
-    max_number_of_voxels: 40000
-    shuffle_enabled: False
+    max_number_of_voxels: *max_number_of_voxels  # 40000
+    shuffle_enabled: True   # False
 
 dataset: # Required.
   train:
     dataset:
-      type: kitti
+      type: product  # kitti
       kwargs:
-        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti/kitti_infos/kitti_infos_train.pkl
+        meta_file: /mnt/lustre/share_data/sense_perception/datasets/3D_lidar/dataset_splits/B2+B3+B4+B5+K+B4t+B5t_train_3_class.pkl
         class_names: *class_names
         get_item_list: &get_item_list ['points']
+        fov_points_only: False
         training: True
-        transformer: [*point_sampling, *point_flip,*point_rotation,*point_scaling, *to_voxel_train]
+        transformer: [*point_flip,*point_rotation,*to_voxel_train]
         image_reader:
           type: kitti
           kwargs:
@@ -79,11 +83,12 @@ dataset: # Required.
 
   test:
     dataset:
-      type: kitti
+      type: product  # kitti
       kwargs:
-        meta_file: /mnt/lustre/share/wangxiaodan/data/kitti/kitti_infos/kitti_infos_val.pkl
+        meta_file: /mnt/lustre/share_data/sense_perception/datasets/3D_lidar/dataset_splits/B2+B3+B4+B5+K_eval_3_class.pkl
         class_names: *class_names
         get_item_list: *get_item_list
+        fov_points_only: False
         training: False
         transformer: [*to_voxel_test]
         image_reader:
@@ -92,10 +97,9 @@ dataset: # Required.
             image_dir: /mnt/lustre/share/wangxiaodan/data/kitti/training/
             color_mode: None
         evaluator:
-          type: kitti
+          type: product  # kitti
           kwargs:
-            recall_thresh_list: [0.3, 0.5, 0.7]
-            gt_file: /mnt/lustre/share/wangxiaodan/data/kitti/training/
+            gt_file: /mnt/lustre/share_data/sense_perception/datasets/3D_lidar/dataset_splits/B2+B3+B4+B5+K_eval_3_class.pkl
             
   batch_sampler:
     type: base
@@ -114,32 +118,30 @@ dataset: # Required.
 
 
 trainer: # Required.
-  max_epoch: &max_epoch 80             # total epochs for the training
-  test_freq: 5
+  max_epoch: &max_epoch 400  # 80             # total epochs for the training
+  test_freq: 20  # 80
   save_freq: 5
   optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
     type: AdamW
     kwargs:
       lr: 0.00009375
       betas: [0.9, 0.99]
-      weight_decay: 0.01
-  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
+      weight_decay: 0.0001
+  lr_scheduler:              # lr_scheduler = MultiStepLR(optimizer, milestones=[9,14],gamma=0.1)
     warmup_epochs: 0       # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
     warmup_type: linear
     warmup_ratio: 0.001
-    type: OneCycleLR
+    type: MultiStepLR
     kwargs:
-      max_epoch: *max_epoch
-      max_lr: 0.003
-      pct_start: 0.4
-      base_momentum: 0.85
-      max_momentum: 0.95
-      div_factor: 10
+      milestones: [50, 100, 150, 200, 250, 300, 350]
+      gamma: 0.8
 
 saver: # Required.
-  save_dir: checkpoints/pointpillar    # dir to save checkpoints
-  results_dir: results_dir/pointpillar  # dir to save detection results. i.e., bboxes, masks, keypoints
-  auto_resume: True
+  save_dir: product_multistep_adamw_lr3e10-3_checkpoints/    # dir to save checkpoints
+  results_dir: product_multistep_adamw_lr3e10-3_results_dir/  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: False  # True
+  resume_model: 3d_eagle_0.2.3.pth # pointpillar.pth
+  save_result: False
 
 hooks:
   - type: auto_save_best
@@ -148,8 +150,6 @@ hooks:
       mode: pre_defined  # specific norm
       norm_type: 2
       max_norm: 10
-
-tocaffe: &tocaffe True
 net:
   - name: backbone3d         
     type: pillar_vfe
@@ -167,13 +167,14 @@ net:
       num_filters: [64, 128, 256]
       upsample_strides: [1, 2, 4]
       num_upsample_filters: [128, 128, 128]
+      tocaffe: *tocaffe
 
   - name: roi_head
     prev: backbone
     type: anchor_head_single
     kwargs:
       num_classes: &num_classes 3
-      base_anchors_file: &base_anchors_file anchors.json
+      base_anchors_file: &base_anchors_file ./csp_plugin/anchors_road.json # ./configs/pointpillar/anchors_road.json
       code_size: &code_size 7
       num_dir_bins: &num_dir_bins 2
       initializer:
@@ -181,7 +182,6 @@ net:
         std: 0.001
       init_prior: 0.01
       class_activation: sigmoid
-
 
   - name: post_process
     prev: roi_head
@@ -214,21 +214,24 @@ net:
           type: axis_aligned
           kwargs:
             recall_thresh_list: [0.3, 0.5, 0.7]
-            score_thresh: &score_thresh 0.07
+            score_thresh: &score_thresh 0.07   # 0.1
             output_raw_score: False
             cfg:
               multi_classes_nms: False
               nms_type: nms_gpu
-              nms_thresh: &nms_thresh 0.5 # 0.01
-              nms_pre_maxsize: &nms_pre_maxsize 1000 # 4096
-              nms_post_maxsize: &nms_post_maxsize 300 # 500
+              nms_thresh: &nms_thresh 0.5  # 0.01
+              nms_pre_maxsize: &nms_pre_maxsize 1000  # 4096
+              nms_post_maxsize: &nms_post_maxsize 300  # 500
 
         cls_loss:
           type: sigmoid_focal_loss
+          pos_weight: 1.2
+          neg_weight: 1.0
           kwargs:
-            num_classes: 4 # 3+1
+            num_classes: 4  # 3+1
             alpha: 0.25
             gamma: 2.0
+            loss_weight: 2.0
         loc_loss:
           type: smooth_l1_loss
           kwargs:
@@ -239,7 +242,7 @@ net:
           type: softmax_cross_entropy
           kwargs:
             class_dim: 1
-            loss_weight: 0.2
+            loss_weight: 0.5   # 0.2
 
 to_kestrel:
   toks_type: 'det_3d'

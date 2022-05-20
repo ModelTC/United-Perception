@@ -8,7 +8,7 @@ import torch
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import TOKESTREL_REGISTRY, KS_PROCESSOR_REGISTRY
 
-__all__ = ['DetToKestrel', 'ClsToKestrel', 'SegToKestrel', 'KpToKestrel']
+__all__ = ['DetToKestrel', 'ClsToKestrel', 'SegToKestrel', 'KpToKestrel', 'Det3dToKestrel']
 
 
 def generate_nnie_config(nnie_cfg, config, nnie_out_path='./config.json'):
@@ -322,4 +322,48 @@ class ClsToKestrel(object):
             self.to_nnie(nnie_cfg, self.config, prototxt, caffemodel, self.save_to)
 
         logger.info('Save kestrel model to: {}'.format(self.save_to))
+        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
+
+
+@TOKESTREL_REGISTRY.register('det_3d')
+class Det3dToKestrel(object):
+    def __init__(self, config, caffemodel, parameters, save_to=None, serialize=False, input_channel=3):
+        self.config = config
+        self.caffemodel = caffemodel
+        self.parameters = parameters
+        self.save_to = save_to
+        self.serialize = serialize
+        self.input_channel = input_channel
+
+    def process(self):
+        config = copy.deepcopy(self.config)
+        plugin = config['to_kestrel']['plugin']
+
+        version = config['to_kestrel'].get('version', "1.0.0")
+        parameters_json = 'tmp_parameters_json'
+        # convert torch.tensor in parameters to int or list
+        for key in self.parameters:
+            if torch.is_tensor(self.parameters[key]):
+                self.parameters[key] = self.parameters[key].tolist()
+        with open(parameters_json, 'w') as f:
+            json.dump(self.parameters, f, indent=2)
+        resize_hw = config['to_kestrel'].get('resize_hw', '')
+        nnie = False
+
+        if self.save_to is None:
+            self.save_to = config['to_kestrel']['save_to']
+
+        ks_processor = KS_PROCESSOR_REGISTRY[plugin]('',
+                                                     self.caffemodel,
+                                                     b=1,
+                                                     n=self.save_to,
+                                                     v=version,
+                                                     p=self.save_to,
+                                                     k=parameters_json,
+                                                     i=self.input_channel,
+                                                     s=self.serialize,
+                                                     resize_hw=resize_hw,
+                                                     nnie=nnie)
+        ks_processor.process()
+        logger.info('save kestrel model to: {}'.format(self.save_to))
         return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))

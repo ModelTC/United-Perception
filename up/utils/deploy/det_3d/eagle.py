@@ -83,8 +83,6 @@ def generate_config(train_cfg):
     # net param
     assert 'net' in train_cfg, 'config file incomplete: lack net infomation'
     model_helper_ins = MODEL_HELPER_REGISTRY[train_cfg.get('model_helper_type', 'base')]
-    # model = model_helper_ins(train_cfg['net'])
-    # vfe_model = model_helper_ins(train_cfg['net'][:1])
     backbone_model = model_helper_ins(train_cfg['net'][1:3])
     base_anchors_file = backbone_model.roi_head.base_anchors_file
 
@@ -202,30 +200,21 @@ class EagleProcessor(BaseProcessor):
         net_info['pre']['packname'] = self.model['pfn']['net_name']
         net_info['det']['packname'] = self.model['rpn']['net_name']
 
-        # rpn_path = scaffold.generate_model(rpn_net, self.save_path, net_info['rpn']['packname'])
-        # scaffold.generate_model(det_net, self.save_path, net_info['det']['packname'])
-
-        # if self.serialize:
-        #     net_info['rpn']['packname'] = 'rpn_engine.bin'
-        #     net_info['rpn']['backend'] = 'kestrel_mixnet'
-        #     engine_path = os.path.join(self.save_path, net_info['rpn']['packname'])
-        #     config = {'output_names': [net_info['rpn']['feature']]}
-        #     scaffold.serialize(rpn_path, self.max_batch_size, engine_path, config)
-
         common_param = generate_common_param(net_info)
         kestrel_param['model_files'] = common_param
 
+        self.save_local_path = "tocaffe/" + self.save_path
         if not os.path.exists(self.save_path):
-            os.makedirs(self.save_path)
+            os.makedirs(self.save_local_path)
         # move onnx
         if isinstance(self.model, dict):
             for info in self.model:
-                shutil.move("kestrel_model/" + self.model[info]['net_name'], self.save_path)
+                shutil.move("tocaffe/" + self.model[info]['net_name'], self.save_local_path)
         scaffold.generate_json_file(
-            os.path.join(self.save_path, 'parameters.json'), kestrel_param)
+            os.path.join(self.save_local_path, 'parameters.json'), kestrel_param)
 
         scaffold.generate_meta(
-            self.save_path, self.name, 'eagle', version, {'class': kestrel_param['class']})
+            self.save_local_path, self.name, 'eagle', version, {'class': kestrel_param['class']})
 
         scaffold.compress_model(
-            self.save_path, [net_info['pre']['packname'], net_info['det']['packname']], self.save_path, version)
+            self.save_local_path, [net_info['pre']['packname'], net_info['det']['packname']], self.save_path, version)

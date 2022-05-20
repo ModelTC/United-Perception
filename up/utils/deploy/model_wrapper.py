@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from up.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY
 
-__all__ = ['DetWrapper', 'ClsWrapper', 'SegWrapper', 'KpWrapper']
+__all__ = ['DetWrapper', 'ClsWrapper', 'SegWrapper', 'KpWrapper', 'Det3dWrapper']
 
 
 @MODEL_WRAPPER_REGISTRY.register('det')
@@ -117,3 +117,34 @@ class KpWrapper(torch.nn.Module):
                 print(f'blob:{name}')
         assert len(blob_datas) > 0, 'no valid output provided, please set "tocaffe: True" in your config'
         return blob_names, blob_datas
+
+
+@MODEL_WRAPPER_REGISTRY.register('det_3d')
+class Det3dWrapper(torch.nn.Module):
+    def __init__(self, detector, type='backbone'):
+        super(Det3dWrapper, self).__init__()
+        self.detector = detector
+        self.type = type
+
+    def forward(self, example):
+        if self.type == 'backbone':
+            input = {'spatial_features': example}
+        elif self.type == 'vfe':
+            input = example
+        else:
+            raise ValueError('invalid model type:{}'.format(type))
+        print(f'before detector forward')
+        output = self.detector(input)
+        print(f'detector output:{output.keys()}')
+        blobs_dict = dict()
+        blob_names = list()
+        blob_datas = list()
+        output_names = sorted(output.keys())
+        for name in output_names:
+            if name.find('blobs') >= 0:
+                blob_names.append(name)
+                blob_datas.append(output[name])
+                blobs_dict[name.replace('blobs.', '')] = output[name]
+                print(f'blobs:{name}')
+        assert len(blob_datas) > 0, 'no valid output provided, please set "tocaffe: True" in your config'
+        return blobs_dict
