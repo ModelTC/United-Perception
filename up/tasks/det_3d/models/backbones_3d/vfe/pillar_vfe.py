@@ -34,6 +34,8 @@ class PillarVFE(VFETemplate):
         self.use_norm = use_norm
         self.tocaffe = tocaffe
 
+        # adapt for deploy
+        # num_point_features += 5 if self.use_absolute_xyz else 3
         num_point_features += 6 if self.use_absolute_xyz else 3
         if self.with_distance:
             num_point_features += 1
@@ -114,6 +116,7 @@ class PillarVFE(VFETemplate):
             features[-1] = features[-1][:, :, :2]
             features = torch.cat(features, dim=-2)
         else:
+            # adapt for deploy
             # features[-1] = features[-1][:, :, :2]
             features = torch.cat(features, dim=-1)
         voxel_count = features.shape[1]
