@@ -64,7 +64,7 @@ class Saver(object):
             state = self.load_checkpoint(self.save_cfg['resume_model'])
             return state
         elif 'pretrain_model' in self.save_cfg:
-            state = self.load_checkpoint(self.save_cfg['pretrain_model'])
+            state = self.load_checkpoint(self.save_cfg['pretrain_model'], convert=True)
             logger.warning('Load checkpoint from {}'.format(self.save_cfg['pretrain_model']))
             output = {}
             if 'ema' in state:
@@ -83,18 +83,18 @@ class Saver(object):
             return {'model': {}}
 
     @staticmethod
-    def load_checkpoint(ckpt_path):
+    def load_checkpoint(ckpt_path, convert=False):
         # assert os.path.exists(ckpt_path), f'No such file: {ckpt_path}'
         device = torch.cuda.current_device()
         # ckpt_dict = torch.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
         ckpt_dict = PetrelHelper.load(ckpt_path, map_location=lambda storage, loc: storage.cuda(device))
-        return Saver.process_checkpoint(ckpt_dict)
+        return Saver.process_checkpoint(ckpt_dict, convert)
 
     @staticmethod
-    def process_checkpoint(ckpt_dict):
+    def process_checkpoint(ckpt_dict, convert=False):
         """Load state_dict from checkpoint"""
 
-        def prototype_convert(state_dict):
+        def cls_convert(state_dict):
             is_convert = True
             for k in state_dict.keys():
                 if 'classifier' in k:
@@ -111,7 +111,7 @@ class Saver(object):
             else:
                 return state_dict
 
-        def pod_resnet_convert(state_dict):
+        def _resnet_convert(state_dict):
             convert_dict1 = {
                 "conv1.weight": "layer0.0.weight",
                 "bn1.weight": "layer0.1.weight",
@@ -190,9 +190,10 @@ class Saver(object):
             state_dict = ckpt_dict
 
         state_dict = remove_prefix(state_dict, 'module.')
-        if Saver.task_type == 'cls':
-            state_dict = prototype_convert(state_dict)
-        state_dict = pod_resnet_convert(state_dict)
+        if convert:
+            if Saver.task_type == 'cls':
+                state_dict = cls_convert(state_dict)
+            state_dict = _resnet_convert(state_dict)
         ckpt_dict['model'] = state_dict
 
         return ckpt_dict
