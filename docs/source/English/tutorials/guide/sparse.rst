@@ -9,7 +9,7 @@ Getting Started
 
 .. code-block:: python
 
-    git clone git@gitlab.bj.sensetime.com:spring2/sparsity.git
+    
     # Clone UP repository and install it.
 
 

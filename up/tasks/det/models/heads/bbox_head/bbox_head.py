@@ -185,8 +185,6 @@ class FC(BboxNet):
             - initializer (:obj:`dict`): config for module parameters initialization
               e.g. {'method': msra}
 
-        `FC example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/blob/master
-        /configs/baselines/faster-rcnn-R50-FPN-1x.yaml#L132-164>`_
         """
         super(FC, self).__init__(inplanes, num_classes, cfg)
 
@@ -258,8 +256,6 @@ class Res5(BboxNet):
               This is only for conv layer, we always use norm initilization for the last fc layer.
             - normalize (:obj:`dict`): config of Normalization Layer
 
-        `Res5 example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/blob/
-        master/configs/baselines/faster-rcnn-R50-C4-1x.yaml#L107-137>`_
 
 
         """
@@ -348,8 +344,6 @@ class RFCN(BboxNet):
             - cfg (:obj:`dict`): config for training or test
             - initializer (:obj:`dict`): config for module parameters initialization
 
-        `RFCN example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/blob/
-        master/configs/baselines/rfcn-R101-1x.yaml#L117-145>`_
         """
         super(RFCN, self).__init__(inplanes, num_classes, cfg)
 

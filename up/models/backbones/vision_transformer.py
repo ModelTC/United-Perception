@@ -17,15 +17,6 @@ __all__ = ['VisionTransformer',
            'deit_base_patch16_224']
 
 
-model_urls = {
-    'vit_base_patch16_224': 'http://spring.sensetime.com/drop/$/CvRXZ.pth',
-    'vit_large_patch16_224': 'http://spring.sensetime.com/drop/$/8mWgL.pth',
-    'deit_tiny_patch16_224': 'http://spring.sensetime.com/drop/$/BKaN7.pth',
-    'deit_small_patch16_224': 'http://spring.sensetime.com/drop/$/lBuQK.pth',
-    'deit_base_patch16_224': 'http://spring.sensetime.com/drop/$/icYbD.pth',
-}
-
-
 class GELU(nn.Module):
     """
     Gaussian Error Linear Units, based on

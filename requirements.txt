@@ -1,11 +1,8 @@
---trusted-host 10.10.40.93 --extra-index-url http://10.10.40.93:80/
---trusted-host pavi.parrots.sensetime.com --extra-index-url http://pavi.parrots.sensetime.com/pypi/simple/
 onnx<=1.6.0  # nart 0.2.4 incompatible with onnx 1.7.0
 prettytable
 scipy==1.1.0
 coverage==5.0.3
 pycocotools-fix
-numpy>=1.16.4,<1.18
 pandas>=0.25.1
 easydict>=1.9
 opencv-python>=4.1.0
@@ -13,7 +10,7 @@ Cython>=0.29.2,<0.29.15
 tensorboardX==1.8.0
 matplotlib==3.3.3
 pillow==6.2.1
-http://10.10.40.93/packages/lvis-0.5.1-py3-none-any.whl
+lvis
 SharedArray
 numba==0.48.0
 psutil==5.9.0
