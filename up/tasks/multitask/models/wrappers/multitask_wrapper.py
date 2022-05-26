@@ -58,7 +58,7 @@ def key_replace_wrapper(module, cfg={}):
             inputs[v] = inputs.pop(k)
         outputs = self._forward(inputs)
         for k, v in self.outpu_replace_dict.items():
-            outputs[v] = outputs[k]
+            outputs[v] = outputs.pop(k)
         return outputs
 
     if isinstance(module, dict):
