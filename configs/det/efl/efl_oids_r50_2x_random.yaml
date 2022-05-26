@@ -93,7 +93,7 @@ trainer: # Required.
 
 saver: # Required.
   save_dir: checkpoints    # dir to save checkpoints
-  pretrain_model: pretrain/pytorch/imagenet/resnet101-5d3b4d8f.pth
+  pretrain_model: pretrain/pytorch/imagenet/resnet50-19c8e357.pth
   results_dir: results_dir  # dir to save detection results. i.e., bboxes, masks, keypoints
   save_result: True
   auto_resume: True
@@ -112,7 +112,7 @@ hooks:
 
 net:
   - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
-    type: resnet101
+    type: resnet50
     kwargs:
       frozen_layers: [0,1]     # layer0...1 is fixed
       out_layers: [2,3,4]       # layer1...4, commonly named Conv2...5
