@@ -319,7 +319,13 @@ class BaseRunner(object):
         logger.info(f"save_freq: {self.save_freq}")
         self.save_start = cfg_trainer.get('save_start', _start_base)
         self.only_save_latest = cfg_trainer.get('only_save_latest', False)
+        if not self.iter_base:
+            save_latest_freq = int(cfg_trainer.get('save_latest_freq', 1) * self.train_epoch_size)
+        else:
+            save_latest_freq = int(cfg_trainer.get('save_latest_freq', self.train_epoch_size))
+        self.save_latest_freq = cfg_trainer.get('save_latest_freq', save_latest_freq)
         logger.info(f'only save latest: {self.only_save_latest}')
+        logger.info(f'save latest freq: {self.save_latest_freq}')
         logger.info(f"save_start: {self.save_start}")
         max_epoch = cfg_trainer.get('max_epoch', 0)
         self.max_iter = cfg_trainer.get('max_iter', int(max_epoch * self.train_epoch_size))
@@ -352,9 +358,7 @@ class BaseRunner(object):
 
     def save_epoch_ckpt(self, iter_idx):
         cur_iter = iter_idx + 1
-        epoch_size = self.train_epoch_size
-        if self.iter_base:
-            epoch_size = 1
+        epoch_size = self.save_latest_freq
         assert not self.iter_base
         if cur_iter % epoch_size == 0 and iter_idx > self.start_iter:
             self.save(auto_save='latest', lns=False)
