@@ -240,11 +240,6 @@ class ResNet(nn.Module):
               For more details, refer to `Checkpoint <https://pytorch.org/docs/stable/checkpoint.html>`_
             - initializer (:obj:`dict`): Config of initilizaiton
             - fa (:obj:`dict`): Configurations of `FactorizedAttentionBlock <https://arxiv.org/pdf/1812.01243.pdf>`_.
-              `Example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/
-              blob/master/configs/usages/retinanet-R50-GN-FA.yaml#L67-68>`_
-
-        `ResNet example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/blob/
-        master/configs/baselines/faster-rcnn-R50-FPN-1x.yaml#L61-66>`_
 
         .. note::
 

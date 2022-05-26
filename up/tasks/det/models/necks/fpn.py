@@ -46,8 +46,6 @@ class FPN(nn.Module):
             - normalize (:obj:`dict`): config of Normalization Layer
             - initializer (:obj:`dict`): config for model parameter initialization
 
-        `FPN example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/blob/
-        master/configs/baselines/faster-rcnn-R50-FPN-1x.yaml#L75-82>`_
         """
 
         super(FPN, self).__init__()
