@@ -2,7 +2,7 @@ from __future__ import division
 
 # Standard Library
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 
 # Import from third library
 import cv2
@@ -98,6 +98,29 @@ class CustomDataset(BaseDataset):
             ins['label']
             for ins in data['instances'] if not ins.get('is_ignored', False)
         ]
+
+    @property
+    def num_list(self):
+        return len(self.meta_file)
+
+    @property
+    def images_per_list(self):
+        _images_per_list = defaultdict(list)
+        self._num_images_per_list = Counter()
+        for img_idx, img_anns in enumerate(self.metas):
+            image_source = img_anns.get('image_source', 0)
+            _images_per_list[image_source].append(img_idx)
+            self._num_images_per_list += Counter([image_source])
+        return _images_per_list
+
+    @property
+    def num_images_per_list(self):
+        if not hasattr(self, '_num_images_per_list'):
+            self._num_images_per_list = Counter()
+            for _, img_anns in enumerate(self.metas):
+                image_source = img_anns.get('image_source', 0)
+                self._num_images_per_list += Counter([image_source])
+        return self._num_images_per_list
 
     def take_a_look(self):
         self._num_images_per_class = Counter()

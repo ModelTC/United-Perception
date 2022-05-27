@@ -1,6 +1,6 @@
 # Standard Library
 import math
-from collections import defaultdict
+from collections import defaultdict, deque
 
 # Import from third library
 import numpy as np
@@ -257,6 +257,102 @@ class DistributedRepeatFactorReSampler(Sampler):
 
     def __len__(self):
         return self.original_num_samples
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
+
+
+@SAMPLER_REGISTRY.register('list_balance')
+class DistributedListAwareBalanceSampler(Sampler):
+    def __init__(self, dataset, num_replicas=None, rank=None, priority=[]):
+        """
+        Arguments:
+            - dataset (obj:`Dataset`): dataset used for sampling.
+            - num_replicas (obj:`int`): number of processes participating in distributed training, optional.
+            - rank (obj:`int`): rank of the current process within num_replicas, optional.
+        """
+        if num_replicas is None:
+            num_replicas = get_world_size()
+        if rank is None:
+            rank = get_rank()
+
+        self.dataset = dataset
+        self.num_replicas = num_replicas
+        self.rank = rank
+        self.epoch = 0
+        self.num_samples = int(math.ceil(len(self.dataset) * 1.0 / self.num_replicas))
+        self.total_size = self.num_samples * self.num_replicas
+
+        if not hasattr(dataset, 'num_list'):
+            self.num_list = 1
+        else:
+            self.num_list = dataset.num_list
+
+        if len(priority) == 0:
+            priority = [1] * self.num_list
+
+        self.balance_sampling_prob = np.array(priority) / sum(priority)
+
+        self._list_to_image = self.dataset.images_per_list
+        self._perm = {list_id: deque(img_list) for list_id, img_list in self._list_to_image.items()}
+        self._cur = self.dataset.num_images_per_list
+        logger.info('Build List-Aware Balance Sampler')
+        for idx, _ in sorted(self._list_to_image.items()):
+            logger.info('list {} has {} images'.format(idx, len(self._list_to_image[idx])))
+        self._shuffle_list_perm(list_idx=None)
+
+    def _get_next_list(self):
+        while True:
+            list_idx = np.random.choice(self.num_list, p=self.balance_sampling_prob)
+            list_idx = int(list_idx)
+            list_size = len(self._perm[list_idx])
+            if list_size <= 0:
+                continue
+            else:
+                return list_idx, list_size
+
+    def _shuffle_list_perm(self, list_idx=None):
+        # Shuffle for all classes
+        if list_idx is None:
+            list_idx = [i for i in range(0, self.num_list)]
+        # Shuffle for special class
+        elif not isinstance(list_idx, list):
+            list_idx = [list_idx]
+        # Shuffle
+        for i in list_idx:
+            self._perm[i] = np.random.permutation(np.asarray(self._list_to_image[i]))
+            self._perm[i] = deque(self._perm[i])
+            self._cur[i] = 0
+
+    def __iter__(self):
+        # deterministically shuffle based on epoch
+        # g = torch.Generator()
+        # g.manual_seed(self.epoch)
+
+        # generate a perm based using list-aware balance for this epoch
+        indices = []
+        logger.info('Prepare for list-aware balance')
+        for _ in range(self.total_size):
+            list_idx, list_size = self._get_next_list()
+            indices.append(self._perm[list_idx][0])
+            self._perm[list_idx].rotate(-1)
+            self._cur[list_idx] += 1
+            if self._cur[list_idx] >= list_size:
+                self._shuffle_list_perm(list_idx=list_idx)
+
+        indices = np.random.permutation(np.asarray(indices))
+        indices = list(indices)
+        assert len(indices) == self.total_size
+
+        # subsample
+        offset = self.num_samples * self.rank
+        indices = indices[offset:offset + self.num_samples]
+        assert len(indices) == self.num_samples
+
+        return iter(indices)
+
+    def __len__(self):
+        return self.num_samples
 
     def set_epoch(self, epoch):
         self.epoch = epoch
