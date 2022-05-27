@@ -210,6 +210,13 @@ class Saver(object):
             logger.warning(f'Failed to ln -s {ckpt_path} {new_path}')
             logger.warning(e)
 
+    def rm_ckpt(self, ckpt_path):
+        try:
+            os.system(f'rm {ckpt_path}')
+        except Exception as e:
+            logger.warning(f'Failed to rm {ckpt_path}')
+            logger.warning(e)
+
     def save(self, epoch, iter, **kwargs):
         """Save model checkpoint for one epoch"""
         os.makedirs(self.save_dir, exist_ok=True)
@@ -230,6 +237,8 @@ class Saver(object):
         kwargs['iter'] = iter
         kwargs['metric_val'] = kwargs.get('metric_val', -1)
         lns_latest_ckpt = kwargs.pop('lns', True)
+        if os.path.exists(ckpt_path):
+            self.rm_ckpt(ckpt_path)
         torch.save(kwargs, ckpt_path)
         if lns_latest_ckpt:
             latest_path = os.path.join(self.save_dir, 'ckpt_latest.pth')
