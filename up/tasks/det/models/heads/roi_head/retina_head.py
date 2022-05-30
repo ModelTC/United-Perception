@@ -157,6 +157,7 @@ class RetinaSubNet(BaseNet):
                                          activation=True)
                 for child in module.children():
                     layers.append(child)
+                inplanes = feat_planes
         return nn.Sequential(*layers)
 
     def forward_net(self, x, lvl=None):
