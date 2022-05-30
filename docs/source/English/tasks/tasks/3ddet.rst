@@ -3,14 +3,14 @@
 
 UP supports the whole pipline of training and interfering;
 
-`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/det_3d>`_
+`Codes <https://github.com/ModelTC/EOD/tree/main/up/tasks/det_3d>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/det_3d>`_
+`Repos <https://github.com/ModelTC/EOD/tree/main/configs/det_3d>`_
 
 Dataset related modules
 -----------------------

@@ -39,7 +39,7 @@ v0.2.0 基准 `distillation v0.2.0 <https://github.com/ModelTC/EOD/tree/main/ben
 SSL
 ------------
 
-v0.2.0 基准 `self-supervised learning v0.2.0 <https://github.com/ModelTC/EOD/tree/main/benchmark/ssl.md>`_
+v0.2.0 基准 `self-supervised learning v0.2.0 <https://github.com/ModelTC/EOD/blob/main/benchmark/ssl_benchmark.md>`_
 
 Quant
 -----

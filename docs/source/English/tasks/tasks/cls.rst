@@ -3,14 +3,14 @@ Classification
 
 UP supports the whole pipline of training, deploying, and interfering;
 
-`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/cls>`_
+`Codes <https://github.com/ModelTC/EOD/tree/main/up/tasks/cls>`_
 
 Configs
 -------
 
 It contains the illustration of common configs and deploying.
 
-`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/cls>`_
+`Repos <https://github.com/ModelTC/EOD/tree/main/configs/cls>`_
 
 Dataset related modules
 -----------------------

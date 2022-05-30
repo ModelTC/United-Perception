@@ -3,14 +3,14 @@ Multi-task joint training
 
 UP supports multi-task joint training and inference. The training pipeline firstly gives each task the corresponding training data, secondly computes loss, thirdly sums up the losses, and finally backwards for updating gradients.
 
-`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/multitask>`_
+`Codes <https://github.com/ModelTC/EOD/tree/main/up/tasks/multitask>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Configs <https://github.com/ModelTC/EOD/-/tree/master/configs/multitask>`_
+`Configs <https://github.com/ModelTC/EOD/tree/main/configs/multitask>`_
 
 Illustration of configs
 -----------------------

@@ -2,14 +2,14 @@
 ========
 
 UP支持模型蒸馏训练; 具体流程为通过蒸馏teacher模型与student模型的若干个特征图，提升student模型性能
-`具体代码 <https://github.com/ModelTC/EOD/-/tree/dev/up/tasks/distill>`_
+`具体代码 <https://github.com/ModelTC/EOD/tree/main/up/tasks/distill>`_
 
 
 子任务配置文件示例
 ------------------
 
-* `classification <https://github.com/ModelTC/EOD/-/blob/dev/configs/cls/resnet/res18_kd.yaml>`_
-* `detection <https://github.com/ModelTC/EOD/-/blob/dev/configs/det/distill/faster_rcnn_r152_50_1x_feature_mimic.yaml>`_
+* `classification <https://github.com/ModelTC/EOD/blob/main/configs/distiller/cls/res18_kd.yaml>`_
+* `detection <https://github.com/ModelTC/EOD/blob/main/configs/distiller/det/faster_rcnn/faster_rcnn_r152_50_1x_feature_mimic.yaml>`_
 
 配置文件说明
 ------------

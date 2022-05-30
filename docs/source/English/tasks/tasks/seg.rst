@@ -3,14 +3,14 @@ Segmentation
 
 UP supports the whole pipline of training, deploying, and interfering;
 
-`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/seg>`_
+`Codes <https://github.com/ModelTC/EOD/tree/main/up/tasks/seg>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/seg>`_
+`Repos <https://github.com/ModelTC/EOD/tree/main/configs/seg>`_
 
 Dataset related modules
 -----------------------
