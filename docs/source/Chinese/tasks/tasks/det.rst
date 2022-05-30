@@ -2,12 +2,12 @@
 ====
 
 UP支持检测任务训练、部署、推理的全部流程;
-`具体代码 <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/det>`_
+`具体代码 <https://github.com/ModelTC/EOD/tree/main/up/tasks/det>`_
 
 配置文件
 --------
 
-`代码仓库 <https://github.com/ModelTC/EOD/-/tree/master/configs/det>`_
+`代码仓库 <https://github.com/ModelTC/EOD/tree/main/configs/det>`_
 其中包括常用算法配置文件与部署示例
 
 数据集相关模块

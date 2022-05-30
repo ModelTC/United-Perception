@@ -3,13 +3,13 @@
 
 UP支持自监督pretrain模型训练以及finetune下游任务;
 
-`具体代码 <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/ssl>`_
+`具体代码 <https://github.com/ModelTC/EOD/tree/main/up/tasks/ssl>`_
 
 配置文件
 --------
 
-* `pretrain <https://github.com/ModelTC/EOD/-/blob/master/configs/ssl/mocov1/moco_v1.yaml>`_
-* `finetune <https://github.com/ModelTC/EOD/-/blob/master/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
+* `pretrain <https://github.com/ModelTC/EOD/blob/main/configs/ssl/mocov1/moco_v1.yaml>`_
+* `finetune <https://github.com/ModelTC/EOD/blob/main/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
 
 pretrain相关模块
 ----------------

@@ -3,14 +3,14 @@ Detection
 
 UP supports the whole pipline of training, deploying, and interfering;
 
-`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/det>`_
+`Codes <https://github.com/ModelTC/EOD/tree/main/up/tasks/det>`_
 
 Configs
 -------
 
 It contains the illustration of common configs and deploying.
 
-`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/det>`_
+`Repos <https://github.com/ModelTC/EOD/tree/main/configs/det>`_
 
 Dataset related modules
 -----------------------

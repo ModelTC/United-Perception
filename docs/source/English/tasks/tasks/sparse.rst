@@ -2,14 +2,14 @@ Sparse training
 ===============
 
 UP supports sparse training;
-`Codes <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/sparse>`_
+`Codes <https://github.com/ModelTC/EOD/tree/main/up/tasks/sparse>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Repos <https://github.com/ModelTC/EOD/-/tree/master/configs/sparse>`_
+`Repos <https://github.com/ModelTC/EOD/tree/main/configs/sparse>`_
 
 Dataset related modules
 -----------------------

@@ -2,12 +2,12 @@
 ==============
 
 UP支持多任务的联合训练，推理; 训练流程为每个task分支网络处理对应的训练数据，计算loss，之后将各任务loss计算总和并反向传播更新梯度
-`具体代码 <https://github.com/ModelTC/EOD/-/tree/master/up/tasks/multitask>`_
+`具体代码 <https://github.com/ModelTC/EOD/tree/main/up/tasks/multitask>`_
 
 配置文件
 --------
 
-`配置文件 <https://github.com/ModelTC/EOD/-/tree/master/configs/multitask>`_
+`配置文件 <https://github.com/ModelTC/EOD/tree/main/configs/multitask>`_
 其中包括示例配置文件
 
 配置文件示例
