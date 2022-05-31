@@ -249,8 +249,9 @@ class BaseRunner(object):
                 self.lr_scheduler.load_state_dict(ckpt['lr_scheduler'])
                 logger.info(f'resume from epoch:{start_epoch} iteration:{self.cur_iter}')
         if 'ema' in ckpt and self.ema is not None:
-            logger.info("load ckpt ema to model ema")
-            self.ema.load_state_dict(ckpt['ema'])
+            if ckpt['ema']:
+                logger.info("load ckpt ema to model ema")
+                self.ema.load_state_dict(ckpt['ema'])
 
     def build_saver(self):
         cfg_saver = self.config['saver']
