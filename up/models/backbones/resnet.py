@@ -401,7 +401,9 @@ class ResNet(nn.Module):
                  deep_stem=False,
                  input_channel=3,
                  drop_path_rate=0,
-                 avg_down=False):
+                 avg_down=False,
+                 down_sample='pool',
+                 width=[64, 64, 128, 256, 512]):
         r"""
         Arguments:
             - frozen_layers (:obj:`list` of :obj:`int`): Index of frozen layers, [0,4]
@@ -498,8 +500,8 @@ class ResNet(nn.Module):
         self.frozen_layers = frozen_layers
         self.out_layers = out_layers
         self.out_strides = out_strides
-        layer_out_planes = [64 * self.multiplier] + [i * block.expansion * self.multiplier for i in [64, 128, 256, 512]]
-        layer_in_planes = list(map(int, [64 * self.multiplier] + [i * self.multiplier for i in [64, 128, 256, 512]]))
+        layer_out_planes = [width[0] * self.multiplier] + [i * block.expansion * self.multiplier for i in width[1:]]
+        layer_in_planes = list(map(int, [width[0] * self.multiplier] + [i * self.multiplier for i in width[1:]]))
         layer_out_planes = list(map(int, layer_out_planes))
         self.out_planes = [layer_out_planes[i] for i in out_layers]
         self.segments = self.get_segments(checkpoint)
@@ -526,10 +528,17 @@ class ResNet(nn.Module):
             )
         # self.add_module(self.norm1_name, norm1)
         relu = nn.ReLU(inplace=True)
-        maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-        if nnie:
-            maxpool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0, ceil_mode=True)
-        self.layer0 = nn.Sequential(conv1, norm1, relu, maxpool)
+        if down_sample == 'pool':
+            maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+            if nnie:
+                maxpool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0, ceil_mode=True)
+            self.layer0 = nn.Sequential(conv1, norm1, relu, maxpool)
+        else:
+            conv2 = nn.Sequential(
+                nn.Conv2d(layer_out_planes[0], layer_out_planes[0], kernel_size=3, stride=2, padding=1, bias=True),
+                build_norm_layer(layer_out_planes[0], normalize)[1],
+                nn.ReLU(inplace=True))
+            self.layer0 = nn.Sequential(conv1, norm1, relu, conv2)
         self.layer1 = self._make_layer(block, layer_in_planes[1], layers[0],
                                        normalize=normalize,
                                        block_id=0)
