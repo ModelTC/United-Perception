@@ -129,7 +129,7 @@ trainer: # Required.
         kwargs:
           weight_decay: 0.0
       nodecay: ['relative_position_bias_table']
-lr_scheduler:
+  lr_scheduler:
     warmup_iter: 25020
     warmup_type: linear
     warmup_register_type: no_scale_lr
