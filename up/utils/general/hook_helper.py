@@ -6,9 +6,13 @@ import os
 import signal
 import time
 import weakref
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
 from collections import defaultdict
 
 import torch
+import torch.nn as nn
 from torch.nn.utils import clip_grad_norm_
 
 from .registry_factory import HOOK_REGISTRY, VISUALIZER_REGISTRY
@@ -356,6 +360,191 @@ class Visualize(Hook):
     def after_eval_forward(self, cur_iter, output):
         if self.vis_dt:
             self.runner_ref().data_loaders['test'].dataset.vis_dt(self.vis_dt, output)
+
+
+@HOOK_REGISTRY.register('feature_vis')
+class FEATURE_VIS(Hook):
+    """ Visualize ground truthes, detection results
+    """
+
+    def __init__(self, runner, layer_name, save_dir='feat_vis', gt_dir=None, interpolation='linear'):
+        """
+        Arguments:
+            - runner (:obj:`Runner`): used as to accecss other variables
+        """
+        super(FEATURE_VIS, self).__init__(runner)
+        self.save_dir = save_dir
+        os.makedirs(save_dir, exist_ok=True)
+        self.show_with_gt = True
+        if gt_dir is not None:
+            self.show_with_gt = False
+            self.gt_dir = gt_dir
+            os.makedirs(gt_dir, exist_ok=True)
+
+        interpolation_types = {'linear': cv2.INTER_LINEAR, 'nearest': cv2.INTER_NEAREST,
+                               'cubic': cv2.INTER_CUBIC, 'area': cv2.INTER_AREA}
+        self.interpolation = interpolation_types[interpolation]
+
+        assert isinstance(layer_name, list), 'layer_name must be a layer name list'
+        self.layer_name = layer_name
+        self.feature = []
+
+        def _get_features_hook(module, input, output):
+            self.feature.append(output)
+        for lyn in layer_name:
+            vis_module = self.get_module_by_name(runner.model, lyn)
+            vis_module.register_forward_hook(_get_features_hook)
+
+        logger.info('build feature visualizer done')
+
+    def get_module_by_name(self, model, name):
+        name = name.split('.')
+        targets_module = model
+        for n in name:
+            targets_module = getattr(targets_module, n)
+        return targets_module
+
+    def after_forward(self, cur_iter, output):
+        assert len(self.feature) == len(self.layer_name), 'something wrong with the forward hook!'
+        for bix in range(output['gt'].shape[0]):
+            gt_save_once = True
+            for fix, lyn in enumerate(self.layer_name):
+                feature = self.feature[fix][bix].cpu().data.numpy()
+                feature = np.sum(feature, axis=0)
+                feature = np.maximum(feature, 0)
+                feature -= np.min(feature)
+                feature /= np.max(feature)
+                feature = cv2.resize(feature, (224, 224), interpolation=self.interpolation)
+
+                heatmap = cv2.applyColorMap(np.uint8(255 * feature), cv2.COLORMAP_JET)
+                heatmap = np.float32(heatmap) / 255
+                heatmap = heatmap[..., ::-1]  # gbr to rgb
+
+                heatmap = (heatmap * 255).astype(np.uint8)
+                img = np.float32(output['image'][bix].cpu().numpy()) * np.array([0.229, 0.224, 0.225])[:, None, None] + np.array([0.485, 0.456, 0.406])[:, None, None]   # noqa
+                img = (img.transpose(1, 2, 0) * 255).astype(np.uint8)
+
+                filename = '_'.join(output['filenames'][bix].split('/'))
+                sub_dir = os.path.join(self.save_dir, '_' + '_'.join(lyn.split('.')))
+                if not os.path.exists(sub_dir):
+                    os.mkdir(sub_dir)
+                if self.show_with_gt:
+                    plt.figure()
+                    plt.imshow(img)
+                    plt.imshow(heatmap, alpha=0.5, cmap='rainbow')
+                    plt.axis('off')
+                    plt.savefig(os.path.join(sub_dir, filename))
+                    plt.close()
+                else:
+                    if gt_save_once:
+                        plt.figure()
+                        plt.imshow(img)
+                        plt.axis('off')
+                        plt.savefig(os.path.join(self.gt_dir, filename))
+                        plt.close()
+                        gt_save_once = False
+                    plt.figure()
+                    plt.imshow(heatmap)
+                    plt.axis('off')
+                    plt.savefig(os.path.join(sub_dir, filename))
+                    plt.close()
+        self.feature = []
+
+
+@HOOK_REGISTRY.register('grad_cam')
+class Grad_CAM(Hook):
+    """ Visualize ground truthes, detection results
+    """
+
+    def __init__(self, runner, layer_name=None, class_names=None, save_dir='grad_cam'):
+        """
+        Arguments:
+            - runner (:obj:`Runner`): used as to accecss other variables
+        """
+        super(Grad_CAM, self).__init__(runner)
+        if class_names is not None:
+            with open(class_names, 'r') as f:
+                self.class_names = json.load(f)
+        else:
+            self.class_names = None
+        self.save_dir = save_dir
+        os.makedirs(save_dir, exist_ok=True)
+
+        if layer_name is None:
+            cam_module = self.get_last_conv_module(runner.model)
+        else:
+            cam_module = self.get_module_by_name(runner.model, layer_name)
+        self.feature = None
+        self.gradient = None
+
+        def _get_features_hook(module, input, output):
+            self.feature = output
+
+        def _get_grads_hook(module, input_grad, output_grad):
+            self.gradient = output_grad[0]
+
+        cam_module.register_forward_hook(_get_features_hook)
+        cam_module.register_backward_hook(_get_grads_hook)
+
+        logger.info('build grad cam visualizer done')
+        logger.info('Please run grad cam in a training config!')
+
+    def get_last_conv_module(self, model):
+        targets_module = model
+        for m in model.modules():
+            if isinstance(m, nn.Conv2d):
+                targets_module = m
+        return targets_module
+
+    def get_module_by_name(self, model, name):
+        name = name.split('.')
+        targets_module = model
+        for n in name:
+            targets_module = getattr(targets_module, n)
+        return targets_module
+
+    def before_forward(self, cur_iter, input):
+        self.gradient = None
+        self.feature = None
+        runner = self.runner_ref()
+        model = runner.model
+        for bix in range(input['gt'].shape[0]):
+            model.zero_grad()
+            output = model(input)['logits']
+            output[bix, input['gt'][bix]].backward()
+            gradient = self.gradient[bix]
+            weight = np.mean(gradient.cpu().numpy(), axis=(1, 2))
+            feature = self.feature[bix].cpu().data.numpy()
+            cam = feature * weight[:, np.newaxis, np.newaxis]
+            cam = np.sum(cam, axis=0)
+            cam = np.maximum(cam, 0)
+            cam -= np.min(cam)
+            cam /= np.max(cam)
+            cam = cv2.resize(cam, (224, 224))
+
+            heatmap = cv2.applyColorMap(np.uint8(255 * cam), cv2.COLORMAP_JET)
+            heatmap = np.float32(heatmap) / 255
+            heatmap = heatmap[..., ::-1]  # gbr to rgb
+
+            heatmap = (heatmap * 255).astype(np.uint8)
+            img = np.float32(input['image'][bix].cpu().numpy()) * np.array([0.229, 0.224, 0.225])[:, None, None] + np.array([0.485, 0.456, 0.406])[:, None, None]    # noqa
+            img = (img.transpose(1, 2, 0) * 255).astype(np.uint8)
+
+            filename = '_'.join(input['filenames'][bix].split('/'))
+            plt.figure()
+            if self.class_names is not None:
+                raw_name = self.class_names[str(input['gt'][bix].item())]
+                name, freq = raw_name.split('|')
+                plt.title(name.strip())
+                filename = freq.strip() + '_' + filename
+            plt.imshow(img)
+            plt.imshow(heatmap, alpha=0.5, cmap='rainbow')
+            plt.axis('off')
+            plt.savefig(os.path.join(self.save_dir, filename))
+
+            runner.optimizer.step()
+            self.gradient = None
+            self.feature = None
 
 
 @HOOK_REGISTRY.register('auto_checkpoint')
