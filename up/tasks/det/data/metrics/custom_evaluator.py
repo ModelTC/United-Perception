@@ -20,6 +20,7 @@ from up.utils.general.petrel_helper import PetrelHelper
 from up.data.metrics.base_evaluator import Evaluator, Metric
 from up.data.image_reader import build_image_reader
 from up.utils.general.vis_helper import vis_bad_case_with_text
+from .eval_utils import get_miss_rate_multi_size, get_scale_factor
 
 __all__ = ['MREvaluator']
 
@@ -63,7 +64,7 @@ class CustomEvaluator(Evaluator):
             instance["label"] = self.label_mapping[idx][int(instance["label"] - 1)]
         return data
 
-    def load_gts(self, gt_files):
+    def load_gts(self, gt_files, min_size, max_size, gt_rescale, metric_level):
         # maintain a dict to store original img information
         # key is image dir,value is image_height,image_width,instances
         original_gt = {}
@@ -71,6 +72,7 @@ class CustomEvaluator(Evaluator):
             'bbox_num': Counter(),
             'gt_num': Counter(),
             'image_num': 0,
+            'image_scale': {},
             'image_ids': list()
         }
         if not isinstance(gt_files, list):
@@ -80,12 +82,17 @@ class CustomEvaluator(Evaluator):
             with PetrelHelper.open(gt_file) as f:
                 for i, line in enumerate(f):
                     img = json.loads(line)
+                    # filename = img['filename']
                     if self.label_mapping is not None:
                         img = self.set_label_mapping(img, gt_file_idx)
                     image_id = img['filename']
                     original_gt[img['filename']] = copy.deepcopy(img)
                     gt_img_ids.add(image_id)
+                    image_height = img['image_height']
+                    image_width = img['image_width']
                     gts['image_num'] += 1
+                    gts['image_scale'][image_id] = get_scale_factor(min_size, max_size, image_height,
+                                                                    image_width) if gt_rescale else 1.0
                     for idx, instance in enumerate(img.get('instances', [])):
                         instance['detected'] = False
                         # remember the original index within an image of annoated format so
@@ -104,8 +111,15 @@ class CustomEvaluator(Evaluator):
                         gt_by_img = box_by_img['gts']
                         gts['bbox_num'][label] += 1
                         if not is_ignore:
-                            gt_by_img.append(instance)
-                            gts['gt_num'][label] += 1
+                            bbox = instance['bbox']
+                            rescale_factor = gts['image_scale'][image_id]
+                            if (bbox[3] - bbox[1]) * rescale_factor >= metric_level and (
+                                    bbox[2] - bbox[0]) * rescale_factor >= metric_level:
+                                gt_by_img.append(instance)
+                                gts['gt_num'][label] += 1
+                            else:
+                                ign_by_img = box_by_img.setdefault('ignores', [])
+                                ign_by_img.append(instance)
                         else:
                             ign_by_img = box_by_img.setdefault('ignores', [])
                             ign_by_img.append(instance)
@@ -182,13 +196,14 @@ class CustomEvaluator(Evaluator):
                 cur_gt[img_id] = gt
         return cur_gt
 
-    def get_cls_tp_fp(self, dts_cls, gts_cls):
+    def get_cls_tp_fp(self, dts_cls, gts_cls, image_scale, iou_thresh, ign_iou_thresh):
         """
         Arguments:
             dts_cls (list): det results of one specific class.
             gts_cls (dict): ground truthes bboxes of all images for one specific class
         """
         fps, tps = np.zeros((len(dts_cls))), np.zeros((len(dts_cls)))
+        matched_gt_minsize = np.ones((len(dts_cls))) * -1
         for i, dt in enumerate(dts_cls):
             img_id = dt['image_id']
             dt_bbox = dt['bbox']
@@ -205,6 +220,12 @@ class CustomEvaluator(Evaluator):
                     fps[i] = 0
                     gts['gts'][m_gt]['detected'] = True
                     gts['gts'][m_gt]['detected_score'] = dt['score']
+                    m_gt_bboxes = gt_bboxes[m_gt]
+                    box_w = m_gt_bboxes[2] - m_gt_bboxes[0]
+                    box_h = m_gt_bboxes[3] - m_gt_bboxes[1]
+                    matched_gt_minsize[i] = np.minimum(box_w, box_h)
+                    matched_gt_minsize[i] *= image_scale[img_id]
+
                 else:
                     fps[i] = 1
                     tps[i] = 0
@@ -226,7 +247,7 @@ class CustomEvaluator(Evaluator):
                 fps[i] = 0
                 tps[i] = 0
 
-        return np.array(tps), np.array(fps)
+        return np.array(tps), np.array(fps), np.array(matched_gt_minsize)
 
     def match_ig(self, dt, igns):
         dt = np.array(dt).reshape(-1, 4)
@@ -302,7 +323,12 @@ class MREvaluator(CustomEvaluator):
                  ign_iou_thresh=0.5,
                  iou_types=['bbox'],
                  eval_class_idxs=[],
-                 cross_cfg=None):
+                 cross_cfg=None,
+                 gt_rescale=True,
+                 watch_scale=[],
+                 max_size=1333,
+                 metric_level=0,
+                 scales=[800]):
 
         super(MREvaluator, self).__init__(gt_file,
                                           num_classes,
@@ -317,7 +343,6 @@ class MREvaluator(CustomEvaluator):
             eval_class_idxs = list(range(1, num_classes))
         self.eval_class_idxs = eval_class_idxs
         self.image_reader = image_reader
-
         self.fppi = np.array(fppi)
         self.class_names = class_names
         self.metrics_csv = metrics_csv
@@ -325,6 +350,13 @@ class MREvaluator(CustomEvaluator):
             self.class_names = list(range(1, num_classes))
         self.init_vis(bad_case_analyser, analysis_json, img_root, vis_mode)
         self.iou_types = iou_types
+        self.watch_scale = watch_scale
+        self.gt_rescale = gt_rescale
+        assert self.gt_rescale in [True, False], f'gt_rescale wrong: {self.gt_rescale}'
+        self.metric_level = metric_level
+        self.max_size = max_size
+        assert len(scales) == 1, 'scales {}, but only single scale is allowed during evaluating'.format(scales)
+        self.min_size = scales[0]
 
     def init_vis(self, bad_case_analyser, analysis_json, img_root, vis_mode):
         # init for bad case analysis
@@ -540,7 +572,8 @@ class MREvaluator(CustomEvaluator):
         for itype in self.iou_types:
             num_mean_cls = 0
             if not self.gt_loaded:
-                self.gts, original_gt = self.load_gts(self.gt_file)
+                self.gts, original_gt = self.load_gts(self.gt_file, self.min_size,
+                                                      self.max_size, self.gt_rescale, self.metric_level)
                 self.gt_loaded = True
             else:
                 self.reset_detected_flag()
@@ -574,7 +607,8 @@ class MREvaluator(CustomEvaluator):
                     continue
 
                 if itype == 'bbox':
-                    tps, fps = self.get_cls_tp_fp(results_i, cur_gt)
+                    tps, fps, matched_gt_minsize = self.get_cls_tp_fp(results_i, cur_gt, self.gts['image_scale'],
+                                                                      self.iou_thresh, self.ign_iou_thresh)
                 drec = tps / max(1, sum_gt)
                 tp = np.cumsum(tps)
                 fp = np.cumsum(fps)
@@ -585,6 +619,12 @@ class MREvaluator(CustomEvaluator):
                 scores = [x['score'] for x in results_i]
                 image_num = len(gts_img_id_set)
                 mrs, s_fppi, indices = self.get_miss_rate(tp, fp, scores, image_num, sum_gt, return_index=True)
+                watch_scale = self.watch_scale
+                if len(watch_scale) > 0:
+                    multi_size_metrics = get_miss_rate_multi_size(tp, fp, scores, self.gts, class_i,
+                                                                  matched_gt_minsize, watch_scale, self.fppi)
+                    for k, v in multi_size_metrics.items():
+                        logger.info("{}:\t{}*{}".format(self.class_names[class_i], k, v))
                 ap[class_i] = np.sum(drec * prec)
                 max_recall[class_i] = np.max(rec)
                 fppi_miss[class_i] = mrs
