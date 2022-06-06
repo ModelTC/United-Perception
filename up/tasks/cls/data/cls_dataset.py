@@ -110,7 +110,8 @@ class ClsDataset(BaseDataset):
                  parser_info={},
                  image_type='pil',
                  fraction=1.0,
-                 save_score=False):
+                 save_score=False,
+                 multilabel=False):
         super(ClsDataset, self).__init__(meta_file,
                                          image_reader,
                                          transformer,
@@ -123,6 +124,7 @@ class ClsDataset(BaseDataset):
         self.meta_type = meta_type
         self.image_type = image_type
         self.fraction = fraction
+        self.multilabel = multilabel
         self._list_check()
         self.meta_parser = [CLS_PARSER_REGISTRY[m_type](**parser_info) for m_type in self.meta_type]
         self.parse_metas()
@@ -136,7 +138,11 @@ class ClsDataset(BaseDataset):
     def parse_metas(self):
         self.metas = []
         for idx, meta_file in enumerate(self.meta_file):
-            self.meta_parser[idx].parse(meta_file, idx, self.metas)
+            if self.multilabel:
+                self.meta_parser[idx].parse(meta_file, idx, self.metas, self.multilabel)
+            else:
+                self.meta_parser[idx].parse(meta_file, idx, self.metas)
+
         if self.fraction != 1.:
             rand_idx = np.random.choice(np.arange(len(self.metas)), int(len(self.metas) * self.fraction), replace=False)
             self.metas = np.array(self.metas)[rand_idx].tolist()
@@ -180,8 +186,12 @@ class ClsDataset(BaseDataset):
 
     def dump(self, output):
         maxk = max(self.topk)
-        prediction = self.tensor2numpy(output['preds'])
         label = self.tensor2numpy(output['gt'])
+        # if label is a multilabel, use logits
+        if len(label[0].shape) > 1:
+            prediction = self.tensor2numpy(output['logits'])
+        else:
+            prediction = self.tensor2numpy(output['preds'])
         multicls = False
         scores = output['scores']
         filenames = output['filenames']
@@ -192,6 +202,8 @@ class ClsDataset(BaseDataset):
             # score n* single cls
             multicls = True
             prediction = np.array(prediction)
+            if self.multilabel and label.shape[0] != prediction.shape[0]:
+                label = np.transpose(label, (1, 0, 2))
             score = [self.tensor2numpy(i) for i in scores]
         else:
             score = self.tensor2numpy(output['scores'])
@@ -199,8 +211,15 @@ class ClsDataset(BaseDataset):
         for b_idx in range(label.shape[0]):
             _topk_idx, _topk_score = [], []
             if multicls:
-                _prediction = [int(item) for item in prediction[:, b_idx]]
-                _label = [int(item) for item in label[b_idx][:]]
+                if len(prediction[0].shape) > 1:
+                    _prediction = [item for item in prediction[b_idx]]
+                else:
+                    _prediction = [int(item) for item in prediction[:, b_idx]]
+                if len(label[0].shape) > 1:
+                    _label = [item for item in label[b_idx]]
+                else:
+                    _label = [int(item) for item in label[b_idx][:]]
+                _filename = [filename for filename in filenames]
                 _score = []
                 _filename = filenames[b_idx]
                 for idx, item in enumerate(score):

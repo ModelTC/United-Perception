@@ -8,6 +8,7 @@ from up.data.metrics.base_evaluator import Metric, Evaluator
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import EVALUATOR_REGISTRY
 from up.data.image_reader import build_image_reader
+from up.utils.model.accuracy import multilabel_accuracy, precision, recall, f1
 
 __all__ = ['ImageNetEvaluator']
 
@@ -20,9 +21,11 @@ class ImageNetEvaluator(Evaluator):
                  analysis_json=None,
                  image_reader=None,
                  class_names=[],
-                 eval_class_idxs=[]):
+                 eval_class_idxs=[],
+                 multilabel=False,):
         super(ImageNetEvaluator, self).__init__()
         self.topk = topk
+        self.multilabel = multilabel
         self.bad_case_analyse = bad_case_analyse
         self.analysis_json = analysis_json
         if image_reader is not None:
@@ -38,8 +41,11 @@ class ImageNetEvaluator(Evaluator):
             lines = []
             for device_res in res:
                 for items in device_res:
-                    for line in items:
-                        lines.append(line)
+                    if self.multilabel:
+                        lines.append(items)
+                    else:
+                        for line in items:
+                            lines.append(line)
         else:
             with open(res_file) as f:
                 lines = f.readlines()
@@ -48,11 +54,18 @@ class ImageNetEvaluator(Evaluator):
                 info = json.loads(line)
             else:
                 info = line
-            for key in info.keys():
-                if key not in res_dict.keys():
-                    res_dict[key] = [info[key]]
-                else:
-                    res_dict[key].append(info[key])
+            if self.multilabel:
+                for attr_idx in range(len(info)):
+                    for key in info[attr_idx].keys():
+                        if key not in res_dict.keys():
+                            res_dict[key] = [[] for _ in range(len(info))]
+                        res_dict[key][attr_idx].append(info[attr_idx][key])
+            else:
+                for key in info.keys():
+                    if key not in res_dict.keys():
+                        res_dict[key] = [info[key]]
+                    else:
+                        res_dict[key].append(info[key])
         return res_dict
 
     def get_pred_correct(self, pred, label):
@@ -81,39 +94,75 @@ class ImageNetEvaluator(Evaluator):
     def multicls_eval(self, preds, labels):
         attr_num = len(preds)
         res = {}
-        labels = labels.t()
+        if not self.multilabel:
+            labels = labels.t()
         attr = []
         for idx in range(attr_num):
-            correct, num = self.get_pred_correct(preds[idx], labels[idx])
-            temp = {}
-            for k in self.topk:
-                n_k = min(preds[idx].size(1), k)
-                correct_k = correct[:n_k].reshape(-1).float().sum(0, keepdim=True)
-                acc = correct_k.mul_(100.0 / num)
-                temp[f'top{k}'] = acc.item()
+            if self.multilabel:
+                temp = {}
+                temp['acc'] = multilabel_accuracy(preds[idx], labels[idx])[0].item()
+            else:
+                correct, num = self.get_pred_correct(preds[idx], labels[idx])
+                temp = {}
+                for k in self.topk:
+                    n_k = min(preds[idx].size(1), k)
+                    correct_k = correct[:n_k].reshape(-1).float().sum(0, keepdim=True)
+                    acc = correct_k.mul_(100.0 / num)
+                    temp[f'top{k}'] = acc.item()
+                temp['precision'] = precision(preds[idx], labels[idx])[0].item()
+                temp['recall'] = recall(preds[idx], labels[idx])[0].item()
+                temp['f1'] = f1(preds[idx], labels[idx])[0].item()
             attr.append(temp)
         for head_num in range(len(attr)):
             res[f'head{head_num}'] = attr[head_num]
-        for idx, k in enumerate(self.topk):
-            res[f'ave_top{k}'] = 0
+
+        if self.multilabel:
+            res['avg_acc'] = 0
             for head_num in range(len(attr)):
-                res[f'ave_top{k}'] += res[f'head{head_num}'][f'top{k}']
-            res[f'ave_top{k}'] /= len(attr)
-        metric = Metric(res)
-        metric.set_cmp_key(f'ave_top{self.topk[0]}')
+                res['avg_acc'] += res[f'head{head_num}']['acc']
+            res['avg_acc'] /= len(attr)
+            metric = Metric(res)
+            metric.set_cmp_key('avg_acc')
+        else:
+            for idx, k in enumerate(self.topk):
+                res[f'avg_top{k}'] = 0
+                for head_num in range(len(attr)):
+                    res[f'avg_top{k}'] += res[f'head{head_num}'][f'top{k}']
+                res[f'avg_top{k}'] /= len(attr)
+                metric = Metric(res)
+                metric.set_cmp_key(f'avg_top{self.topk[0]}')
+            res['avg_precision'], res['avg_recall'], res['avg_f1'] = 0, 0, 0
+            for head_num in range(len(attr)):
+                res['avg_precision'] += res[f'head{head_num}']['precision']
+                res['avg_recall'] += res[f'head{head_num}']['recall']
+                res['avg_f1'] += res[f'head{head_num}']['f1']
+
+            res['avg_precision'] /= len(attr)
+            res['avg_recall'] /= len(attr)
+            res['avg_f1'] /= len(attr)
+
         return metric
 
     def eval(self, res_file, res=None):
         res_dict = self.load_res(res_file, res)
-        label = torch.from_numpy(np.array(res_dict['label']))
+        if self.multilabel:
+            label, pred = [], []
+            for attr_idx in range(len(res_dict['label'])):
+                label.append(np.concatenate(np.array(res_dict['label'][attr_idx]), axis=0))
+                pred.append(np.concatenate(np.array(res_dict['prediction'][attr_idx]), axis=0))
+            label = torch.from_numpy(np.array(label))
+            pred = torch.from_numpy(np.array(pred))
+        else:
+            label = torch.from_numpy(np.array(res_dict['label']))
         if len(label.shape) > 1:
-            preds = []
-            for attr_idx in range(label.shape[1]):
-                temp = []
-                for b_idx in range(label.shape[0]):
-                    temp.append(res_dict['topk_idx'][b_idx][attr_idx])
-                preds.append(temp)
-            pred = [torch.from_numpy(np.array(idx)) for idx in preds]
+            if not self.multilabel:
+                preds = []
+                for attr_idx in range(label.shape[1]):
+                    temp = []
+                    for b_idx in range(label.shape[0]):
+                        temp.append(res_dict['topk_idx'][b_idx][attr_idx])
+                    preds.append(temp)
+                pred = [torch.from_numpy(np.array(idx)) for idx in preds]
             metric = self.multicls_eval(pred, label)
         else:
             topk_idx = torch.from_numpy(np.array(res_dict['topk_idx']))

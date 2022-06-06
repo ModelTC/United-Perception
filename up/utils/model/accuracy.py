@@ -3,6 +3,7 @@ from functools import reduce
 
 # Import from third library
 import torch
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 
 def binary_accuracy(output, target, thresh=0.5, ignore_index=-1):
@@ -18,6 +19,17 @@ def binary_accuracy(output, target, thresh=0.5, ignore_index=-1):
     binary = (output > thresh).type_as(target)
     tp = (binary == target).float().sum(0, keepdim=True)
     return [tp.mul_(100.0 / target.numel())]
+
+
+def multilabel_accuracy(output, target, thresh=0.5):
+    batch_size = target.size(0)
+
+    output = torch.nn.Sigmoid()(output)
+    output[output >= thresh] = 1
+    output[output < thresh] = 0
+
+    correct = torch.sum(torch.all(torch.eq(output, target), dim=1))
+    return [100 * correct / batch_size]
 
 
 def accuracy(output, target, topk=(1, ), ignore_indices=[-1]):
@@ -48,6 +60,27 @@ def accuracy(output, target, topk=(1, ), ignore_indices=[-1]):
     for k in topk:
         correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
         res.append(correct_k.mul_(100.0 / batch_size))
+    return res
+
+
+def precision(output, target):
+    prediction = output.argmax(dim=1)
+    score = torch.FloatTensor([precision_score(target, prediction, average='macro')])
+    res = [score * 100]
+    return res
+
+
+def recall(output, target):
+    prediction = output.argmax(dim=1)
+    score = torch.FloatTensor([recall_score(target, prediction, average='macro')])
+    res = [score * 100]
+    return res
+
+
+def f1(output, target):
+    prediction = output.argmax(dim=1)
+    score = torch.FloatTensor([f1_score(target, prediction, average='macro')])
+    res = [score * 100]
     return res
 
 

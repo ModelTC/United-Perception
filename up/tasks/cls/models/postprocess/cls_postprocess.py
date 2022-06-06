@@ -9,7 +9,7 @@ __all__ = ['BaseClsPostProcess']
 
 @MODULE_ZOO_REGISTRY.register('base_cls_postprocess')
 class BaseClsPostProcess(nn.Module):
-    def __init__(self, cls_loss, prefix=None):
+    def __init__(self, cls_loss, prefix=None, multilabel=False):
         super(BaseClsPostProcess, self).__init__()
         if isinstance(cls_loss, list):
             self.cls_loss = nn.ModuleList()
@@ -18,9 +18,13 @@ class BaseClsPostProcess(nn.Module):
         else:
             self.cls_loss = build_loss(cls_loss)
         self.prefix = prefix if prefix is not None else self.__class__.__name__
+        self.multilabel = multilabel
 
     def get_acc(self, logits, targets):
-        acc = A.accuracy(logits, targets)[0]
+        if self.multilabel:
+            acc = A.multilabel_accuracy(logits, targets)[0]
+        else:
+            acc = A.accuracy(logits, targets)[0]
         return acc
 
     def get_loss(self, logits, targets):

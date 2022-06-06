@@ -41,6 +41,7 @@ class BCE_LOSS(_Loss):
 
     def forward(self, input, label):
         C = input.size(1) if self.bias else 1
+        label = label.float()
         if label.dim() == 1:
             one_hot = torch.zeros_like(input).cuda()
             label = label.reshape(one_hot.shape[0], 1)
