@@ -251,7 +251,7 @@ to_kestrel:
   save_to: './3D_detection'
   class_names: ['vehicle', 'Pedestrian', 'Cyclist']
   voxel_size: *voxel_size
-  max_voxel_cnt: *max_number_of_voxels
+  max_voxels_cnt: *max_number_of_voxels
   max_points_num: *max_points_per_voxel
   point_cloud_range: *point_cloud_range
   filter_thresh: *score_thresh
