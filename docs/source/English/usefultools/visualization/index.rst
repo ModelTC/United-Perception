@@ -35,12 +35,12 @@ UP supports visualized hook. You can add the visualization setting into the hook
         vis_gt:
           type: plt
           kwargs:
-            output_dir: vis_gt
+            vis_dir: vis_gt
             thresh: 0.3
         vis_dt:
           type: plt
           kwargs:
-            output_dir: vis_dt
+            vis_dir: vis_dt
             thresh: 0.3
 
 
