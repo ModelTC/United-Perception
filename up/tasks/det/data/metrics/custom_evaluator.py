@@ -328,7 +328,8 @@ class MREvaluator(CustomEvaluator):
                  watch_scale=[],
                  max_size=1333,
                  metric_level=0,
-                 scales=[800]):
+                 scales=[800],
+                 ignore_class_idxs=[]):
 
         super(MREvaluator, self).__init__(gt_file,
                                           num_classes,
@@ -342,6 +343,7 @@ class MREvaluator(CustomEvaluator):
         if len(eval_class_idxs) == 0:
             eval_class_idxs = list(range(1, num_classes))
         self.eval_class_idxs = eval_class_idxs
+        self.eval_without_ignore_class_idxs = [idx for idx in self.eval_class_idxs if idx not in ignore_class_idxs]
         self.image_reader = image_reader
         self.fppi = np.array(fppi)
         self.class_names = class_names
@@ -452,6 +454,14 @@ class MREvaluator(CustomEvaluator):
         m_rec_at_fppi = np.mean(recalls_at_fppi[1:], axis=0).tolist()
         m_prec_at_fppi = np.mean(precisions_at_fppi[1:], axis=0).tolist()
         m_f1_score_at_fppi = np.mean(f1_score_at_fppi[1:], axis=0).tolist()
+        # Summary without ignore
+        mAP_no_ign = np.mean(ap[self.eval_without_ignore_class_idxs]).tolist()
+        m_rec_ign = np.mean(max_recall[self.eval_without_ignore_class_idxs]).tolist()
+        m_fppi_miss_ign = np.mean(fppi_miss[self.eval_without_ignore_class_idxs], axis=0).tolist()
+        m_score_at_fppi_ign = np.mean(fppi_scores[self.eval_without_ignore_class_idxs], axis=0).tolist()
+        m_rec_at_fppi_ign = np.mean(recalls_at_fppi[self.eval_without_ignore_class_idxs], axis=0).tolist()
+        m_prec_at_fppi_ign = np.mean(precisions_at_fppi[self.eval_without_ignore_class_idxs], axis=0).tolist()
+        m_f1_score_at_fppi_ign = np.mean(f1_score_at_fppi[self.eval_without_ignore_class_idxs], axis=0).tolist()
 
         csv_metrics['Class'].append('Mean')
         csv_metrics['AP'].append(mAP)
@@ -459,6 +469,18 @@ class MREvaluator(CustomEvaluator):
         for fppi, mr, score, recall, precision, f1_score in zip(
                 self.fppi, m_fppi_miss, m_score_at_fppi, m_rec_at_fppi, m_prec_at_fppi, m_f1_score_at_fppi):
 
+            csv_metrics['MR@FPPI={:.3f}'.format(fppi)].append(mr)
+            csv_metrics['Score@FPPI={:.3f}'.format(fppi)].append(score)
+            csv_metrics['Recall@FPPI={:.3f}'.format(fppi)].append(recall)
+            csv_metrics['Precision@FPPI={:.3f}'.format(fppi)].append(precision)
+            csv_metrics['F1-Score@FPPI={:.3f}'.format(fppi)].append(f1_score)
+        # add results for without ignore
+        csv_metrics['Class'].append('Mean_focus')
+        csv_metrics['AP'].append(mAP_no_ign)
+        csv_metrics['Recall'].append(m_rec_ign)
+        for fppi, mr, score, recall, precision, f1_score in zip(self.fppi, m_fppi_miss_ign, m_score_at_fppi_ign,
+                                                                m_rec_at_fppi_ign, m_prec_at_fppi_ign,
+                                                                m_f1_score_at_fppi_ign):
             csv_metrics['MR@FPPI={:.3f}'.format(fppi)].append(mr)
             csv_metrics['Score@FPPI={:.3f}'.format(fppi)].append(score)
             csv_metrics['Recall@FPPI={:.3f}'.format(fppi)].append(recall)

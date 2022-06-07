@@ -345,7 +345,7 @@ class Visualize(Hook):
         if vis_dt:
             vis_dt_dir = vis_dt['kwargs'].get('vis_dir', 'vis_dt')
             vis_dt['kwargs'].update({'vis_dir': vis_dt_dir})
-            os.makedirs(vis_dt['kwargs']['vis_dir'], exist_ok=True)
+            os.makedirs(vis_dt_dir, exist_ok=True)
             self.vis_dt = VISUALIZER_REGISTRY.build(vis_dt)
         logger.info('build visualizer done')
 
