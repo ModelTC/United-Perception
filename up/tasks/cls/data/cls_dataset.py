@@ -133,7 +133,7 @@ class ClsDataset(BaseDataset):
         self._list_check()
         self.meta_parser = [CLS_PARSER_REGISTRY[m_type](**parser_info) for m_type in self.meta_type]
         self.parse_metas()
-        self.label_mapping = None
+        self.label_mapping = label_mapping
         if self.label_mapping is not None:
             assert len(self.label_mapping) == len(self.meta_file)
 
