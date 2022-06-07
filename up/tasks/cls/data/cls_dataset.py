@@ -4,6 +4,7 @@ import numpy as np
 from up.data.datasets.base_dataset import BaseDataset
 from up.utils.general.registry_factory import DATASET_REGISTRY
 from easydict import EasyDict
+from collections import Counter, defaultdict
 from PIL import Image
 from up.utils.general.petrel_helper import PetrelHelper
 from up.data.data_utils import is_numpy_image
@@ -26,7 +27,8 @@ class BaseParser(object):
 
 @CLS_PARSER_REGISTRY.register('imagenet')
 class ImageNetParser(BaseParser):
-    def parse(self, meta_file, idx, metas, start_index=0, rank_indices=None):
+    def parse(self, meta_file, idx, start_index=0, rank_indices=None):
+        metas = []
         with PetrelHelper.open(meta_file) as f:
             for index, line in enumerate(f):
                 if rank_indices is not None:
@@ -43,7 +45,8 @@ class ImageNetParser(BaseParser):
 
 @CLS_PARSER_REGISTRY.register('custom_cls')
 class CustomClsParser(BaseParser):
-    def parse(self, meta_file, idx, metas, start_index=0, rank_indices=None):
+    def parse(self, meta_file, idx, start_index=0, rank_indices=None):
+        metas = []
         with PetrelHelper.open(meta_file) as f:
             for index, line in enumerate(f):
                 if rank_indices is not None:
@@ -64,8 +67,9 @@ class CustomClsParser(BaseParser):
 
 @CLS_PARSER_REGISTRY.register("custom_det")
 class CustomDetParser(BaseParser):
-    def parse(self, meta_file, idx, metas, start_index=0, rank_indices=None):
+    def parse(self, meta_file, idx, start_index=0, rank_indices=None):
         min_size = self.extra_info.get("min_size", 40)
+        metas = []
         with PetrelHelper.open(meta_file) as f:
             for index, line in enumerate(f):
                 if rank_indices is not None:
@@ -111,7 +115,8 @@ class ClsDataset(BaseDataset):
                  image_type='pil',
                  fraction=1.0,
                  save_score=False,
-                 multilabel=False):
+                 multilabel=False,
+                 label_mapping=None):
         super(ClsDataset, self).__init__(meta_file,
                                          image_reader,
                                          transformer,
@@ -128,6 +133,9 @@ class ClsDataset(BaseDataset):
         self._list_check()
         self.meta_parser = [CLS_PARSER_REGISTRY[m_type](**parser_info) for m_type in self.meta_type]
         self.parse_metas()
+        self.label_mapping = None
+        if self.label_mapping is not None:
+            assert len(self.label_mapping) == len(self.meta_file)
 
     def _list_check(self):
         if not isinstance(self.meta_file, list):
@@ -135,14 +143,43 @@ class ClsDataset(BaseDataset):
         if not isinstance(self.meta_type, list):
             self.meta_type = [self.meta_type]
 
+    def set_label_mapping(self, metas, idx):
+        for meta in metas:
+            meta['label'] += self.label_mapping[idx]
+
+    @property
+    def num_list(self):
+        return len(self.meta_file)
+
+    @property
+    def images_per_list(self):
+        _images_per_list = defaultdict(list)
+        self._num_images_per_list = Counter()
+        for img_idx, img_anns in enumerate(self.metas):
+            image_source = img_anns.get('image_source', 0)
+            _images_per_list[image_source].append(img_idx)
+            self._num_images_per_list += Counter([image_source])
+        return _images_per_list
+
+    @property
+    def num_images_per_list(self):
+        if not hasattr(self, '_num_images_per_list'):
+            self._num_images_per_list = Counter()
+            for _, img_anns in enumerate(self.metas):
+                image_source = img_anns.get('image_source', 0)
+                self._num_images_per_list += Counter([image_source])
+        return self._num_images_per_list
+
     def parse_metas(self):
         self.metas = []
         for idx, meta_file in enumerate(self.meta_file):
             if self.multilabel:
-                self.meta_parser[idx].parse(meta_file, idx, self.metas, self.multilabel)
+                metas = self.meta_parser[idx].parse(meta_file, idx, self.multilabel)
             else:
-                self.meta_parser[idx].parse(meta_file, idx, self.metas)
-
+                metas = self.meta_parser[idx].parse(meta_file, idx)
+            if self.label_mapping is not None:
+                self.set_label_mapping(metas, idx)
+            self.metas.extend(metas)
         if self.fraction != 1.:
             rand_idx = np.random.choice(np.arange(len(self.metas)), int(len(self.metas) * self.fraction), replace=False)
             self.metas = np.array(self.metas)[rand_idx].tolist()
