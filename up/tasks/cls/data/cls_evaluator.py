@@ -170,10 +170,12 @@ class ImageNetEvaluator(Evaluator):
         return metric
 
     def analyze_bad_case(self, original_data):
-        pred = torch.from_numpy(np.array(original_data['score']))
+        score = torch.from_numpy(np.array(original_data['score']))
+        pred = torch.from_numpy(np.array(original_data['topk_idx']))
         analyze_res = {}
-        for k in self.topk:
-            topk_scores, topk_pred = pred.topk(k, 1, True, True)
+        for idx, k in enumerate(self.topk):
+            topk_scores = score[:, :idx + 1]
+            topk_pred = pred[:, :idx + 1]
             original_data['score'] = topk_scores.numpy().tolist()
             original_data['prediction'] = topk_pred.numpy().tolist()
             convert_res = []
