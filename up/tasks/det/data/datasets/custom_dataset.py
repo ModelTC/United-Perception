@@ -406,6 +406,8 @@ class RankCustomDataset(CustomDataset):
                             else:
                                 data = self.set_label_mapping(data, self.label_mapping[idx], 0)
                                 data['image_source'] = idx
+                        else:
+                            data['image_source'] = idx
                         self.metas.append(data)
                         if 'image_height' not in data or 'image_width' not in data:
                             logger.warning('image size is not provided, '
