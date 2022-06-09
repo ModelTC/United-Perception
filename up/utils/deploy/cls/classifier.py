@@ -96,6 +96,14 @@ def generate_category_param(class_label):
         category_dict['feature_start'] = class_label[category].get('start', idx)
         category_dict['feature_end'] = class_label[category].get('end', idx + len(class_label[category]['labels']) - 1)
         category_dict['labels'] = class_label[category]['labels']
+        if 'append_dep' in class_label[category].keys():
+            category_dict['append_dep'] = class_label[category]['append_dep']
+        if 'positive_depend' in class_label[category].keys():
+            category_dict['positive_depend'] = class_label[category]['positive_depend']
+        if 'proposal_threshold' in class_label[category].keys():
+            category_dict['proposal_threshold'] = class_label[category]['proposal_threshold']
+        if 'proposal_label_thresholds' in class_label[category].keys():
+            category_dict['proposal_label_thresholds'] = class_label[category]['proposal_label_thresholds']
         class_param[category] = category_dict
         idx += len(class_label[category]['labels'])
     return class_param
@@ -149,8 +157,12 @@ def generate(net, path, name, serialize, max_batch_size, cfg_params, version):
     net_info['data'] = net_graph.root[0].content.bottom[0]
     logger.info(net_graph.root[0].content.name)
     net_graph = graph.gen_graph(net)
-    net_info['score'] = net_graph.leaf[0].content.top[0]
-    logger.info(net_graph.leaf[0].content.top)
+    if len(net_graph.leaf) > 1:
+        net_info['score'] = [net_graph.leaf[i].content.top[0] for i in range(len(net_graph.leaf))]
+        logger.info([net_graph.leaf[i].content.top for i in range(len(net_graph.leaf))])
+    else:
+        net_info['score'] = net_graph.leaf[0].content.top[0]
+        logger.info(net_graph.leaf[0].content.top)
 
     # input shape
     assert len(net.input_dim) < 1 or len(net.input_shape) < 1

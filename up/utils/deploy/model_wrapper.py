@@ -56,8 +56,14 @@ class ClsWrapper(torch.nn.Module):
         output = self.detector(input)
         print(f'detector output:{output.keys()}')
         if self.add_softmax:
-            output['scores'] = self.softmax(output['scores'])
-        blob_names = ['scores']
+            if isinstance(output['scores'], list):
+                output['scores'] = [self.softmax(score) for score in output['scores']]
+            else:
+                output['scores'] = self.softmax(output['scores'])
+        if isinstance(output['scores'], list):
+            blob_names = ['scores_%d' % i for i in range(len(output['scores']))]
+        else:
+            blob_names = ['scores']
         blob_datas = [output['scores']]
         return blob_names, blob_datas
 
