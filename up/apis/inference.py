@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from torch.nn.modules.utils import _pair
 from easydict import EasyDict
+from PIL import Image, ImageDraw
 
 from up.data.datasets.transforms import build_transformer
 from up.data.data_utils import get_image_size
@@ -11,6 +12,7 @@ from up.utils.general.cfg_helper import merge_opts_into_cfg
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import MODEL_HELPER_REGISTRY, BATCHING_REGISTRY, IMAGE_READER_REGISTRY
 from up.utils.general.registry_factory import INFERENCER_REGISTRY, SAVER_REGISTRY, VISUALIZER_REGISTRY
+from up.utils.general.user_analysis_helper import get_task_from_cfg
 
 __all__ = ['BaseInference']
 
@@ -27,6 +29,8 @@ class BaseInference(object):
         self.vis_dir = self.args['vis_dir']
         self.ckpt = self.args['ckpt']
         self.image_path = self.args['image_path']
+        self.task_type = get_task_from_cfg(config)
+        self.num_classes = config.get('num_classes')
 
         assert self.image_path and os.path.exists(self.image_path), 'Invalid images path.'
 
@@ -93,7 +97,7 @@ class BaseInference(object):
         self.transformer = build_transformer(dataset_cfg['transformer'])
         pad_type = data_cfg['dataloader']['kwargs'].get('pad_type', 'batch_pad')
         pad_value = data_cfg['dataloader']['kwargs'].get('pad_value', 0)
-        alignment = data_cfg['dataloader']['kwargs']['alignment']
+        alignment = data_cfg['dataloader']['kwargs'].get('alignment', 1)
         self.batch_pad = BATCHING_REGISTRY.get(pad_type)(alignment, pad_value)
 
     def iterate_image(self, image_dir):
@@ -157,6 +161,8 @@ class BaseInference(object):
             'image': img,
             'flipped': False
         })
+        if self.task_type == 'seg':
+            data['gt_semantic_seg'] = img
         data = self.transformer(data)
         scale_factor = data.get('scale_factor', 1)
 
@@ -191,8 +197,15 @@ class BaseInference(object):
             batch = self.fetch([filename])
             with torch.no_grad():
                 output = self.detector(batch)
-            output = self.map_back(output)
-            self.vis(output)
+            if(self.task_type == 'det'):
+                output = self.map_back(output)
+                self.vis(output)
+            elif(self.task_type == 'cls'):
+                self.vis_cls(output)
+            elif(self.task_type == 'seg'):
+                self.vis_seg(output)
+            else:
+                raise Exception('Unsupported type of task')
 
     def vis(self, outputs):
         for img_idx, output in enumerate(outputs):
@@ -210,3 +223,39 @@ class BaseInference(object):
             classes = boxes[:, -1].astype(np.int32)
             boxes = boxes[:, :-1]
             self.visualizer.vis(img, boxes, classes, filename)
+
+    def vis_cls(self, outputs):
+        origin_images = outputs['origin_image']
+        image_info = outputs['image_info']
+        batch_size = len(image_info)
+        preds = self.tensor2numpy(outputs['preds'])
+        for b_ix in range(batch_size):
+            img = origin_images[b_ix]
+            pred = str(preds[b_ix])
+            filename = os.path.basename(image_info[b_ix][-1])
+            draw = ImageDraw.Draw(img)
+            draw.text((100, 100), pred, (255, 255, 255))
+            draw = ImageDraw.Draw(img)
+            logger.info('visualizing {}'.format(filename))
+            output_name = os.path.basename(filename)
+            output_name = os.path.join(self.vis_dir, '{}'.format(output_name))
+            img.save(output_name)
+
+    def vis_seg(self, outputs):
+        image_info = outputs['image_info']
+        batch_size = len(image_info)
+        blob_preds = outputs['blob_pred']
+        for b_ix in range(batch_size):
+            filename = os.path.basename(image_info[b_ix][-1])
+            preds = blob_preds[b_ix]
+            pred = preds.reshape(1, preds.shape[0], preds.shape[1], preds.shape[2])
+            pred = pred.max(1)[1]
+            pred = self.tensor2numpy(pred)[0]
+            pred = pred * 255 / self.num_classes
+            pred = cv2.applyColorMap(cv2.convertScaleAbs(pred), cv2.COLORMAP_JET)
+            img = Image.fromarray(np.uint8(pred))
+            img = img.convert("RGB")
+            logger.info('visualizing {}'.format(filename))
+            output_name = os.path.basename(filename)
+            output_name = os.path.join(self.vis_dir, '{}'.format(output_name))
+            img.save(output_name)
