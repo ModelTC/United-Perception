@@ -196,6 +196,15 @@ class Saver(object):
             state_dict = _resnet_convert(state_dict)
         ckpt_dict['model'] = state_dict
 
+        if 'ema' in ckpt_dict and 'ema_state_dict' in ckpt_dict['ema']:
+            ema_state_dict = ckpt_dict['ema']['ema_state_dict']
+            ema_state_dict = remove_prefix(ema_state_dict, 'module.')
+            if convert:
+                if Saver.task_type == 'cls':
+                    ema_state_dict = cls_convert(ema_state_dict)
+                ema_state_dict = _resnet_convert(ema_state_dict)
+                ckpt_dict['ema']['ema_state_dict'] = ema_state_dict
+
         return ckpt_dict
 
     def lns_latest_ckpt(self, ckpt_path, new_path):
