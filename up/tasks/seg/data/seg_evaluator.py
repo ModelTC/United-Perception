@@ -20,9 +20,10 @@ def intersectionAndUnion(output, target, K, ignore_index=255):
 
 @EVALUATOR_REGISTRY.register('seg')
 class SegEvaluator(Evaluator):
-    def __init__(self, num_classes=19, ignore_label=255):
+    def __init__(self, num_classes=19, ignore_label=255, cmp_key=None):
         self.num_classes = num_classes
         self.ignore_label = ignore_label
+        self.cmp_key = cmp_key
 
     def load_res(self, res_file, res=None):
         res_dict = {}
@@ -75,7 +76,8 @@ class SegEvaluator(Evaluator):
         res['mIoU'] = miou
         res['mAcc'] = macc
         metric = Metric(res)
-        metric.set_cmp_key('mIoU')
+        metric_name = self.cmp_key if self.cmp_key and metric.get(self.cmp_key, False) else 'mIoU'
+        metric.set_cmp_key(metric_name)
         return metric
 
     @staticmethod

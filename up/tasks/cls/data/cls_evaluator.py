@@ -22,7 +22,8 @@ class ImageNetEvaluator(Evaluator):
                  image_reader=None,
                  class_names=[],
                  eval_class_idxs=[],
-                 multilabel=False,):
+                 multilabel=False,
+                 cmp_key=None):
         super(ImageNetEvaluator, self).__init__()
         self.topk = topk
         self.multilabel = multilabel
@@ -34,6 +35,7 @@ class ImageNetEvaluator(Evaluator):
             self.image_reader = None
         self.eval_class_idxs = eval_class_idxs
         self.class_names = class_names
+        self.cmp_key = cmp_key
 
     def load_res(self, res_file, res=None):
         res_dict = {}
@@ -82,7 +84,8 @@ class ImageNetEvaluator(Evaluator):
             acc = correct_k.mul_(100.0 / num)
             res.update({f'top{k}': acc.item()})
         metric = Metric(res)
-        metric.set_cmp_key(f'top{self.topk[0]}')
+        metric_name = self.cmp_key if self.cmp_key and metric.get(self.cmp_key, False) else f'top{self.topk[0]}'
+        metric.set_cmp_key(metric_name)
         if self.bad_case_analyse:
             self.analyze_bad_case(res_dict)
             assert self.analysis_json is not None
@@ -122,7 +125,8 @@ class ImageNetEvaluator(Evaluator):
                 res['avg_acc'] += res[f'head{head_num}']['acc']
             res['avg_acc'] /= len(attr)
             metric = Metric(res)
-            metric.set_cmp_key('avg_acc')
+            metric_name = self.cmp_key if self.cmp_key and metric.get(self.cmp_key, False) else 'avg_acc'
+            metric.set_cmp_key(metric_name)
         else:
             for idx, k in enumerate(self.topk):
                 res[f'avg_top{k}'] = 0
@@ -130,7 +134,11 @@ class ImageNetEvaluator(Evaluator):
                     res[f'avg_top{k}'] += res[f'head{head_num}'][f'top{k}']
                 res[f'avg_top{k}'] /= len(attr)
                 metric = Metric(res)
-                metric.set_cmp_key(f'avg_top{self.topk[0]}')
+                if self.cmp_key and metric.get(self.cmp_key, False):
+                    metric_name = self.cmp_key
+                else:
+                    metric_name = f'avg_top{self.topk[0]}'
+                metric.set_cmp_key(metric_name)
             res['avg_precision'], res['avg_recall'], res['avg_f1'] = 0, 0, 0
             for head_num in range(len(attr)):
                 res['avg_precision'] += res[f'head{head_num}']['precision']

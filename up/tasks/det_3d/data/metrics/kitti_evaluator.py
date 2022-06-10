@@ -19,7 +19,7 @@ __all__ = ['KittiEvaluator']
 
 @EVALUATOR_REGISTRY.register('kitti')
 class KittiEvaluator(Evaluator):
-    def __init__(self, gt_file, recall_thresh_list=[0.3, 0.5, 0.7]):
+    def __init__(self, gt_file, recall_thresh_list=[0.3, 0.5, 0.7], cmp_key=None):
         """
         Arguments:
             gt_file (str): directory or json file of annotations
@@ -28,6 +28,7 @@ class KittiEvaluator(Evaluator):
         super(KittiEvaluator, self).__init__()
         self.gt_file = gt_file
         self.recall_thresh_list = recall_thresh_list
+        self.cmp_key = cmp_key
 
     def load_dts(self, res_file, res):
         out = []
@@ -95,7 +96,8 @@ class KittiEvaluator(Evaluator):
                 ave_recall.append(v)
         recall_dict["AVE_3d/moderate"] = np.array(ave_recall).mean()
         recall_dict = Metric(recall_dict)
-        recall_dict.set_cmp_key("AVE_3d/moderate")
+        metric_name = self.cmp_key if self.cmp_key and recall_dict.get(self.cmp_key, False) else "AVE_3d/moderate"
+        recall_dict.set_cmp_key(metric_name)
         logger.info(json.dumps(result, indent=2))
         return recall_dict
 

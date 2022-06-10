@@ -26,7 +26,7 @@ __all__ = ['CocoEvaluator']
 class CocoEvaluator(Evaluator):
     """Evaluator for coco"""
 
-    def __init__(self, gt_file, iou_types=['bbox']):
+    def __init__(self, gt_file, iou_types=['bbox'], cmp_key=None):
         """
         Arguments:
             gt_file (str): directory or json file of annotations
@@ -37,6 +37,7 @@ class CocoEvaluator(Evaluator):
         if os.path.isdir(gt_file):
             gt_file = os.path.join(gt_file, anno_file)
         self.gt_file = gt_file
+        self.cmp_key = cmp_key
         # self.gt_loaded = False
 
     def iou_type_to_setting(self, itypes):
@@ -76,6 +77,8 @@ class CocoEvaluator(Evaluator):
         metric_name = ["{}.{}".format(iou_type, item) for item in metric_name]
         assert len(metric_name) == len(aps), f'{len(metric_name)} vs {len(aps)}'
         metric = Metric(zip(metric_name, aps))
+        if self.cmp_key and metric.get(self.cmp_key, False):
+            metric_name = self.cmp_key
         metric.set_cmp_key(metric_name)
         return metric
 
@@ -133,7 +136,8 @@ class CocoEvaluator(Evaluator):
             logger.info('copypaste: ' + ','.join(res_names))
             logger.info('copypaste: ' + ','.join(res_vals))
             metrics.update(self.format(aps, itype))
-        metrics.set_cmp_key(list(metrics.keys()))
+        metric_name = self.cmp_key if self.cmp_key and metrics.get(self.cmp_key, False) else list(metrics.keys())
+        metrics.set_cmp_key(metric_name)
         return metrics
 
     @staticmethod

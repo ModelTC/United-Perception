@@ -63,7 +63,7 @@ def _check_cls_ap(self, summary_type, iou_thr=None, area_rng="all", freq_group_i
 class LvisEvaluator(Evaluator):
     """Evaluator for coco"""
 
-    def __init__(self, gt_file, iou_types=['bbox']):
+    def __init__(self, gt_file, iou_types=['bbox'], cmp_key=None):
         """
         Arguments:
             gt_file (str): directory or json file of annotations
@@ -74,6 +74,7 @@ class LvisEvaluator(Evaluator):
         if os.path.isdir(gt_file):
             gt_file = os.path.join(gt_file, anno_file)
         self.gt_file = gt_file
+        self.cmp_key = cmp_key
         # self.gt_loaded = False
 
     def iou_type_to_setting(self, itypes):
@@ -138,7 +139,8 @@ class LvisEvaluator(Evaluator):
                     cls_freq = cats_freqs[i]
                     f.write('{} {} {} {:.3f} {:.3f}\n'.format(i + 1, cls_name, cls_freq,
                                                               all_cls_ars[i], all_cls_aps[i]))
-        metrics.set_cmp_key(list(metrics.keys()))
+        metric_name = self.cmp_key if self.cmp_key and metrics.get(self.cmp_key, False) else list(metrics.keys())
+        metrics.set_cmp_key(metric_name)
         return metrics
 
     @staticmethod

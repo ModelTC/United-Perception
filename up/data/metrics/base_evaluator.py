@@ -178,7 +178,7 @@ class Evaluator(object):
 
 @EVALUATOR_REGISTRY.register('Resp')
 class EvaluatorResp(Evaluator):
-    def __init__(self, sub_cfg, gt_file, metrics_csv='metrics.csv'):
+    def __init__(self, sub_cfg, gt_file, metrics_csv='metrics.csv', cmp_key=None):
         super(EvaluatorResp, self).__init__()
         if not isinstance(gt_file, list):
             gt_file = [gt_file]
@@ -198,6 +198,7 @@ class EvaluatorResp(Evaluator):
             self.evaluators.append(build_evaluator(sub_cfgs[idx]))
         self.gt_files = gt_file
         self.metrics_csv = metrics_csv
+        self.cmp_key = cmp_key
 
     def eval(self, res_file, res=None):
         metric_res = Metric({})
@@ -213,7 +214,8 @@ class EvaluatorResp(Evaluator):
         metric_res.update(csv_metrics)
         for key in metric_res:
             if 'AP' in key:
-                metric_res.set_cmp_key(key)
+                metric_name = self.cmp_key if self.cmp_key and metric_res.get(self.cmp_key, False) else key
+                metric_res.set_cmp_key(metric_name)
         return metric_res
 
     def export_all(self, metrics):

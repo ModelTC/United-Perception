@@ -329,7 +329,8 @@ class MREvaluator(CustomEvaluator):
                  max_size=1333,
                  metric_level=0,
                  scales=[800],
-                 ignore_class_idxs=[]):
+                 ignore_class_idxs=[],
+                 cmp_key=None):
 
         super(MREvaluator, self).__init__(gt_file,
                                           num_classes,
@@ -359,6 +360,7 @@ class MREvaluator(CustomEvaluator):
         self.max_size = max_size
         assert len(scales) == 1, 'scales {}, but only single scale is allowed during evaluating'.format(scales)
         self.min_size = scales[0]
+        self.cmp_key = cmp_key
 
     def init_vis(self, bad_case_analyser, analysis_json, img_root, vis_mode):
         # init for bad case analysis
@@ -666,6 +668,8 @@ class MREvaluator(CustomEvaluator):
             metric_name = '{}_mAP:{}'.format(itype, self.iou_thresh)
             csv_metrics.update({metric_name: mAP})
             metric_res.update(csv_metrics)
+            if self.cmp_key and metric_res.get(self.cmp_key, False):
+                metric_name = self.cmp_key
             metric_res.set_cmp_key(metric_name)
 
             if self.bad_case_analyzer_is_on:
