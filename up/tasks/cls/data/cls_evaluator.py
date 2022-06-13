@@ -72,6 +72,10 @@ class ImageNetEvaluator(Evaluator):
 
     def get_pred_correct(self, pred, label):
         num = pred.size(0)
+        if isinstance(pred, torch.FloatTensor) or isinstance(pred, torch.DoubleTensor):
+            maxk = max(self.topk)
+            maxk = min(maxk, pred.size(1))
+            _, pred = pred.topk(maxk, 1, True, True)
         pred = pred.t()
         correct = pred.eq(label.reshape(1, -1).expand_as(pred))
         return correct, num
@@ -162,19 +166,23 @@ class ImageNetEvaluator(Evaluator):
             pred = torch.from_numpy(np.array(pred))
         else:
             label = torch.from_numpy(np.array(res_dict['label']))
+        if 'score' in res_dict.keys():
+            score = res_dict['score']
+        else:
+            score = res_dict['topk_idx']
         if len(label.shape) > 1:
             if not self.multilabel:
                 preds = []
                 for attr_idx in range(label.shape[1]):
                     temp = []
                     for b_idx in range(label.shape[0]):
-                        temp.append(res_dict['topk_idx'][b_idx][attr_idx])
+                        temp.append(score[b_idx][attr_idx])
                     preds.append(temp)
                 pred = [torch.from_numpy(np.array(idx)) for idx in preds]
             metric = self.multicls_eval(pred, label)
         else:
-            topk_idx = torch.from_numpy(np.array(res_dict['topk_idx']))
-            metric = self.single_eval(topk_idx, label, res_dict)
+            score = torch.from_numpy(np.array(score))
+            metric = self.single_eval(score, label, res_dict)
         return metric
 
     def analyze_bad_case(self, original_data):

@@ -278,7 +278,7 @@ class ClsDataset(BaseDataset):
                 'prediction': _prediction,
                 'label': _label,
                 'topk_idx': _topk_idx,
-                'score': _topk_score,
+                'topk_score': _topk_score,
                 'filename': _filename
             }
             if self.save_score:
