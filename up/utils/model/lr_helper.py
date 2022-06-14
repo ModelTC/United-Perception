@@ -115,6 +115,22 @@ class ExponentialWarmUpLR(object):
         return [base_lr * self.gamma[idx]**last_epoch for idx, base_lr in enumerate(base_lrs)]
 
 
+@WARM_LR_REGISTRY.register('cosine')
+class CosineWarmUpLR(object):
+    """Scheduler that update learning rate cosinely.
+    """
+
+    def __init__(self, warmup_iter, init_lr, target_lr):
+        self.init_lr = init_lr
+        self.target_lr = target_lr
+        self.warmup_iter = warmup_iter - 1
+
+    def get_lr(self, last_epoch, base_lrs, optimizer):
+        return [init_lr + (target_lr - init_lr)
+                * (1 - math.cos(math.pi * last_epoch / self.warmup_iter)) / 2.
+                for init_lr, target_lr in zip(self.init_lr, self.target_lr)]
+
+
 @WARM_LR_REGISTRY.register('linear')
 class LinearWarmUpLR(object):
     """Scheduler that update learning rate linearly

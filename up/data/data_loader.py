@@ -1,8 +1,6 @@
-from __future__ import division
-
-# Import from third library
 from easydict import EasyDict
 from torch.utils.data import DataLoader
+
 
 from up.utils.general.registry_factory import DATALOADER_REGISTRY, BATCHING_REGISTRY
 from .samplers.batch_sampler import InfiniteBatchSampler
@@ -128,7 +126,6 @@ class BaseDataLoader(DataLoader):
 class PyTorchDataLoader(DataLoader):
     def __init__(self,
                  dataset,
-                 alignment=1,
                  batch_size=1,
                  shuffle=False,
                  sampler=None,
@@ -136,10 +133,14 @@ class PyTorchDataLoader(DataLoader):
                  num_workers=0,
                  pin_memory=False,
                  drop_last=False,
-                 pad_value=0):
+                 worker_init=False):
+        worker_init_fn = None
+        if worker_init:
+            from up.utils.env.gene_env import worker_init_reset_seed
+            worker_init_fn = worker_init_reset_seed
         super(PyTorchDataLoader, self).__init__(
             dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
-            None, pin_memory, drop_last)
+            None, pin_memory, drop_last, 0, worker_init_fn=worker_init_fn)
 
     def get_data_size(self):
         return self.get_epoch_size()
