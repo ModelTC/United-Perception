@@ -73,8 +73,12 @@ class _SimSiamScheduler(LambdaLR):
             self.warm_epoch = kwargs.pop('warm_epoch')
             self.T_max = self.T_max - self.warm_epoch
         self.data_size = kwargs.pop('data_size')
-        lambda_backbone = lambda s: 0.5 * (1 + math.cos(math.pi * s / self.T_max))
-        lambda_pred = lambda s: 1.0
+
+        def lambda_backbone(s):
+            return 0.5 * (1 + math.cos(math.pi * s / self.T_max))
+
+        def lambda_pred(s):
+            return 1.0
         kwargs.update({'lr_lambda': [lambda_backbone, lambda_pred]})
         super(_SimSiamScheduler, self).__init__(**kwargs)
 
