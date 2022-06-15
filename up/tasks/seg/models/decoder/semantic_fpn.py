@@ -75,7 +75,10 @@ class BaseSegPostProcess(nn.Module):
         return {self.prefix + '.loss': loss}
 
     def forward(self, input):
-        return self.get_loss(input)
+        if self.training:
+            return self.get_loss(input)
+        else:
+            return {}
 
 
 class UpsampleBlock(nn.Module):
