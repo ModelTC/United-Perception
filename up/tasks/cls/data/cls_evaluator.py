@@ -23,7 +23,9 @@ class ImageNetEvaluator(Evaluator):
                  class_names=[],
                  eval_class_idxs=[],
                  multilabel=False,
-                 cmp_key=None):
+                 cmp_key=None,
+                 use_prec_rec_f1=False,
+                 prec_rec_f1_avg=None):
         super(ImageNetEvaluator, self).__init__()
         self.topk = topk
         self.multilabel = multilabel
@@ -36,6 +38,8 @@ class ImageNetEvaluator(Evaluator):
         self.eval_class_idxs = eval_class_idxs
         self.class_names = class_names
         self.cmp_key = cmp_key
+        self.use_prec_rec_f1 = use_prec_rec_f1
+        self.prec_rec_f1_avg = prec_rec_f1_avg
 
     def load_res(self, res_file, res=None):
         res_dict = {}
@@ -116,9 +120,16 @@ class ImageNetEvaluator(Evaluator):
                     correct_k = correct[:n_k].reshape(-1).float().sum(0, keepdim=True)
                     acc = correct_k.mul_(100.0 / num)
                     temp[f'top{k}'] = acc.item()
-                temp['precision'] = precision(preds[idx], labels[idx])[0].item()
-                temp['recall'] = recall(preds[idx], labels[idx])[0].item()
-                temp['f1'] = f1(preds[idx], labels[idx])[0].item()
+                    if self.use_prec_rec_f1:
+                        if self.prec_rec_f1_avg is None:
+                            temp['precision'] = precision(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
+                            temp['recall'] = recall(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
+                            temp['f1'] = f1(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
+                        else:
+                            temp['precision'] = precision(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
+                            temp['recall'] = recall(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
+                            temp['f1'] = f1(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
+
             attr.append(temp)
         for head_num in range(len(attr)):
             res[f'head{head_num}'] = attr[head_num]
@@ -143,15 +154,30 @@ class ImageNetEvaluator(Evaluator):
                 else:
                     metric_name = f'avg_top{self.topk[0]}'
                 metric.set_cmp_key(metric_name)
-            res['avg_precision'], res['avg_recall'], res['avg_f1'] = 0, 0, 0
-            for head_num in range(len(attr)):
-                res['avg_precision'] += res[f'head{head_num}']['precision']
-                res['avg_recall'] += res[f'head{head_num}']['recall']
-                res['avg_f1'] += res[f'head{head_num}']['f1']
 
-            res['avg_precision'] /= len(attr)
-            res['avg_recall'] /= len(attr)
-            res['avg_f1'] /= len(attr)
+            if self.use_prec_rec_f1:
+                if self.prec_rec_f1_avg is None:
+                    num_cls = len(res['head0']['precision'])
+                    res['avg_precision'] = np.zeros(num_cls)
+                    res['avg_recall'] = np.zeros(num_cls)
+                    res['avg_f1'] = np.zeros(num_cls)
+                else:
+                    res['avg_precision'], res['avg_recall'], res['avg_f1'] = 0, 0, 0
+
+                for head_num in range(len(attr)):
+                    res['avg_precision'] += res[f'head{head_num}']['precision']
+                    res['avg_recall'] += res[f'head{head_num}']['recall']
+                    res['avg_f1'] += res[f'head{head_num}']['f1']
+
+                res['avg_precision'] /= len(attr)
+                res['avg_recall'] /= len(attr)
+                res['avg_f1'] /= len(attr)
+
+                if self.prec_rec_f1_avg is None:
+                    res['avg_precision'] = res['avg_precision'].tolist()
+                    res['avg_recall'] = res['avg_recall'].tolist()
+                    res['avg_f1'] = res['avg_f1'].tolist()
+                metric.update(res)
 
         return metric
 

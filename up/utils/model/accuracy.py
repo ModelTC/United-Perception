@@ -63,23 +63,23 @@ def accuracy(output, target, topk=(1, ), ignore_indices=[-1]):
     return res
 
 
-def precision(output, target):
+def precision(output, target, average=None):
     prediction = output.argmax(dim=1)
-    score = torch.FloatTensor([precision_score(target, prediction, average='macro')])
+    score = torch.FloatTensor([precision_score(target, prediction, average=average)])
     res = [score * 100]
     return res
 
 
-def recall(output, target):
+def recall(output, target, average=None):
     prediction = output.argmax(dim=1)
-    score = torch.FloatTensor([recall_score(target, prediction, average='macro')])
+    score = torch.FloatTensor([recall_score(target, prediction, average=average)])
     res = [score * 100]
     return res
 
 
-def f1(output, target):
+def f1(output, target, average=None):
     prediction = output.argmax(dim=1)
-    score = torch.FloatTensor([f1_score(target, prediction, average='macro')])
+    score = torch.FloatTensor([f1_score(target, prediction, average=average)])
     res = [score * 100]
     return res
 
