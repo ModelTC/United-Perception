@@ -64,7 +64,7 @@ class CustomEvaluator(Evaluator):
             instance["label"] = self.label_mapping[idx][int(instance["label"] - 1)]
         return data
 
-    def load_gts(self, gt_files, min_size, max_size, gt_rescale, metric_level):
+    def load_gts(self, gt_files, min_size, max_size, gt_rescale, metric_level, for_check=False):
         # maintain a dict to store original img information
         # key is image dir,value is image_height,image_width,instances
         original_gt = {}
@@ -82,7 +82,6 @@ class CustomEvaluator(Evaluator):
             with PetrelHelper.open(gt_file) as f:
                 for i, line in enumerate(f):
                     img = json.loads(line)
-                    # filename = img['filename']
                     if self.label_mapping is not None:
                         img = self.set_label_mapping(img, gt_file_idx)
                     image_id = img['filename']
@@ -106,8 +105,11 @@ class CustomEvaluator(Evaluator):
                         # 2 indicates we ingore all ignore regions
                         if is_ignore and self.ignore_mode == 0:
                             label = -1
-                        box_by_label = gts.setdefault(label, {})
-                        box_by_img = box_by_label.setdefault(image_id, {'gts': []})
+                        if for_check:
+                            box_by_img = gts.setdefault(image_id, {'gts': []})
+                        else:
+                            box_by_label = gts.setdefault(label, {})
+                            box_by_img = box_by_label.setdefault(image_id, {'gts': []})
                         gt_by_img = box_by_img['gts']
                         gts['bbox_num'][label] += 1
                         if not is_ignore:
@@ -330,7 +332,8 @@ class MREvaluator(CustomEvaluator):
                  metric_level=0,
                  scales=[800],
                  ignore_class_idxs=[],
-                 cmp_key=None):
+                 cmp_key=None,
+                 label_check=None):
 
         super(MREvaluator, self).__init__(gt_file,
                                           num_classes,
@@ -361,6 +364,7 @@ class MREvaluator(CustomEvaluator):
         assert len(scales) == 1, 'scales {}, but only single scale is allowed during evaluating'.format(scales)
         self.min_size = scales[0]
         self.cmp_key = cmp_key
+        self.label_check = label_check
 
     def init_vis(self, bad_case_analyser, analysis_json, img_root, vis_mode):
         # init for bad case analysis
@@ -591,6 +595,59 @@ class MREvaluator(CustomEvaluator):
             table.add_row(list(row))
         logger.info('\n{}'.format(table))
 
+    def get_topk_fp_images(self, res_file, res):
+        score_thresh = self.label_check.get('score_thresh', 0.5)
+        check_num = self.label_check.get('check_num', 25)
+        for itype in self.iou_types:
+            self.gts, original_gt = self.load_gts(self.gt_file, self.min_size,
+                                                  self.max_size, self.gt_rescale, self.metric_level, True)
+            dts = {}
+            if res is None:
+                logger.info(f'loading res from {res_file}')
+                with open(res_file, 'r') as f:
+                    for line in f:
+                        dt = json.loads(line)
+                        if dt['score'] > score_thresh:
+                            dt_by_filename = dts.setdefault(dt['image_id'], [])
+                            dt_by_filename.append({'bbox': dt['bbox'], 'score': dt['score'],
+                                                   'label': dt['label'], 'image_id': dt['image_id']})
+                        else:
+                            continue
+            else:
+                for device_res in res:
+                    for lines in device_res:
+                        for line in lines:
+                            if line['score'] > score_thresh:
+                                dt_by_filename = dts.setdefault(line['image_id'], [])
+                                dt_by_filename.append({'bbox': line['bbox'], 'score': line['score'],
+                                                       'label': line['label'], 'image_id': line['image_id']})
+                            else:
+                                continue
+            fp_list = []
+            for idx, image_id in enumerate(dts):
+                results_i = dts[image_id]
+                cur_gt = {}
+                cur_gt[image_id] = self.gts.get(image_id, {})
+                if cur_gt[image_id]:
+                    if itype == 'bbox':
+                        tps, fps, matched_gt_minsize = self.get_cls_tp_fp(results_i, cur_gt, self.gts['image_scale'],
+                                                                          self.iou_thresh, self.ign_iou_thresh)
+                    fp_mean = fps.sum() / len(fps)
+                else:
+                    fp_mean = 1
+                fp_list.append({'image_id': image_id, 'fp_mean': fp_mean})
+            fp_list_sorted = sorted(fp_list, key=lambda x: x['fp_mean'], reverse=True)
+            image_unlabeled = fp_list_sorted[: check_num]
+            pwd = os.getcwd()
+            txt_path = self.label_check.get('results_dir', '')
+            txt_name = self.label_check.get('filename', 'unlabeled')
+            absolute_path = os.path.join(pwd, txt_path)
+            os.makedirs(absolute_path, exist_ok=True)
+            check_file = os.path.join(absolute_path, '{}.txt'.format(txt_name))
+            with open(check_file, mode='w', encoding='utf-8') as fb:
+                for idx, image_id in enumerate(image_unlabeled):
+                    fb.write(str(image_unlabeled[idx]['image_id']) + '\n')
+
     def eval(self, res_file, res=None):
         metric_res = Metric({})
         for itype in self.iou_types:
@@ -676,6 +733,8 @@ class MREvaluator(CustomEvaluator):
                 self.export_bad_case(original_gt)
                 if self.vis_missing or self.vis_mistake:
                     self.visualize_bad_case(original_gt, self.class_names)
+        if isinstance(self.label_check, dict):
+            self.get_topk_fp_images(res_file, res)
         return metric_res
 
     @staticmethod
