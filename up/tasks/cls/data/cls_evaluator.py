@@ -120,15 +120,15 @@ class ImageNetEvaluator(Evaluator):
                     correct_k = correct[:n_k].reshape(-1).float().sum(0, keepdim=True)
                     acc = correct_k.mul_(100.0 / num)
                     temp[f'top{k}'] = acc.item()
-                    if self.use_prec_rec_f1:
-                        if self.prec_rec_f1_avg is None:
-                            temp['precision'] = precision(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
-                            temp['recall'] = recall(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
-                            temp['f1'] = f1(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
-                        else:
-                            temp['precision'] = precision(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
-                            temp['recall'] = recall(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
-                            temp['f1'] = f1(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
+                if self.use_prec_rec_f1:
+                    if self.prec_rec_f1_avg is None:
+                        temp['precision'] = precision(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
+                        temp['recall'] = recall(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
+                        temp['f1'] = f1(preds[idx], labels[idx], self.prec_rec_f1_avg)[0][0].tolist()
+                    else:
+                        temp['precision'] = precision(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
+                        temp['recall'] = recall(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
+                        temp['f1'] = f1(preds[idx], labels[idx], self.prec_rec_f1_avg)[0].item()
 
             attr.append(temp)
         for head_num in range(len(attr)):
