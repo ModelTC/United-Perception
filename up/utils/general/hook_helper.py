@@ -304,6 +304,13 @@ class TrainEvalLogger(Hook):
                 timers=self.eval_timers,
             ))
 
+    def upload_scalar(self, key, value, epoch):
+        if isinstance(value, list):
+            for idx, idx_value in enumerate(value) :
+                self.summary_writer.add_scalar(key + f'_{idx}', idx_value, epoch)
+        else:
+            self.summary_writer.add_scalar(key, value, epoch)
+
     def after_eval(self, metrics):
         # if evaluate during training, record metrics into log
         runner = self.runner_ref()
@@ -313,9 +320,9 @@ class TrainEvalLogger(Hook):
                 if not isinstance(v, list):
                     if isinstance(v, dict):
                         for i_k, i_v in v.items():
-                            self.summary_writer.add_scalar('metrics/' + k + '_' + i_k, i_v, epoch)
+                            self.upload_scalar('metrics/' + k + '_' + i_k, i_v, epoch)
                     else:
-                        self.summary_writer.add_scalar('metrics/' + k, v, epoch)
+                        self.upload_scalar('metrics/' + k, v, epoch)
                     try:
                         self.summary_writer.flush()
                     except:  # noqa
