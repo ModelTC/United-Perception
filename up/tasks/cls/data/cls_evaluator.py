@@ -91,6 +91,15 @@ class ImageNetEvaluator(Evaluator):
             correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
             acc = correct_k.mul_(100.0 / num)
             res.update({f'top{k}': acc.item()})
+        if self.use_prec_rec_f1:
+            if self.prec_rec_f1_avg is None:
+                res.update({'precision': precision(pred, label, self.prec_rec_f1_avg)[0][0].tolist()})
+                res.update({'recall': recall(pred, label, self.prec_rec_f1_avg)[0][0].tolist()})
+                res.update({'f1': f1(pred, label, self.prec_rec_f1_avg)[0][0].tolist()})
+            else:
+                res.update({'precision': precision(pred, label, self.prec_rec_f1_avg)[0].item()})
+                res.update({'recall': recall(pred, label, self.prec_rec_f1_avg)[0].item()})
+                res.update({'f1': f1(pred, label, self.prec_rec_f1_avg)[0].item()})
         metric = Metric(res)
         metric_name = self.cmp_key if self.cmp_key and metric.get(self.cmp_key, False) else f'top{self.topk[0]}'
         metric.set_cmp_key(metric_name)
