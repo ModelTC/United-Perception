@@ -68,7 +68,7 @@ class KittiReader(ImageReader):
     def get_lidar(self, idx):
         lidar_file = os.path.join(self.root_dir, 'velodyne', '{}.bin'.format(idx))
         f = PetrelHelper._petrel_helper.load_data(lidar_file, ceph_read=False, fs_read=True, mode='rb')
-        res = np.frombuffer(f, np.float32).reshape(-1, 4).copy()
+        res = np.frombuffer(f, np.float32).reshape(-1, 4)[:, :3].copy()
         return res
 
 

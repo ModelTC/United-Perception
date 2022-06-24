@@ -484,11 +484,17 @@ class BaseRunner(object):
         if env.is_master():
             logger.info("begin evaluate")
             metrics = self.data_loaders['test'].dataset.evaluate(res_file, all_device_results_list)
-            logger.info(json.dumps(metrics, indent=2))
+            try:
+                logger.info(json.dumps(metrics, indent=2))
+            except BaseException:
+                logger.warning('metrics type is incompatible for display')
         else:
             metrics = Metric({})
         barrier()
-        self._hooks('after_eval', metrics)
+        try:
+            self._hooks('after_eval', metrics)
+        except BaseException:
+            logger.warning('metrics type is incompatible for hook')
         self.set_cur_eval_iter()
         return metrics
 

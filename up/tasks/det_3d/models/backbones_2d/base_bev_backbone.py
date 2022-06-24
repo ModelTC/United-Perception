@@ -33,25 +33,14 @@ class BaseBEVBackbone(nn.Module):
         self.deblocks = nn.ModuleList()
         self.tocaffe = tocaffe
         for idx in range(num_levels):
-            if self.tocaffe:
-                cur_layers = [
-                    nn.Conv2d(
-                        c_in_list[idx], num_filters[idx], kernel_size=3,
-                        stride=layer_strides[idx], padding=1, bias=False
-                    ),
-                    build_norm_layer(num_filters[idx], normalize)[1],
-                    nn.ReLU()
-                ]
-            else:
-                cur_layers = [
-                    nn.ZeroPad2d(1),
-                    nn.Conv2d(
-                        c_in_list[idx], num_filters[idx], kernel_size=3,
-                        stride=layer_strides[idx], padding=0, bias=False
-                    ),
-                    build_norm_layer(num_filters[idx], normalize)[1],
-                    nn.ReLU()
-                ]
+            cur_layers = [
+                nn.Conv2d(
+                    c_in_list[idx], num_filters[idx], kernel_size=3,
+                    stride=layer_strides[idx], padding=1, bias=False
+                ),
+                build_norm_layer(num_filters[idx], normalize)[1],
+                nn.ReLU()
+            ]
             for k in range(layer_nums[idx]):
                 cur_layers.extend([
                     nn.Conv2d(num_filters[idx], num_filters[idx], kernel_size=3, padding=1, bias=False),

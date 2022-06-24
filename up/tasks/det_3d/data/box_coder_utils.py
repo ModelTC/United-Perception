@@ -26,7 +26,8 @@ class ResidualCoder(object):
 
         xa, ya, za, dxa, dya, dza, ra, *cas = torch.split(anchors, 1, dim=-1)
         xg, yg, zg, dxg, dyg, dzg, rg, *cgs = torch.split(boxes, 1, dim=-1)
-
+        za = za + dza / 2
+        zg = zg + dzg / 2
         diagonal = torch.sqrt(dxa ** 2 + dya ** 2)
         xt = (xg - xa) / diagonal
         yt = (yg - ya) / diagonal
@@ -58,7 +59,7 @@ class ResidualCoder(object):
             xt, yt, zt, dxt, dyt, dzt, rt, *cts = torch.split(box_encodings, 1, dim=-1)
         else:
             xt, yt, zt, dxt, dyt, dzt, cost, sint, *cts = torch.split(box_encodings, 1, dim=-1)
-
+        za = za + dza / 2
         diagonal = torch.sqrt(dxa ** 2 + dya ** 2)
         xg = xt * diagonal + xa
         yg = yt * diagonal + ya
@@ -74,7 +75,7 @@ class ResidualCoder(object):
             rg = torch.atan2(rg_sin, rg_cos)
         else:
             rg = rt + ra
-
+        zg = zg - dzg / 2
         cgs = [t + a for t, a in zip(cts, cas)]
         return torch.cat([xg, yg, zg, dxg, dyg, dzg, rg, *cgs], dim=-1)
 

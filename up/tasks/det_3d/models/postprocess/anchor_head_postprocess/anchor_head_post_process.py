@@ -120,7 +120,7 @@ class AnchorHeadSingle(nn.Module):
         cls_loss = self.get_cls_layer_loss(cls_preds, box_cls_labels)
         loc_loss, dir_loss = self.get_box_reg_layer_loss(box_cls_labels, box_reg_targets, box_preds, dir_cls_preds)
         output.update({self.prefix + '.cls_loss': cls_loss, self.prefix
-                      + '.loc_loss': loc_loss, self.prefix + '.dir_loss': dir_loss})
+                       + '.loc_loss': loc_loss, self.prefix + '.dir_loss': dir_loss})
         return output
 
     def get_cls_layer_loss(self, cls_preds, box_cls_labels):
@@ -141,11 +141,14 @@ class AnchorHeadSingle(nn.Module):
         cls_targets = box_cls_labels * cared.type_as(box_cls_labels)
         cls_preds = cls_preds.view(batch_size, -1, self.num_classes)
         normalizer_override = cls_targets.shape[0]
-        cls_loss = self.cls_loss(
-            cls_preds,
-            cls_targets,
-            normalizer_override=normalizer_override,
-            weights=cls_weights)
+        if cls_preds.numel() % cls_targets.numel() == 0:
+            cls_loss = self.cls_loss(
+                cls_preds,
+                cls_targets,
+                normalizer_override=normalizer_override,
+                weights=cls_weights)
+        else:
+            cls_loss = cls_preds.sum() * 0
         return cls_loss
 
     def get_box_reg_layer_loss(self, box_cls_labels, box_reg_targets, box_preds, box_dir_cls_preds):
@@ -168,26 +171,34 @@ class AnchorHeadSingle(nn.Module):
                                    box_preds.shape[-1] // self.num_anchors if not self.use_multihead else
                                    box_preds.shape[-1])
         # sin(a - b) = sinacosb-cosasinb
-        box_preds_sin, reg_targets_sin = self.add_sin_difference(box_preds, box_reg_targets)
-        normalizer_override = reg_targets_sin.shape[0]
-        loc_loss = self.loc_loss(
-            box_preds_sin,
-            reg_targets_sin,
-            normalizer_override=normalizer_override,
-            weights=reg_weights)  # [N, M]
-        if box_dir_cls_preds is not None:
-            dir_targets = self.get_direction_target(
-                anchors, box_reg_targets,
-                dir_offset=self.dir_offset,
-                num_bins=self.num_dir_bins
-            )
-            dir_logits = box_dir_cls_preds.view(batch_size, -1, self.num_dir_bins)
-            weights = positives.type_as(dir_logits)
-            weights /= torch.clamp(weights.sum(-1, keepdim=True), min=1.0)
-            dir_targets = dir_targets.long().argmax(dim=-1)
-            dir_logits = dir_logits.permute(0, 2, 1)
-            normalizer_override = dir_targets.shape[0]
-            dir_loss = self.dir_loss(dir_logits, dir_targets, normalizer_override=normalizer_override, weights=weights)
+        if box_preds.shape[0] != box_reg_targets.shape[0]:
+            loc_loss = 0 * box_preds.sum()
+            dir_loss = 0 * box_dir_cls_preds.sum()
+        else:
+            box_preds_sin, reg_targets_sin = self.add_sin_difference(box_preds, box_reg_targets)
+            normalizer_override = reg_targets_sin.shape[0]
+            loc_loss = self.loc_loss(
+                box_preds_sin,
+                reg_targets_sin,
+                normalizer_override=normalizer_override,
+                weights=reg_weights)  # [N, M]
+            if box_dir_cls_preds is not None:
+                dir_targets = self.get_direction_target(
+                    anchors, box_reg_targets,
+                    dir_offset=self.dir_offset,
+                    num_bins=self.num_dir_bins
+                )
+                dir_logits = box_dir_cls_preds.view(batch_size, -1, self.num_dir_bins)
+                weights = positives.type_as(dir_logits)
+                weights /= torch.clamp(weights.sum(-1, keepdim=True), min=1.0)
+                dir_targets = dir_targets.long().argmax(dim=-1)
+                dir_logits = dir_logits.permute(0, 2, 1)
+                normalizer_override = dir_targets.shape[0]
+                dir_loss = self.dir_loss(
+                    dir_logits,
+                    dir_targets,
+                    normalizer_override=normalizer_override,
+                    weights=weights)
         return loc_loss, dir_loss
 
     @staticmethod

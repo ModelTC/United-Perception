@@ -35,8 +35,7 @@ class PillarVFE(VFETemplate):
         self.tocaffe = tocaffe
 
         # adapt for deploy
-        # num_point_features += 5 if self.use_absolute_xyz else 3
-        num_point_features += 6 if self.use_absolute_xyz else 3
+        num_point_features += 5 if self.use_absolute_xyz else 3
         if self.with_distance:
             num_point_features += 1
         self.num_point_features = num_point_features
@@ -70,27 +69,27 @@ class PillarVFE(VFETemplate):
     def get_f_center(self, voxel_features, coords, voxel_size, point_cloud_range):
         voxel_x = voxel_size[0]
         voxel_y = voxel_size[1]
-        voxel_z = voxel_size[2]
+        # voxel_z = voxel_size[2]
         x_offset = voxel_x / 2 + point_cloud_range[0]
         y_offset = voxel_y / 2 + point_cloud_range[1]
-        z_offset = voxel_z / 2 + point_cloud_range[2]
+        # z_offset = voxel_z / 2 + point_cloud_range[2]
 
         if self.tocaffe:
-            f_center = torch.zeros_like(voxel_features[:, :, :3, :])
+            f_center = torch.zeros_like(voxel_features[:, :, :2, :])
             f_center[:, :, 0, :] = voxel_features[:, :, 0, :] - \
                 (coords[:, 3].to(voxel_features.dtype).unsqueeze(1).unsqueeze(-1) * voxel_x + x_offset)
             f_center[:, :, 1, :] = voxel_features[:, :, 1, :] - \
                 (coords[:, 2].to(voxel_features.dtype).unsqueeze(1).unsqueeze(-1) * voxel_y + y_offset)
-            f_center[:, :, 2, :] = voxel_features[:, :, 2, :] - \
-                (coords[:, 1].to(voxel_features.dtype).unsqueeze(1).unsqueeze(-1) * voxel_z + z_offset)
+            # f_center[:, :, 2, :] = voxel_features[:, :, 2, :] - \
+            #     (coords[:, 1].to(voxel_features.dtype).unsqueeze(1).unsqueeze(-1) * voxel_z + z_offset)
         else:
-            f_center = torch.zeros_like(voxel_features[:, :, :3])
+            f_center = torch.zeros_like(voxel_features[:, :, :2])
             f_center[:, :, 0] = voxel_features[:, :, 0] - \
                 (coords[:, 3].to(voxel_features.dtype).unsqueeze(1) * voxel_x + x_offset)
             f_center[:, :, 1] = voxel_features[:, :, 1] - \
                 (coords[:, 2].to(voxel_features.dtype).unsqueeze(1) * voxel_y + y_offset)
-            f_center[:, :, 2] = voxel_features[:, :, 2] - \
-                (coords[:, 1].to(voxel_features.dtype).unsqueeze(1) * voxel_z + z_offset)
+            # f_center[:, :, 2] = voxel_features[:, :, 2] - \
+            #     (coords[:, 1].to(voxel_features.dtype).unsqueeze(1) * voxel_z + z_offset)
         return f_center
 
     def get_pillar_features(self, voxel_infos, voxel_features, coords, voxel_num_points):
@@ -107,17 +106,14 @@ class PillarVFE(VFETemplate):
         if self.use_absolute_xyz:
             features = [voxel_features, f_cluster, f_center]
         else:
-            features = [voxel_features[..., 3:], f_cluster, f_center]
+            features = [voxel_features[:, :, 3:], f_cluster, f_center]
         if self.with_distance:
             points_dist = torch.norm(voxel_features[:, :, :3], 2, 2, keepdim=True)
             features.append(points_dist)
 
         if self.tocaffe:
-            features[-1] = features[-1][:, :, :2]
             features = torch.cat(features, dim=-2)
         else:
-            # adapt for deploy
-            # features[-1] = features[-1][:, :, :2]
             features = torch.cat(features, dim=-1)
         voxel_count = features.shape[1]
         mask = self.get_paddings_indicator(voxel_num_points, voxel_count, axis=0)

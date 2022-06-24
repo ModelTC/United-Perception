@@ -35,11 +35,11 @@
       "unmatched_threshold": 0.45
     },
     {
-      "class_name": "Pedestrian",
+      "class_name": "Cyclist",
       "anchor_sizes": [
         [
           0.6,
-          0.8,
+          1.76,
           1.73
         ]
       ],
@@ -70,11 +70,11 @@
       "unmatched_threshold": 0.35
     },
     {
-      "class_name": "Cyclist",
+      "class_name": "Pedestrian",
       "anchor_sizes": [
         [
           0.6,
-          1.76,
+          0.8,
           1.73
         ]
       ],

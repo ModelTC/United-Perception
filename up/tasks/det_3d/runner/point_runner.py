@@ -21,7 +21,7 @@ class PointRunner(BaseRunner):
         for key, val in batch.items():
             if not isinstance(val, np.ndarray):
                 continue
-            elif key in ['frame_id', 'metadata', 'calib', 'voxel_infos', 'class_names']:
+            elif key in ['frame_id', 'metadata', 'calib', 'voxel_infos', 'class_names', 'velodyne_path', 'image_meta']:
                 continue
             elif key in ['image_shape']:
                 batch[key] = torch.from_numpy(val).int().cuda()
