@@ -2,7 +2,7 @@
 
 | model            | setting | Params(M) | FLOPS(G) | ema   | train size | bs   | epoch | test size | top-1 |
 | ---------------- | ------- | --------- | -------- | ----- | ---------- | ---- | ----- | --------- | ----- |
-| [resnet18](https://github.com/ModelTC/EOD/blob/main/configs/cls/resnet/res18.yaml) | Steplr  | 11.690    | 1.813    | False | 224        | 1024 | 100   | 224       | [70.32](http://spring.sensetime.com/dropadmin/$/6V3ZX.pth) |
+| [resnet18](https://github.com/ModelTC/EOD/blob/main/configs/cls/resnet/res18.yaml) | Steplr  | 11.690    | 1.813    | False | 224        | 1024 | 100   | 224       | [70.32](https://github.com/ModelTC/United-Perception/releases/download/0.2.0_github/resnet18.pth) |
 | [resnet34](https://github.com/ModelTC/EOD/blob/main/configs/cls/resnet/res34.yaml) | Steplr  | 21.798    | 3.663    | False | 224        | 1024 | 100   | 224       | [74.14](http://spring.sensetime.com/dropadmin/$/gzI7Y.pth) |
 | [resnet50](https://github.com/ModelTC/EOD/blob/main/configs/cls/resnet/res50.yaml) | Steplr  | 25.557    | 4.087    | False | 224        | 1024 | 100   | 224       | [76.76](http://spring.sensetime.com/dropadmin/$/xTc3C.pth) |
 | [mobilenetv2_0.5](https://github.com/ModelTC/EOD/blob/main/configs/cls/mobilenetv2/mbv2_0.5_batch1k_epoch250_coslr_nesterov_wd0.00004_bn_nowd_fp16_ema.yaml) | coslr   | 1.969     | 0.096    | True  | 224        | 1024 | 350   | 224       | [65.36](http://spring.sensetime.com/dropadmin/$/IvZlV.pth) |
