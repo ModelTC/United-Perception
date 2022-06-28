@@ -63,7 +63,7 @@ class BaseClsHead(nn.Module):
         x = self.get_pool_output(x)
         x = self.get_dropout(x)
         logits = self.get_logits(x)
-        return {'logits': logits}
+        return {'logits': logits, 'deploy_output_node': logits}
 
     def forward(self, input):
         return self.forward_net(input)
