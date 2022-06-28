@@ -136,6 +136,27 @@ class TestDistributedSampler(Sampler):
         self.epoch = epoch
 
 
+@SAMPLER_REGISTRY.register('local_test')
+class TestLocalSampler(Sampler):
+    def __init__(self, dataset, rank=None):
+        if rank is None:
+            rank = env.rank
+        self.dataset = dataset
+        self.rank = rank
+        self.epoch = 0
+        self.num_samples = len(self.dataset)
+
+    def __iter__(self):
+        indices = torch.arange(len(self.dataset))
+        return iter(indices)
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
+
+    def __len__(self):
+        return self.num_samples
+
+
 @SAMPLER_REGISTRY.register('repeat_factor')
 class DistributedRepeatFactorReSampler(Sampler):
     """ Suitable for long-tail distribution datasets.

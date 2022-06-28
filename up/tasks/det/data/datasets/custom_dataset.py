@@ -15,7 +15,7 @@ import pickle as pk
 
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.registry_factory import DATASET_REGISTRY
-from up.utils.env.dist_helper import env
+from up.utils.env.dist_helper import env, barrier
 from up.data.image_reader import get_cur_image_dir
 from up.data.datasets.base_dataset import BaseDataset
 from up.data.data_utils import get_image_size
@@ -31,6 +31,78 @@ cv2.ocl.setUseOpenCL(False)
 __all__ = ['CustomDataset', 'RankCustomDataset']
 
 
+def _parse_results(res, indicator, writer=None):
+    done_imgs = set()
+
+    last_img = ""
+    datas_length = len(res)
+    # drop the last one json lines becuase it may have mistake
+    if datas_length != 0:
+        res.pop()
+    # drop the last one image becuase it is a uncontrollable factor
+    if len(res) != 0:
+        last_img = json.loads(res[-1])[indicator]
+
+    for line in res:
+        data = json.loads(line)
+        if data[indicator] != last_img:
+            done_imgs.add(data[indicator])
+            if writer is not None:
+                writer.write(json.dumps(data, ensure_ascii=False) + '\n')
+    if writer is not None:
+        writer.flush()
+    return done_imgs
+
+
+def test_resume_init(resume_dir, world_size, rank, rank_set=False, indicator="image_id"):
+    # for test resume
+    done_imgs = set()
+    if resume_dir is None:
+        return done_imgs
+
+    if not os.path.exists(resume_dir):
+        logger.warning('You use the inference resuming, but the resume dir is not exist!')
+        return done_imgs
+
+    resume_files = os.listdir(resume_dir)
+    resume_fdict = {}
+    for fn in resume_files:
+        fn_rank = fn.replace('results.txt.rank', '')
+        if fn_rank.isdigit():
+            resume_fdict[int(fn_rank)] = fn
+    if len(resume_fdict) == 0:
+        logger.warning('You use the inference resuming, but the resume files are not exist!')
+        return done_imgs
+
+    assert world_size == len(resume_fdict), 'Current world size is not matched with the resumed result files ranks!'
+
+    if not rank_set:
+        for fr in resume_fdict:
+            file_path = os.path.join(resume_dir, resume_fdict[fr])
+            with PetrelHelper.open(file_path) as f:
+                datas = f.readlines()
+            # wait all process read the data done
+            barrier()
+
+            writer = None
+            if env.is_master():
+                writer = open(file_path, 'w')
+            done_imgs = done_imgs.union(_parse_results(datas, indicator, writer))
+            if writer is not None:
+                writer.close()
+            barrier()
+    else:
+        fr = rank
+        file_path = os.path.join(resume_dir, resume_fdict[fr])
+        with PetrelHelper.open(file_path) as f:
+            datas = f.readlines()
+
+        writer = open(file_path, 'w')
+        done_imgs = _parse_results(datas, indicator, writer)
+        writer.close()
+    return done_imgs
+
+
 @DATASET_REGISTRY.register('custom')
 class CustomDataset(BaseDataset):
     def __init__(self,
@@ -44,7 +116,8 @@ class CustomDataset(BaseDataset):
                  cache=None,
                  clip_box=True,
                  cross_cfg=None,
-                 check_label=False):
+                 check_label=False,
+                 resume_cfg=None):
         super(CustomDataset, self).__init__(
             meta_file,
             image_reader,
@@ -60,6 +133,14 @@ class CustomDataset(BaseDataset):
         self.metas = []
         self.aspect_ratios = []
         self.cross_cfg = cross_cfg
+        self.resume_cfg = resume_cfg
+        if self.resume_cfg is not None:
+            resume_dir = resume_cfg.get('resume_dir', 'results_dir')
+            rank_set = resume_cfg.get('rank_set', False)
+            indicator = resume_cfg.get('indicator', 'image_id')
+            self.done_imgs = test_resume_init(resume_dir, env.world_size, env.rank, rank_set, indicator)
+        else:
+            self.done_imgs = set()
         self._normal_init()
         self.clip_box = clip_box
         if check_label:
@@ -182,6 +263,8 @@ class CustomDataset(BaseDataset):
             with PetrelHelper.open(meta_file) as f:
                 for line in f:
                     data = json.loads(line)
+                    if data['filename'] in self.done_imgs:
+                        continue
                     if self.label_mapping is not None:
                         if self.cross_cfg is not None:
                             data = self.set_label_mapping(data, self.label_mapping[idx], neg_targets[idx])
@@ -357,7 +440,8 @@ class RankCustomDataset(CustomDataset):
                  cross_cfg=None,
                  reload_cfg={},
                  random=True,
-                 check_label=False):
+                 check_label=False,
+                 resume_cfg=None):
         self.mini_epoch = reload_cfg.get('mini_epoch', 1)
         self.seed = reload_cfg.get('seed', 0)
         self.mini_epoch_idx = reload_cfg.get('mini_epoch_idx', 0)
@@ -365,6 +449,8 @@ class RankCustomDataset(CustomDataset):
         self.world_size = env.world_size
         self.rank = env.rank
         self.random = random
+        if resume_cfg is not None:
+            resume_cfg.update({'rank_set': True})
         super(RankCustomDataset, self).__init__(
             meta_file,
             image_reader,
@@ -374,7 +460,8 @@ class RankCustomDataset(CustomDataset):
             evaluator=evaluator,
             label_mapping=label_mapping,
             cross_cfg=cross_cfg,
-            check_label=check_label)
+            check_label=check_label,
+            resume_cfg=resume_cfg)
 
     def _normal_init(self):
         if not isinstance(self.meta_file, list):
@@ -398,6 +485,9 @@ class RankCustomDataset(CustomDataset):
                 for line in f:
                     if _index in rank_indices:
                         data = json.loads(line)
+                        if data['filename'] in self.done_imgs:
+                            _index += 1
+                            continue
                         if self.label_mapping is not None:
                             if self.cross_cfg is not None:
                                 data = self.set_label_mapping(data, self.label_mapping[idx], neg_targets[idx])

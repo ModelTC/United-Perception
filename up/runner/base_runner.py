@@ -396,8 +396,13 @@ class BaseRunner(object):
         self.model.cuda().eval()
         test_loader = self.data_loaders['test']
         all_results_list = []
+        test_resume = ((hasattr(test_loader.dataset, 'resume_cfg')) and (test_loader.dataset.resume_cfg is not None))
+        if test_resume:
+            assert self.memory_friendly_infer, \
+                'If you want to resume your test results files, \
+                you must always inference it with memory_friendly_infer=True'
         if self.memory_friendly_infer:
-            writer = self._prepare_writer()
+            writer = self._prepare_writer(resume=test_resume)
         for _ in range(test_loader.get_epoch_size()):
             batch = self.get_batch('test')
             output = self.forward_eval(batch)
@@ -441,12 +446,18 @@ class BaseRunner(object):
                     merged_fd.write(line)
             logger.info(f'merging {res_file} {line_idx+1} results')
         merged_fd.close()
+        self.inference_logger = open(os.path.join(self.results_dir, 'inference_process.log'), 'w')
+        self.inference_logger.write('[Done] writing all results to {} done. \n'.format(merged_file))
+        self.inference_logger.close()
         return merged_file
 
-    def _prepare_writer(self):
+    def _prepare_writer(self, resume=False):
         os.makedirs(self.results_dir, exist_ok=True)
         res_file = os.path.join(self.results_dir, f'results.txt.rank{env.rank}')
-        writer = open(res_file, 'w')
+        if not resume or not os.path.exists(res_file):
+            writer = open(res_file, 'w')
+        else:
+            writer = open(res_file, 'a')
         return writer
 
     def _results2disk(self, dump_results, writer):
@@ -476,6 +487,9 @@ class BaseRunner(object):
                             print(json.dumps(item), file=writer)
                             writer.flush()
                 writer.close()
+                self.inference_logger = open(os.path.join(self.results_dir, 'inference_process.log'), 'w')
+                self.inference_logger.write('[Done] writing all results to {} done. \n'.format(res_file))
+                self.inference_logger.close()
         return res_file, all_device_results_list
 
     @torch.no_grad()

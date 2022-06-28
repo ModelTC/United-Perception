@@ -11,6 +11,7 @@ from up.data.data_utils import is_numpy_image
 from up.utils.env.dist_helper import env
 from up.utils.general.registry import Registry
 from up.data.data_utils import count_dataset_size, get_rank_indices
+from up.tasks.det.data.datasets.custom_dataset import test_resume_init
 
 __all__ = ['ClsDataset']
 
@@ -116,7 +117,8 @@ class ClsDataset(BaseDataset):
                  fraction=1.0,
                  save_score=False,
                  multilabel=False,
-                 label_mapping=None):
+                 label_mapping=None,
+                 resume_cfg=None):
         super(ClsDataset, self).__init__(meta_file,
                                          image_reader,
                                          transformer,
@@ -132,6 +134,14 @@ class ClsDataset(BaseDataset):
         self.fraction = fraction
         self.multilabel = multilabel
         self._list_check()
+        self.resume_cfg = resume_cfg
+        if self.resume_cfg is not None:
+            resume_dir = resume_cfg.get('resume_dir', 'results_dir')
+            rank_set = resume_cfg.get('rank_set', False)
+            indicator = resume_cfg.get('indicator', 'filename')
+            self.done_imgs = test_resume_init(resume_dir, env.world_size, env.rank, rank_set, indicator)
+        else:
+            self.done_imgs = set()
         self.meta_parser = [CLS_PARSER_REGISTRY[m_type](**parser_info) for m_type in self.meta_type]
         self.parse_metas()
         if self.label_mapping is not None:
@@ -177,6 +187,12 @@ class ClsDataset(BaseDataset):
                 metas = self.meta_parser[idx].parse(meta_file, idx, self.multilabel)
             else:
                 metas = self.meta_parser[idx].parse(meta_file, idx)
+            if len(self.done_imgs) != 0:
+                filtered_metas = []
+                for m in metas:
+                    if m['filename'] not in self.done_imgs:
+                        filtered_metas.append(m)
+                metas = filtered_metas
             if self.label_mapping is not None:
                 self.set_label_mapping(metas, idx)
             self.metas.extend(metas)
@@ -298,7 +314,8 @@ class RankClsDataset(ClsDataset):
                  parser_info={},
                  image_type='pil',
                  reload_cfg={},
-                 random=True):
+                 random=True,
+                 resume_cfg=None):
         self.mini_epoch = reload_cfg.get('mini_epoch', 1)
         self.seed = reload_cfg.get('seed', 0)
         self.mini_epoch_idx = reload_cfg.get('mini_epoch_idx', 0)
@@ -306,13 +323,16 @@ class RankClsDataset(ClsDataset):
         self.world_size = env.world_size
         self.rank = env.rank
         self.random = random
+        if resume_cfg is not None:
+            resume_cfg.update({'rank_set': True})
         super(RankClsDataset, self).__init__(meta_file,
                                              image_reader,
                                              transformer,
                                              evaluator,
                                              meta_type,
                                              parser_info,
-                                             image_type)
+                                             image_type,
+                                             resume_cfg=resume_cfg)
 
     def parse_metas(self):
         dataset_sizes = count_dataset_size(self.meta_file)
@@ -331,6 +351,12 @@ class RankClsDataset(ClsDataset):
         for idx in range(1, len(dataset_sizes)):
             start_indexs.append(start_indexs[idx - 1] + dataset_sizes[idx - 1])
         for idx, meta_file in enumerate(self.meta_file):
-            self.meta_parser[idx].parse(meta_file, idx, self.metas, start_indexs[idx], rank_indices)
+            self.metas.extend(self.meta_parser[idx].parse(meta_file, idx, start_indexs[idx], rank_indices))
+        if len(self.done_imgs) != 0:
+            filtered_metas = []
+            for m in self.metas:
+                if m['filename'] not in self.done_imgs:
+                    filtered_metas.append(m)
+            self.metas = filtered_metas
         if len(rank_indices) != rank_num_samples:
             self.metas += self.metas[:(rank_num_samples - len(rank_indices))]

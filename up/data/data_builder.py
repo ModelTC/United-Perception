@@ -42,9 +42,14 @@ class BaseDataLoaderBuilder(object):
         cfg_sampler = copy.deepcopy(cfg_sampler)
         cfg_sampler['kwargs']['dataset'] = dataset
         if self.phase == 'test':
-            test_sampler = {'type': 'dist_test', 'kwargs': {'dataset': dataset}}
-            logger.warning('We use dist_test instead of {} for test'.format(cfg_sampler['type']))
-            return SAMPLER_REGISTRY.build(test_sampler)
+            if 'test' in cfg_sampler['type']:
+                return SAMPLER_REGISTRY.build(cfg_sampler)
+            else:
+                test_sampler = {'type': 'dist_test', 'kwargs': {'dataset': dataset}}
+                logger.warning('We use dist_test instead of {} for test. \
+                    If you use a rank based dataset, \
+                    you need to use the local_test as the test sampler'.format(cfg_sampler['type']))
+                return SAMPLER_REGISTRY.build(test_sampler)
         return SAMPLER_REGISTRY.build(cfg_sampler)
 
     def build_batch_sampler(self, cfg_batch_sampler, dataset):
