@@ -59,8 +59,7 @@ class BaseClsHead(nn.Module):
         return x
 
     def forward_net(self, x):
-        if isinstance(x, dict):
-            x = x['features'][self.input_feature_idx]
+        x = x['features'][self.input_feature_idx]
         x = self.get_pool_output(x)
         x = self.get_dropout(x)
         logits = self.get_logits(x)

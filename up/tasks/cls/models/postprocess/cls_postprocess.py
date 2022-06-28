@@ -1,13 +1,13 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from up.utils.general.registry_factory import MODULE_PROCESS_REGISTRY
 from up.utils.model import accuracy as A
 from up.models.losses import build_loss
 
 __all__ = ['BaseClsPostProcess']
 
 
-@MODULE_ZOO_REGISTRY.register('base_cls_postprocess')
+@MODULE_PROCESS_REGISTRY.register('base_cls_postprocess')
 class BaseClsPostProcess(nn.Module):
     def __init__(self, cls_loss, prefix=None):
         super(BaseClsPostProcess, self).__init__()

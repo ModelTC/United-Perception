@@ -4,6 +4,7 @@ from up.utils.env.gene_env import get_env_info
 from up.utils.env.dist_helper import env
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.cfg_helper import format_cfg
+from up.utils.env.dist_helper import get_world_size, allreduce
 from mqbench.utils.state import enable_quantization, enable_calibration_woquantization
 
 __all__ = ['QuantRunner']
@@ -183,23 +184,19 @@ class QuantRunner(BaseRunner):
 
     def sync_quant_params(self):
         logger.info('start quant params reduce')
-        try:
-            import spring.linklink as link
-        except:   # noqa
-            link = None
         reduce_list = ['scale', 'zero_point', 'min_val', 'max_val']
         reduced = []
         for n, tensor in self.model.named_buffers():
             for rd in reduce_list:
                 if n.endswith(rd):
-                    tensor.data = tensor.data / link.get_world_size()
-                    link.allreduce(tensor.data)
+                    tensor.data = tensor.data / get_world_size()
+                    allreduce(tensor.data)
                     reduced.append(n)
         for n, tensor in self.model.named_parameters():
             for rd in reduce_list:
                 if n.endswith(rd):
-                    tensor.data = tensor.data / link.get_world_size()
-                    link.allreduce(tensor.data)
+                    tensor.data = tensor.data / get_world_size()
+                    allreduce(tensor.data)
                     reduced.append(n)
         logger.info(f'sync quant params: {reduced}.')
 
