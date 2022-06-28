@@ -61,7 +61,7 @@ class Saver(object):
 
         if 'resume_model' in self.save_cfg:
             logger.warning('Load checkpoint from {}'.format(self.save_cfg['resume_model']))
-            state = self.load_checkpoint(self.save_cfg['resume_model'])
+            state = self.load_checkpoint(self.save_cfg['resume_model'], convert=True)
             return state
         elif 'pretrain_model' in self.save_cfg:
             state = self.load_checkpoint(self.save_cfg['pretrain_model'], convert=True)
