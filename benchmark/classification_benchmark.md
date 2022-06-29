@@ -22,6 +22,7 @@
 | [swin_base384](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/swin/swin_transformer_base_384.yaml)   | cosEpochlr   | 88        | 47.0      | False  | 384        | 1024 | 300   | 384       | [84.15](http://spring.sensetime.com/dropadmin/$/MxWpX.pth) |
 | [swin_large224](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/swin/swin_transformer_large_224.yaml)   | cosEpochlr   | 197        | 34.5      | False  | 224        | 1024 | 300   | 224       | [86.25](http://spring.sensetime.com/dropadmin/$/wwuVS.pth) |
 | [swin_large384](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/swin/swin_transformer_large_384.yaml)   | cosEpochlr   | 197        | 103.9      | False  | 384        | 1024 | 300   | 384       | [86.98](http://spring.sensetime.com/dropadmin/$/uTygC.pth) |
+| [xmnet](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/cls/xmnet/xmnet.yaml)   | Steplr   |         |       | False  | 224        | 1024 | 100   | 224       | []() |
 
 ## 高精度baseLine
 
