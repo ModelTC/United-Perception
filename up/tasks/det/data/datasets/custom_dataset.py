@@ -22,6 +22,7 @@ from up.data.data_utils import get_image_size
 from torch.nn.modules.utils import _pair
 from up.utils.general.petrel_helper import PetrelHelper
 from up.data.data_utils import count_dataset_size, get_rank_indices
+from up.data.data_utils import test_resume_init, search_folder_and_save, fake_metas_func
 
 
 # TODO: Check GPU usage after move this setting down from upper line
@@ -29,78 +30,6 @@ cv2.ocl.setUseOpenCL(False)
 
 
 __all__ = ['CustomDataset', 'RankCustomDataset']
-
-
-def _parse_results(res, indicator, writer=None):
-    done_imgs = set()
-
-    last_img = ""
-    datas_length = len(res)
-    # drop the last one json lines becuase it may have mistake
-    if datas_length != 0:
-        res.pop()
-    # drop the last one image becuase it is a uncontrollable factor
-    if len(res) != 0:
-        last_img = json.loads(res[-1])[indicator]
-
-    for line in res:
-        data = json.loads(line)
-        if data[indicator] != last_img:
-            done_imgs.add(data[indicator])
-            if writer is not None:
-                writer.write(json.dumps(data, ensure_ascii=False) + '\n')
-    if writer is not None:
-        writer.flush()
-    return done_imgs
-
-
-def test_resume_init(resume_dir, world_size, rank, rank_set=False, indicator="image_id"):
-    # for test resume
-    done_imgs = set()
-    if resume_dir is None:
-        return done_imgs
-
-    if not os.path.exists(resume_dir):
-        logger.warning('You use the inference resuming, but the resume dir is not exist!')
-        return done_imgs
-
-    resume_files = os.listdir(resume_dir)
-    resume_fdict = {}
-    for fn in resume_files:
-        fn_rank = fn.replace('results.txt.rank', '')
-        if fn_rank.isdigit():
-            resume_fdict[int(fn_rank)] = fn
-    if len(resume_fdict) == 0:
-        logger.warning('You use the inference resuming, but the resume files are not exist!')
-        return done_imgs
-
-    assert world_size == len(resume_fdict), 'Current world size is not matched with the resumed result files ranks!'
-
-    if not rank_set:
-        for fr in resume_fdict:
-            file_path = os.path.join(resume_dir, resume_fdict[fr])
-            with PetrelHelper.open(file_path) as f:
-                datas = f.readlines()
-            # wait all process read the data done
-            barrier()
-
-            writer = None
-            if env.is_master():
-                writer = open(file_path, 'w')
-            done_imgs = done_imgs.union(_parse_results(datas, indicator, writer))
-            if writer is not None:
-                writer.close()
-            barrier()
-    else:
-        fr = rank
-        file_path = os.path.join(resume_dir, resume_fdict[fr])
-        with PetrelHelper.open(file_path) as f:
-            datas = f.readlines()
-
-        writer = open(file_path, 'w')
-        done_imgs = _parse_results(datas, indicator, writer)
-        writer.close()
-    return done_imgs
 
 
 @DATASET_REGISTRY.register('custom')
@@ -117,7 +46,7 @@ class CustomDataset(BaseDataset):
                  clip_box=True,
                  cross_cfg=None,
                  check_label=False,
-                 resume_cfg=None):
+                 inference_cfg=None):
         super(CustomDataset, self).__init__(
             meta_file,
             image_reader,
@@ -133,14 +62,9 @@ class CustomDataset(BaseDataset):
         self.metas = []
         self.aspect_ratios = []
         self.cross_cfg = cross_cfg
-        self.resume_cfg = resume_cfg
-        if self.resume_cfg is not None:
-            resume_dir = resume_cfg.get('resume_dir', 'results_dir')
-            rank_set = resume_cfg.get('rank_set', False)
-            indicator = resume_cfg.get('indicator', 'image_id')
-            self.done_imgs = test_resume_init(resume_dir, env.world_size, env.rank, rank_set, indicator)
-        else:
-            self.done_imgs = set()
+        self.inference_cfg = inference_cfg
+        if self.inference_cfg is not None:
+            self._inference_init()
         self._normal_init()
         self.clip_box = clip_box
         if check_label:
@@ -251,6 +175,34 @@ class CustomDataset(BaseDataset):
         image_dir = get_cur_image_dir(self.image_reader.image_dir, data.get('image_source', 0))
         filename = os.path.join(image_dir, data['filename'])
         return self.cache_image[filename]
+
+    def _inference_init(self):
+        test_resume = self.inference_cfg.get('test_resume', None)
+        if test_resume is not None:
+            resume_dir = test_resume.get('resume_dir', 'results_dir')
+            rank_set = test_resume.get('rank_set', False)
+            indicator = test_resume.get('indicator', 'image_id')
+            self.test_resume = True
+            self.done_imgs = test_resume_init(resume_dir, env.world_size, env.rank, rank_set, indicator)
+        else:
+            self.test_resume = False
+            self.done_imgs = set()
+
+        infer_from = self.inference_cfg.get('inference_from', None)
+        if infer_from is not None:
+            logger.info('You inference results from a imagepaths file or images folder')
+            write_path = self.inference_cfg.get('fake_meta_save_path', 'fake_path.json')
+            if env.is_master():
+                if os.path.isdir(infer_from):
+                    inference_files = self.inference_cfg.get('folder_images_save_path', 'imagepaths.txt')
+                    search_folder_and_save(infer_from, inference_files)
+                elif os.path.isfile(infer_from):
+                    inference_files = infer_from
+                else:
+                    raise NotImplementedError
+                fake_metas_func(inference_files, 'det', write_path=write_path)
+            barrier()
+            self.meta_file = write_path
 
     def _normal_init(self):
         if not isinstance(self.meta_file, list):
@@ -441,7 +393,7 @@ class RankCustomDataset(CustomDataset):
                  reload_cfg={},
                  random=True,
                  check_label=False,
-                 resume_cfg=None):
+                 inference_cfg=None):
         self.mini_epoch = reload_cfg.get('mini_epoch', 1)
         self.seed = reload_cfg.get('seed', 0)
         self.mini_epoch_idx = reload_cfg.get('mini_epoch_idx', 0)
@@ -449,8 +401,8 @@ class RankCustomDataset(CustomDataset):
         self.world_size = env.world_size
         self.rank = env.rank
         self.random = random
-        if resume_cfg is not None:
-            resume_cfg.update({'rank_set': True})
+        if (inference_cfg is not None) and (inference_cfg.get('test_resume', None) is not None):
+            inference_cfg['test_resume'].update({'rank_set': True})
         super(RankCustomDataset, self).__init__(
             meta_file,
             image_reader,
@@ -461,7 +413,7 @@ class RankCustomDataset(CustomDataset):
             label_mapping=label_mapping,
             cross_cfg=cross_cfg,
             check_label=check_label,
-            resume_cfg=resume_cfg)
+            inference_cfg=inference_cfg)
 
     def _normal_init(self):
         if not isinstance(self.meta_file, list):

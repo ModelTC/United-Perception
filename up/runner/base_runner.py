@@ -396,7 +396,7 @@ class BaseRunner(object):
         self.model.cuda().eval()
         test_loader = self.data_loaders['test']
         all_results_list = []
-        test_resume = ((hasattr(test_loader.dataset, 'resume_cfg')) and (test_loader.dataset.resume_cfg is not None))
+        test_resume = ((hasattr(test_loader.dataset, 'test_resume')) and (test_loader.dataset.test_resume is True))
         if test_resume:
             assert self.memory_friendly_infer, \
                 'If you want to resume your test results files, \
@@ -446,9 +446,8 @@ class BaseRunner(object):
                     merged_fd.write(line)
             logger.info(f'merging {res_file} {line_idx+1} results')
         merged_fd.close()
-        self.inference_logger = open(os.path.join(self.results_dir, 'inference_process.log'), 'w')
-        self.inference_logger.write('[Done] writing all results to {} done. \n'.format(merged_file))
-        self.inference_logger.close()
+        with open(os.path.join(self.results_dir, 'inference_process.log'), 'w') as f:
+            f.write('[Done] writing all results to {} done. \n'.format(merged_file))
         return merged_file
 
     def _prepare_writer(self, resume=False):
@@ -487,9 +486,8 @@ class BaseRunner(object):
                             print(json.dumps(item), file=writer)
                             writer.flush()
                 writer.close()
-                self.inference_logger = open(os.path.join(self.results_dir, 'inference_process.log'), 'w')
-                self.inference_logger.write('[Done] writing all results to {} done. \n'.format(res_file))
-                self.inference_logger.close()
+                with open(os.path.join(self.results_dir, 'inference_process.log'), 'w') as f:
+                    f.write('[Done] writing all results to {} done. \n'.format(res_file))
         return res_file, all_device_results_list
 
     @torch.no_grad()

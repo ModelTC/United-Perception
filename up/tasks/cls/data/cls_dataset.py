@@ -1,3 +1,4 @@
+import os
 import json
 import torch
 import numpy as np
@@ -6,12 +7,13 @@ from up.utils.general.registry_factory import DATASET_REGISTRY
 from easydict import EasyDict
 from collections import Counter, defaultdict
 from PIL import Image
+from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.petrel_helper import PetrelHelper
 from up.data.data_utils import is_numpy_image
-from up.utils.env.dist_helper import env
+from up.utils.env.dist_helper import env, barrier
 from up.utils.general.registry import Registry
 from up.data.data_utils import count_dataset_size, get_rank_indices
-from up.tasks.det.data.datasets.custom_dataset import test_resume_init
+from up.data.data_utils import test_resume_init, search_folder_and_save, fake_metas_func
 
 __all__ = ['ClsDataset']
 
@@ -24,6 +26,21 @@ class BaseParser(object):
 
     def parse(self):
         raise NotImplementedError
+
+
+@CLS_PARSER_REGISTRY.register('inference_only')
+class InferenceOnlyParser(BaseParser):
+    def parse(self, meta_file, idx, start_index=0, rank_indices=None):
+        metas = fake_metas_func(meta_file, 'cls', idx)
+
+        if rank_indices is not None:
+            rank_metas = []
+            for index, m in enumerate(metas):
+                if (start_index + index) not in rank_indices:
+                    continue
+                rank_metas.append(m)
+            metas = rank_metas
+        return metas
 
 
 @CLS_PARSER_REGISTRY.register('imagenet')
@@ -118,7 +135,7 @@ class ClsDataset(BaseDataset):
                  save_score=False,
                  multilabel=False,
                  label_mapping=None,
-                 resume_cfg=None):
+                 inference_cfg=None):
         super(ClsDataset, self).__init__(meta_file,
                                          image_reader,
                                          transformer,
@@ -134,14 +151,9 @@ class ClsDataset(BaseDataset):
         self.fraction = fraction
         self.multilabel = multilabel
         self._list_check()
-        self.resume_cfg = resume_cfg
-        if self.resume_cfg is not None:
-            resume_dir = resume_cfg.get('resume_dir', 'results_dir')
-            rank_set = resume_cfg.get('rank_set', False)
-            indicator = resume_cfg.get('indicator', 'filename')
-            self.done_imgs = test_resume_init(resume_dir, env.world_size, env.rank, rank_set, indicator)
-        else:
-            self.done_imgs = set()
+        self.inference_cfg = inference_cfg
+        if self.inference_cfg is not None:
+            self._inference_init()
         self.meta_parser = [CLS_PARSER_REGISTRY[m_type](**parser_info) for m_type in self.meta_type]
         self.parse_metas()
         if self.label_mapping is not None:
@@ -179,6 +191,32 @@ class ClsDataset(BaseDataset):
                 image_source = img_anns.get('image_source', 0)
                 self._num_images_per_list += Counter([image_source])
         return self._num_images_per_list
+
+    def _inference_init(self):
+        test_resume = self.inference_cfg.get('test_resume', None)
+        if test_resume is not None:
+            resume_dir = test_resume.get('resume_dir', 'results_dir')
+            rank_set = test_resume.get('rank_set', False)
+            indicator = test_resume.get('indicator', 'filename')
+            self.test_resume = True
+            self.done_imgs = test_resume_init(resume_dir, env.world_size, env.rank, rank_set, indicator)
+        else:
+            self.test_resume = False
+            self.done_imgs = set()
+
+        infer_from = self.inference_cfg.get('inference_from', None)
+        if infer_from is not None:
+            logger.info('You inference results from a imagepaths file or images folder')
+            if os.path.isdir(infer_from):
+                inference_files = self.inference_cfg.get('folder_images_save_path', 'imagepaths.txt')
+                if env.is_master():
+                    search_folder_and_save(infer_from, inference_files)
+                barrier()
+            elif os.path.isfile(infer_from):
+                inference_files = infer_from
+            else:
+                raise NotImplementedError
+            self.meta_file = [inference_files]
 
     def parse_metas(self):
         self.metas = []
@@ -315,7 +353,7 @@ class RankClsDataset(ClsDataset):
                  image_type='pil',
                  reload_cfg={},
                  random=True,
-                 resume_cfg=None):
+                 inference_cfg=None):
         self.mini_epoch = reload_cfg.get('mini_epoch', 1)
         self.seed = reload_cfg.get('seed', 0)
         self.mini_epoch_idx = reload_cfg.get('mini_epoch_idx', 0)
@@ -323,8 +361,8 @@ class RankClsDataset(ClsDataset):
         self.world_size = env.world_size
         self.rank = env.rank
         self.random = random
-        if resume_cfg is not None:
-            resume_cfg.update({'rank_set': True})
+        if (inference_cfg is not None) and (inference_cfg.get('test_resume', None) is not None):
+            inference_cfg['test_resume'].update({'rank_set': True})
         super(RankClsDataset, self).__init__(meta_file,
                                              image_reader,
                                              transformer,
@@ -332,7 +370,7 @@ class RankClsDataset(ClsDataset):
                                              meta_type,
                                              parser_info,
                                              image_type,
-                                             resume_cfg=resume_cfg)
+                                             inference_cfg=inference_cfg)
 
     def parse_metas(self):
         dataset_sizes = count_dataset_size(self.meta_file)
