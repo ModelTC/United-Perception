@@ -52,7 +52,7 @@ def get_forground_class_threshes(dataset_cfg, to_kestrel_cfg, with_background_ch
         return to_kestrel_cfg['kestrel_config']
 
     forground_class_names = to_kestrel_cfg['class_names']
-    confidences_thresh = to_kestrel_cfg.get('confidneces_thresh', {})
+    confidences_thresh = to_kestrel_cfg.get('confidences_thresh', {})
     cls_id = {'vehicle': 1420, 'Pedestrian': 221488, 'Cyclist': 1507442}
 
     # generate new kestrel config

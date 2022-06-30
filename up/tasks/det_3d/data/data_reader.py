@@ -1,6 +1,8 @@
+import copy
 import numpy as np
 import os
 from skimage import io
+import open3d as o3d
 
 from up.utils.general.registry_factory import IMAGE_READER_REGISTRY
 from up.data.image_reader import ImageReader
@@ -70,6 +72,13 @@ class KittiReader(ImageReader):
         f = PetrelHelper._petrel_helper.load_data(lidar_file, ceph_read=False, fs_read=True, mode='rb')
         res = np.frombuffer(f, np.float32).reshape(-1, 4)[:, :3].copy()
         return res
+
+    def get_lidar_pcd(self, path):
+        base_path = path.split('/')[-1]
+        lidar_file = os.path.join(self.root_dir, base_path)
+        pcd = o3d.io.read_point_cloud(lidar_file)
+        pc_velo = np.asarray(pcd.points)
+        return copy.deepcopy(pc_velo)
 
 
 class Calibration(object):

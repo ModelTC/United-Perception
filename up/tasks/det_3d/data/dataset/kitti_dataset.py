@@ -2,8 +2,6 @@
 import copy
 import numpy as np
 import torch
-import struct
-import open3d as o3d
 from collections import defaultdict
 from up.tasks.det_3d.data.box_utils import boxes3d_lidar_to_kitti_camera, boxes3d_kitti_camera_to_imageboxes
 from up.utils.general.registry_factory import DATASET_REGISTRY
@@ -177,12 +175,13 @@ class KittiDataset(BaseDataset):
         recall_dict = {}
         for index, box_dict in enumerate(pred_list):
             frame_id = output['frame_id'][index]
-            velodyne_path = output['velodyne_path'][index]
+            velodyne_path = output.get("velodyne_path", None)
             calib = output['calib'][index]
             image_shape = output['image_shape'][index].cpu().numpy()
             single_pred_dict = self.generate_single_sample_dict(calib, image_shape, box_dict)
             single_pred_dict['frame_id'] = frame_id
-            single_pred_dict['velodyne_path'] = velodyne_path
+            if velodyne_path is not None:
+                single_pred_dict['velodyne_path'] = velodyne_path[index]
 
             recall_dict = self.generate_recall_record(
                 box_dict['pred_boxes'], recall_dict, index, output, recall_thresh_list
@@ -331,64 +330,20 @@ class KittiDataset(BaseDataset):
         ret['batch_size'] = batch_size
         return ret
 
-    def read_bin_velodyne(self, path):
-        pc_list = []
-        with open(path, 'rb') as f:
-            content = f.read()
-            pc_iter = struct.iter_unpack('ffff', content)
-            for idx, point in enumerate(pc_iter):
-                pc_list.append([point[0], point[1], point[2]])
-        return np.asarray(pc_list, dtype=np.float32)
-
-    def get_pcd(self, file_path, num_point_features):
-        if file_path.find(".bin") > 0:
-            pc_velo = self.read_bin_velodyne(file_path)
-        else:
-            pcd = o3d.io.read_point_cloud(file_path)
-            pc_velo = np.asarray(pcd.points)
-        return copy.deepcopy(pc_velo)
-
-    def pre_image_meta(self):
-        image_meta = {}
-        image_meta['filename'] = ''
-        image_meta['ori_shape'] = None
-        image_meta['img_shape'] = None
-        image_meta['lidar2img'] = None
-        image_meta['depth2img'] = None
-        image_meta['cam2img'] = None
-        image_meta['pad_shape'] = None
-        image_meta['scale_factor'] = None
-        image_meta['flip'] = False
-        image_meta['pcd_horizontal_flip'] = False
-        image_meta['pcd_vertical_flip'] = False
-        image_meta['box_mode_3d'] = None
-        image_meta['box_type_3d'] = 'Lidar'
-        image_meta['img_norm_cfg'] = {
-            'mean': [0.485, 0.456, 0.406], 'std': [0.229, 0.224, 0.225]
-        }
-        image_meta['sample_idx'] = 0
-        image_meta['pts_filename'] = ''
-        image_meta['transformation_3d_flow'] = list()
-        # image_meta['pcd_trans'] = True
-        # image_meta['trans_mat'] = []
-        image_meta['affine_aug'] = False
-
-        return image_meta
-
     def get_input(self, idx):
         info = copy.deepcopy(self.kitti_infos[idx])
         if self.point_format == 'lidar':
             img_shape = info['img_shape']
             sample_idx = info['image_idx']
             calib = {'P2': info['calib/P2'], 'R0': info['calib/R0_rect'], 'Tr_velo2cam': info['calib/Tr_velo_to_cam']}
-            num_point_features = info['pointcloud_num_features']
+            # num_point_features = info['pointcloud_num_features']
             velodyne_path = info['velodyne_path']
-            image_meta = self.pre_image_meta()
+            # image_meta = self.pre_image_meta()
             input_dict = {
                 'frame_id': sample_idx,
                 'calib': calib,
                 'velodyne_path': velodyne_path,
-                'image_meta': image_meta,
+                # 'image_meta': image_meta,
             }
         else:
             img_shape = info['image']['image_shape']
@@ -424,7 +379,8 @@ class KittiDataset(BaseDataset):
                     input_dict['road_plane'] = road_plane
         if "points" in self.get_item_list:
             if self.point_format == 'lidar':
-                points = self.get_pcd(info['velodyne_path'], num_point_features)
+                # points = self.get_pcd(info['velodyne_path'], num_point_features)
+                points = self.image_reader.get_lidar_pcd(info['velodyne_path'])
             else:
                 points = self.image_reader.get_lidar(sample_idx)
             if self.fov_points_only:
