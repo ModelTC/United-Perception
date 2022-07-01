@@ -179,7 +179,7 @@ class KittiDataset(BaseDataset):
             calib = output['calib'][index]
             image_shape = output['image_shape'][index].cpu().numpy()
             single_pred_dict = self.generate_single_sample_dict(calib, image_shape, box_dict)
-            single_pred_dict['frame_id'] = frame_id
+            single_pred_dict['frame_id'] = int(frame_id)
             if velodyne_path is not None:
                 single_pred_dict['velodyne_path'] = velodyne_path[index]
 

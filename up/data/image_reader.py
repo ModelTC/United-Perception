@@ -149,7 +149,7 @@ class CephSystemCVReader(ImageReader):
         if 's3://' in filename:
             abs_filename = filename
         else:
-            abs_filename = os.path.join(root, filename)
+            abs_filename = os.path.join(root, filename.lstrip('/'))
 
         if abs_filename.startswith('s3://') and self.default_cluster:
             abs_filename = self.default_cluster + ':' + abs_filename
