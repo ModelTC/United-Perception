@@ -43,7 +43,7 @@ class Train(Subcommand):
         sub_parser.add_argument('--backend',
                                 dest='backend',
                                 type=str,
-                                default='linklink',
+                                default='dist',
                                 help='model backend')
         sub_parser.add_argument(
             '--nocudnn',

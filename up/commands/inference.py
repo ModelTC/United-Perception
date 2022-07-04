@@ -35,7 +35,7 @@ class Inference(Subcommand):
         sub_parser.add_argument('--backend',
                                 dest='backend',
                                 type=str,
-                                default='linklink',
+                                default='dist',
                                 help='model backend')
         sub_parser.add_argument('--ng', '--num_gpus_per_machine',
                                 dest='num_gpus_per_machine',
