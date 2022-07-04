@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# cmd example: sh train_ptq.sh 16 ToolChain
+# cmd example: sh train_ptq.sh 1 8 ToolChain
 
 UP=/path to up
 MQB=/path to mqbench # github mqbench commit id after 6c222c40d1a176df78bcbf4d334698185f7cd8d8
@@ -13,14 +13,10 @@ export PYTHONPATH=$UP:$PYTHONPATH
 export PYTHONPATH=$MQB:$PYTHONPATH
 
 
-g=$(($1<8?$1:8))
-spring.submit run -n$1 --ntasks-per-node=$g \
-                      -p $2 \
-                      --job-name=$jobname \
-                      --gpu \
-                      --cpus-per-task=2 \
-                      --quotatype=auto \
-"nohup python -u -m up train \
+srun -N$1 --gres=gpu:$2 -p $3 --job-name=$jobname --cpus-per-task=2 \
+nohup python -u -m up train \
+  --ng=$2 \
+  --launch=pytorch \
   --config=$cfg \
   --display=10 \
-  > train_log_ptq.txt 2>&1 &"
+  > train_log_ptq.txt 2>&1 &

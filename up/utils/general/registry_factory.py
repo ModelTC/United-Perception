@@ -83,6 +83,9 @@ DATA_BUILDER_REGISTY = Registry()
 
 MODEL_HELPER_REGISTRY = Registry()
 
+# deploy
+DEPLOY_REGISTRY = Registry()
+
 # distill
 MIMIC_REGISTRY = Registry()
 MIMIC_LOSS_REGISTRY = Registry()
