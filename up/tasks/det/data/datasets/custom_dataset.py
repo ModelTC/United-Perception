@@ -62,6 +62,7 @@ class CustomDataset(BaseDataset):
         self.metas = []
         self.aspect_ratios = []
         self.cross_cfg = cross_cfg
+        self.done_imgs = set()
         self.inference_cfg = inference_cfg
         if self.inference_cfg is not None:
             self._inference_init()

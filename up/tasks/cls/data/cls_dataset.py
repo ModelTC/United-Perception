@@ -151,6 +151,7 @@ class ClsDataset(BaseDataset):
         self.fraction = fraction
         self.multilabel = multilabel
         self._list_check()
+        self.done_imgs = set()
         self.inference_cfg = inference_cfg
         if self.inference_cfg is not None:
             self._inference_init()
