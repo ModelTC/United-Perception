@@ -28,6 +28,13 @@ from .global_flag import (
     FP16_FLAG
 )
 
+try:
+    import inspector
+except ImportError as e:
+    logger.warning(e)
+    logger.warning('If you need to SenseInspector to profile training, please install SenseInspector first.')
+    inspector = None
+
 
 __all__ = [
     'Hook',
@@ -1034,6 +1041,40 @@ class MemoryCheckpoint(Hook):
     def after_train(self):
         if self.enable:
             self.recover_forward()
+
+
+@HOOK_REGISTRY.register('sense_inspector')
+class SenseInspectorHook(Hook):
+    def __init__(self, runner, **kwargs):
+        super().__init__(runner)
+
+        self.mark_begining = False
+        inspector.init_most(
+            model=runner.model,
+            **kwargs
+        )
+
+    def before_data(self, cur_iter):
+        if not self.mark_begining:
+            inspector.mark.at_epoch_beginning()
+            self.mark_begining = True
+
+    def before_forward(self, cur_iter, input):
+        # data
+        inspector.mark.after_data_preparation()
+
+    def after_forward(self, cur_iter, output):
+        losses = [val for name, val in output.items() if name.find('loss') >= 0]
+        loss = sum(losses).item()
+        # from IPython import embed
+        # embed()
+        inspector.add_scalar('loss', loss, cur_iter)
+
+    def after_backward(self, cur_iter, loss):
+        inspector.mark.after_backward()
+
+    def after_update(self, cur_iter):
+        inspector.mark.at_iter_end()
 
 
 class ComposeHook(object):
