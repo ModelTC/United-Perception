@@ -61,7 +61,9 @@ class ClsWrapper(torch.nn.Module):
             else:
                 output['scores'] = self.softmax(output['scores'])
         if isinstance(output['scores'], list):
-            blob_names = ['scores_%d' % i for i in range(len(output['scores']))]
+            # blob_names = ['scores_%d' % i for i in range(len(output['scores']))]
+            blob_names = ['scores']
+            output['scores'] = torch.cat(output['scores'], dim=1)
         else:
             blob_names = ['scores']
         blob_datas = [output['scores']]

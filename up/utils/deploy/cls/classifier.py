@@ -126,6 +126,8 @@ def generate_parameter(path, packname, max_batch_size, net_info, cfg_params):
     param['is_rgb'] = cfg_params.get('is_rgb', True)
     param['type'] = cfg_params.get('type', 'UNKNOWN')
     param['save_all_label'] = cfg_params.get('save_all_label', True)
+    if cfg_params.get("support_labels", None):
+        param["support_labels"] = [cfg_params.get('support_labels')]
     scaffold.generate_json_file(os.path.join(path, 'parameters.json'), param)
     class_label = generate_category_param(cfg_params['class_label'])
     scaffold.generate_json_file(os.path.join(path, 'category_param.json'), class_label)
@@ -157,12 +159,8 @@ def generate(net, path, name, serialize, max_batch_size, cfg_params, version):
     net_info['data'] = net_graph.root[0].content.bottom[0]
     logger.info(net_graph.root[0].content.name)
     net_graph = graph.gen_graph(net)
-    if len(net_graph.leaf) > 1:
-        net_info['score'] = [net_graph.leaf[i].content.top[0] for i in range(len(net_graph.leaf))]
-        logger.info([net_graph.leaf[i].content.top for i in range(len(net_graph.leaf))])
-    else:
-        net_info['score'] = net_graph.leaf[0].content.top[0]
-        logger.info(net_graph.leaf[0].content.top)
+    net_info['score'] = net_graph.leaf[0].content.top[0]
+    logger.info(net_graph.leaf[0].content.top)
 
     # input shape
     assert len(net.input_dim) < 1 or len(net.input_shape) < 1
