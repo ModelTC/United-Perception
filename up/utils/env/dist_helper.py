@@ -89,7 +89,7 @@ def get_link_world_size(*args, **kwargs):
 
 
 def get_rank_from_env():
-    rank_cands = ['SLURM_PROCID', 'MV2_COMM_WORLD_RANK', 'PMI_RANK']
+    rank_cands = ['SLURM_PROCID', 'MV2_COMM_WORLD_RANK', 'OMPI_COMM_WORLD_RANK']
     for rank_name in rank_cands:
         if rank_name in os.environ:
             return int(os.environ[rank_name])
@@ -97,7 +97,7 @@ def get_rank_from_env():
 
 
 def get_world_size_from_env():
-    ws_cands = ['SLURM_NTASKS', 'MV2_COMM_WORLD_SIZE', 'PMI_SIZE']
+    ws_cands = ['SLURM_NTASKS', 'MV2_COMM_WORLD_SIZE', 'OMPI_COMM_WORLD_SIZE']
     for ws_name in ws_cands:
         if ws_name in os.environ:
             return int(os.environ[ws_name])
@@ -302,13 +302,13 @@ def dist_init_mpi(backend='nccl',
     os.environ['MASTER_PORT'] = str(port) or os.environ.get('MASTER_PORT', str(port))
 
     if rank is None:
-        local_id = os.environ.get('SLURM_LOCALID', os.environ.get('PMI_RANK', None))
+        local_id = os.environ.ge(os.environ.get('OMPI_COMM_WORLD_RANK', None))
         if local_id is None:
             raise RuntimeError("please indicate rank explicitly in dist_init method")
         else:
             rank = int(local_id)
     if world_size is None:
-        ntasks = os.environ.get('SLURM_NTASKS', os.environ.get('PMI_SIZE', None))
+        ntasks = os.environ.get(os.environ.get('OMPI_COMM_WORLD_SIZE', None))
         if ntasks is None:
             raise RuntimeError("please indicate world_size explicitly in dist_init method")
         else:
@@ -332,14 +332,8 @@ def setup_distributed_dist(port, launch):
 
 
 def setup_distributed_link(port, launch):
-    if 'SLURM_PROCID' in os.environ:    # slurm mode
-        device = get_rank() % torch.cuda.device_count()
-        torch.cuda.set_device(device)
-        link.initialize()
-    else:
-        link.initialize()
-        device = get_rank() % torch.cuda.device_count()
-        torch.cuda.set_device(device)
+    link.initialize()
+    torch.cuda.set_device(link.get_local_rank())
 
 
 def setup_distributed(port=33334, launch='slurm', backend='dist'):
