@@ -44,7 +44,7 @@ class ModelHelper(nn.Module):
                     kwargs = cfg_m['kwargs']
                     mtype = cfg_m['type']
                     sub_module = self.build(mtype, kwargs)
-                    module.update({name : sub_module})
+                    module.update({name: sub_module})
             else:
                 kwargs = cfg_subnet['kwargs']
                 mtype = cfg_subnet['type']
@@ -53,6 +53,8 @@ class ModelHelper(nn.Module):
                         prev_module = getattr(self, cfg_subnet['prev'])
                         if hasattr(prev_module, "get_outplanes"):
                             kwargs['inplanes'] = prev_module.get_outplanes()
+                        if hasattr(prev_module, "get_repeats"):
+                            kwargs["num_repeats"] = prev_module.get_repeats()
                 module = self.build(mtype, kwargs)
             if 'wrappers' in cfg_subnet:
                 for wrapper_cfg in cfg_subnet['wrappers']:
@@ -147,6 +149,7 @@ class ModelHelper(nn.Module):
         other_state_dict.pop('model_cfg', None)
         model_keys = self.state_dict().keys()
         other_keys = other_state_dict.keys()
+
         shared_keys, unexpected_keys, missing_keys \
             = self.check_keys(model_keys, other_keys, 'model')
 

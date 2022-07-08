@@ -20,7 +20,7 @@ class EMA(object):
         self.ema_state_dict = self.model.state_dict()
 
     def remove_prefix(self, state_dict, prefix):
-        f = lambda x: x.split(prefix, 1)[-1] if x.startswith(prefix) else x
+        def f(x): return x.split(prefix, 1)[-1] if x.startswith(prefix) else x # noqa
         return {f(key): value for key, value in state_dict.items()}
 
     def step(self, model, curr_step=None):
@@ -61,7 +61,7 @@ class ExpEMA(EMA):
         if curr_step is None:
             decay = self.decay
         else:
-            df = lambda x: self.decay * (1 - math.exp(-x / 2000))
+            def df(x): return self.decay * (1 - math.exp(-x / 2000)) # noqa
             decay = df(curr_step)
         with torch.no_grad():
             if hasattr(model, 'module'):

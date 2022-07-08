@@ -16,7 +16,14 @@ __all__ = ['IOULoss', 'ComposeLocLoss']
 
 
 @to_float32
-def iou_overlaps(b1, b2, eps=1e-9, return_giou=False, return_diou=False, return_ciou=False, return_eiou=False):
+def iou_overlaps(b1,
+                 b2,
+                 eps=1e-9,
+                 return_giou=False,
+                 return_diou=False,
+                 return_ciou=False,
+                 return_eiou=False,
+                 return_siou=False):
     """
     Arguments:
         - b1: dts, [n, >=4] (x1, y1, x2, y2, ...)
@@ -80,6 +87,31 @@ def iou_overlaps(b1, b2, eps=1e-9, return_giou=False, return_diou=False, return_
         eiou -= (wo2 / cw2 + ho2 / ch2)
         # imbalance
         iou_dict['eiou'] = eiou * iou
+    if return_siou:
+        # SIoU Loss https://arxiv.org/pdf/2205.12740.pdf
+        w1, h1 = b1[:, 2] - b1[:, 0] + ALIGNED_FLAG.offset, b1[:, 3] - b1[:, 1] + ALIGNED_FLAG.offset + eps
+        w2, h2 = b2[:, 2] - b2[:, 0] + ALIGNED_FLAG.offset, b2[:, 3] - b2[:, 1] + ALIGNED_FLAG.offset + eps
+        s_cw = (b2[:, 0] + b2[:, 2] - b1[:, 0] - b1[:, 2]) * 0.5
+        s_ch = (b2[:, 1] + b2[:, 3] - b1[:, 1] - b1[:, 3]) * 0.5
+        sigma = torch.pow(s_cw ** 2 + s_ch ** 2, 0.5)
+        sin_alpha = torch.abs(s_cw) / sigma
+        sin_beta = torch.abs(s_ch) / sigma
+        threshold = pow(2, 0.5) / 2
+        sin_thelta = torch.where(sin_alpha > threshold, sin_beta, sin_alpha)
+        angle_loss = torch.cos(torch.arcsin(sin_thelta) * 2 - math.pi / 2)
+        cw = torch.max(b1[:, 2], b2[:, 2]) - torch.min(b1[:, 0], b2[:, 0])  # convex width
+        ch = torch.max(b1[:, 3], b2[:, 3]) - torch.min(b1[:, 1], b2[:, 1])  # convex height
+        rho_x = (s_cw / cw) ** 2
+        rho_y = (s_ch / ch) ** 2
+        gamma = angle_loss - 2
+        distance_loss = 2 - torch.exp(gamma * rho_x) - torch.exp(gamma * rho_y)
+        omiga_w = torch.abs(w1 - w2) / torch.max(w1, w2)
+        omiga_h = torch.abs(h1 - h2) / torch.max(h1, h2)
+        shape_loss = torch.pow(1 - torch.exp(-1 * omiga_w), 4) + torch.pow(1 - torch.exp(-1 * omiga_h), 4)
+        siou = iou - 0.5 * (distance_loss + shape_loss)
+
+        iou_dict["siou"] = siou
+
     return iou_dict
 
 
@@ -90,7 +122,14 @@ def iou_loss(input, target, loss_type='iou', reduction='none', normalizer=None, 
       - target (FloatTensor) [N, 4] (x1, y1, x2, y2)
       - weights (FloatTensor) [N, 1]
     """
-    ious = iou_overlaps(input, target, return_giou=True, return_diou=True, return_ciou=True, return_eiou=True)
+    ious = iou_overlaps(input,
+                        target,
+                        return_giou=True,
+                        return_diou=True,
+                        return_ciou=True,
+                        return_eiou=True,
+                        return_siou=True)
+
     if loss_type == 'iou':
         loss = -ious['iou'].log()
     elif loss_type == 'linear_iou':
