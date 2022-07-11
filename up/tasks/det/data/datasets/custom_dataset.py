@@ -128,6 +128,18 @@ class CustomDataset(BaseDataset):
                 self._num_images_per_list += Counter([image_source])
         return self._num_images_per_list
 
+    @property
+    def images_per_class(self):
+        image_list_per_class = defaultdict(list)
+        for img_idx, img_anns in enumerate(self.metas):
+            labels = set([
+                ins['label']
+                for ins in img_anns['instances'] if not ins.get('is_ignored', False)
+            ])
+            for label in labels:
+                image_list_per_class[label].append(img_idx)
+        return image_list_per_class
+
     def take_a_look(self):
         self._num_images_per_class = Counter()
         self._num_instances_per_class = Counter()
@@ -138,6 +150,12 @@ class CustomDataset(BaseDataset):
             ])
             self._num_instances_per_class += instance_counter
             self._num_images_per_class += Counter(instance_counter.keys())
+
+    @property
+    def num_instances_per_class(self):
+        if not hasattr(self, '_num_instances_per_class'):
+            self.take_a_look()
+        return self._num_instances_per_class
 
     @property
     def num_images_per_class(self):
