@@ -377,3 +377,99 @@ class DistributedListAwareBalanceSampler(Sampler):
 
     def set_epoch(self, epoch):
         self.epoch = epoch
+
+
+@SAMPLER_REGISTRY.register('class_balance')
+class DistributedClassAwareBalanceSampler(Sampler):
+    """Sampler that try to get all the class uniformly.
+    Suitable for long-tail distribution datasets. `Reference <https://arxiv.org/abs/1512.05830>`_
+
+        .. note::
+
+            Dataset is assumed to be of constant size.
+    """
+
+    def __init__(self, dataset, num_replicas=None, rank=None):
+        """
+        Arguments:
+            - dataset (obj:`Dataset`): dataset used for sampling.
+            - num_replicas (obj:`int`): number of processes participating in distributed training, optional.
+            - rank (obj:`int`): rank of the current process within num_replicas, optional.
+        """
+        if num_replicas is None:
+            num_replicas = get_world_size()
+        if rank is None:
+            rank = get_rank()
+
+        self.dataset = dataset
+        self.num_replicas = num_replicas
+        self.rank = rank
+        self.epoch = 0
+        self.num_samples = int(math.ceil(len(self.dataset) * 1.0 / self.num_replicas))
+        self.total_size = self.num_samples * self.num_replicas
+
+        # prepare for class-aware balance
+        # self._perm = [deque() for _ in range(self.dataset.num_classes)]
+        self._class_to_image = self.dataset.images_per_class
+        self._perm = {cls_id: deque(img_list) for cls_id, img_list in self._class_to_image.items()}
+        self._cur = self.dataset.num_images_per_class
+        logger.info('Build Class-Aware Balance Sampler')
+        for idx, cls_to_img in sorted(self._class_to_image.items()):
+            logger.info('class {} has {} images'.format(idx, len(self._class_to_image[idx])))
+        self._shuffle_classes_perm(class_idx=None)
+
+    def _get_next_class(self):
+        while(True):
+            class_idx = np.random.randint(low=1, high=self.dataset.num_classes)
+            class_idx = int(class_idx)
+            class_size = len(self._perm[class_idx])
+            if class_size <= 0:
+                continue
+            else:
+                return class_idx, class_size
+
+    def _shuffle_classes_perm(self, class_idx=None):
+        # Shuffle for all classes
+        if class_idx is None:
+            class_idx = [i for i in range(1, self.dataset.num_classes)]
+        # Shuffle for special class
+        elif not isinstance(class_idx, list):
+            class_idx = [class_idx]
+        # Shuffle
+        for i in class_idx:
+            self._perm[i] = np.random.permutation(np.asarray(self._class_to_image[i]))
+            self._perm[i] = deque(self._perm[i])
+            self._cur[i] = 0
+
+    def __iter__(self):
+        # deterministically shuffle based on epoch
+        # g = torch.Generator()
+        # g.manual_seed(self.epoch)
+
+        # generate a perm based using class-aware balance for this epoch
+        indices = []
+        logger.info('Prepare for class-aware balance')
+        for idx in range(self.total_size):
+            class_idx, class_size = self._get_next_class()
+            indices.append(self._perm[class_idx][0])
+            self._perm[class_idx].rotate(-1)
+            self._cur[class_idx] += 1
+            if self._cur[class_idx] >= class_size:
+                self._shuffle_classes_perm(class_idx=class_idx)
+
+        indices = np.random.permutation(np.asarray(indices))
+        indices = list(indices)
+        assert len(indices) == self.total_size
+
+        # subsample
+        offset = self.num_samples * self.rank
+        indices = indices[offset:offset + self.num_samples]
+        assert len(indices) == self.num_samples
+
+        return iter(indices)
+
+    def __len__(self):
+        return self.num_samples
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
