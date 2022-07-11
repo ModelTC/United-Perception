@@ -39,6 +39,8 @@ def generate_config(train_cfg):
     kestrel_param['pixel_stds'] = train_cfg['to_kestrel'].get('pixel_stds', [58.395, 57.12, 57.375])
     kestrel_param['is_rgb'] = train_cfg['to_kestrel'].get('is_rgb', True)
     kestrel_param['save_all_label'] = train_cfg['to_kestrel'].get('save_all_label', True)
+    if train_cfg['to_kestrel'].get('support_labels', None):
+        kestrel_param['support_labels'] = [train_cfg['to_kestrel'].get('support_labels')]
     kestrel_param['type'] = train_cfg['to_kestrel'].get('type', 'ImageNet')
 
     if train_cfg.get('to_kestrel') and train_cfg['to_kestrel'].get('class_label'):
