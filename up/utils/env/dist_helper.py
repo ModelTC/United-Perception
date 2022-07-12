@@ -520,7 +520,8 @@ def gather_pk(data, dst=0, group=None):
 def finalize():
     try:
         if DIST_BACKEND.backend == 'dist':
-            dist.destroy_process_group()
+            if get_world_size() > 1:
+                dist.destroy_process_group()
         elif DIST_BACKEND.backend == 'linklink':
             link.finalize()
         else:
