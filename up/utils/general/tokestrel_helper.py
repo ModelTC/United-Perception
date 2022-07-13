@@ -105,7 +105,9 @@ class KpToKestrel(object):
         prototxt = '{}.prototxt'.format(prefix)
 
         config = copy.deepcopy(self.config)
+        plugin = config['to_kestrel']['plugin']
         model_name = config['to_kestrel'].get('model_name', 'model')
+        resize_hw = config['to_kestrel'].get('resize_hw', '')
 
         to_kestrel_yml = 'temp_to_kestrel.yml'
         version = config['to_kestrel'].get('version', "1.0.0")
@@ -115,13 +117,15 @@ class KpToKestrel(object):
         if self.save_to is None:
             self.save_to = config['to_kestrel']['save_to']
 
-        cmd = 'python -m spring.nart.tools.kestrel.raven {} {} -v {} -c {} -n {} -p {}'.format(
-            prototxt, caffemodel, version, to_kestrel_yml, model_name, self.save_to)
-        if self.serialize:
-            logger.info('spring.nart.tools.kestrel.raven not support serialization')
-            raise NotImplementedError
-            cmd += ' -s'
-        os.system(cmd)
+        ks_processor = KS_PROCESSOR_REGISTRY[plugin](prototxt,
+                                                     caffemodel, b=1,
+                                                     n=model_name, v=version,
+                                                     p=self.save_to,
+                                                     k=to_kestrel_yml,
+                                                     i=self.input_channel,
+                                                     s=self.serialize,
+                                                     resize_hw=resize_hw)
+        ks_processor.process()
 
         logger.info('save kestrel model to: {}'.format(self.save_to))
         return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
