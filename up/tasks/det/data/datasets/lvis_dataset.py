@@ -84,6 +84,7 @@ class LvisV1Dataset(LvisDataset):
             if len(meta_annos) == 1:
                 ann = meta_annos[0]
                 if ann['bbox'][2] <= min_size or ann['bbox'][3] <= min_size:
+                    del self.aspect_ratios[self.img_ids.index(img_id)]
                     self.img_ids.remove(img_id)
 
     def get_filename(self, meta_img):
