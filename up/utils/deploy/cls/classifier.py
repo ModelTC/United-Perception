@@ -129,7 +129,7 @@ def generate_parameter(path, packname, max_batch_size, net_info, cfg_params):
     param['type'] = cfg_params.get('type', 'UNKNOWN')
     param['save_all_label'] = cfg_params.get('save_all_label', True)
     if cfg_params.get("support_labels", None):
-        param["support_labels"] = [cfg_params.get('support_labels')]
+        param["support_labels"] = cfg_params.get('support_labels')
     scaffold.generate_json_file(os.path.join(path, 'parameters.json'), param)
     class_label = generate_category_param(cfg_params['class_label'])
     scaffold.generate_json_file(os.path.join(path, 'category_param.json'), class_label)
