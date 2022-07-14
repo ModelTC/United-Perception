@@ -46,17 +46,6 @@ from .cswin import (CSWin_64_12211_tiny_224,  # noqa: F401
                     CSWin_96_24322_base_384,
                     CSWin_144_24322_large_384)
 
-from .mb import (MB2_160,  # noqa: F401
-                 MB2,
-                 MB3,
-                 MB4,
-                 MB6,
-                 MB7_new,
-                 MB7_ckpt,
-                 MB9,
-                 MB9_ckpt,
-                 MB12_ckpt)
-
 from .moco_vit import (moco_vit_small,  # noqa: F401
                        moco_vit_base,
                        moco_vit_conv_small,
