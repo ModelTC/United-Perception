@@ -7,7 +7,7 @@ import sys
 # Import from third library
 import torch.multiprocessing as mp
 
-from up.utils.env.dist_helper import setup_distributed, finalize
+from up.utils.env.dist_helper import setup_distributed, finalize, gpu_check
 from up.utils.general.yaml_loader import load_yaml  # IncludeLoader
 from up.utils.env.launch import launch
 from up.utils.general.user_analysis_helper import send_info
@@ -102,12 +102,17 @@ class Train(Subcommand):
                                 help='options to replace yaml config',
                                 default=None,
                                 nargs=argparse.REMAINDER)
-
+        sub_parser.add_argument('--test_gpu',
+                                dest='test_gpu',
+                                action='store_true',
+                                help='test if gpus work properly before training')
         sub_parser.set_defaults(run=_main)
         return sub_parser
 
 
 def main(args):
+    if args.test_gpu:
+        gpu_check()
     cfg = load_yaml(args.config, args.cfg_type)
     cfg['args'] = {
         'ddp': args.backend == 'dist',

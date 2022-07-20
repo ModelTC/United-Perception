@@ -1,6 +1,7 @@
 # Standard Library
 import os
 import sys
+import datetime
 import functools
 
 # Import from third library
@@ -593,3 +594,51 @@ def all_reduce_norm(module):
     states = get_async_norm_states(module)
     states = all_reduce_dict(states, op="mean")
     module.load_state_dict(states, strict=False)
+
+
+def run_shell(cmd):
+    with os.popen(cmd, 'r') as fin:
+        text = fin.read()
+    return text
+
+
+def gpu_check():
+    import logging
+    logger = logging.getLogger('global')
+
+    try:
+        local_rank = get_local_rank()
+    except RuntimeError:
+        logger.warning('not using linklink, skip gpu check')
+        return True
+    logger.info('Prepare for gpu check')
+    succ_flag = True
+    if local_rank == 0:
+        nodename = run_shell('hostname')
+        if not os.path.exists('/mnt/lustre/share/gpu_burn'):
+            logger.warning('gpu-burn tool not found, skip gpu check, please contact @yufengwei or @wangyiru')
+            return
+        test_info = run_shell(
+            'bash -c "cd /mnt/lustre/share/gpu_burn; CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 ./gpu_burn 60"')
+
+        nodename = nodename.replace('\n', '')
+        test_result = nodename
+        err_idx = -1
+        for idx, line in enumerate(test_info.split('\n')):
+            if "OK" in line:
+                test_result += line
+            elif "FAULTY" in line:
+                test_result += line
+                err_idx = idx
+                succ_flag = False
+        print(test_result)
+        print(nodename + "\tPass = " + str(succ_flag))
+        if not succ_flag:
+            user = run_shell('echo $USER').strip()
+            f = open('/mnt/lustre/%s/gpu_err.txt' % user, 'a')
+            f.write('%s %s GPU%d error\n' % (datetime.datetime.now().strftime('%Y/%m/%d %H:%M:%S'), nodename, err_idx))
+            f.close()
+            assert succ_flag, nodename + " GPU test Failed! Contact DCP for help."
+    barrier()
+    logger.info('all gpu check passed')
+    return
