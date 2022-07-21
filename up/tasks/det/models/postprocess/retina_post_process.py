@@ -101,22 +101,12 @@ class BaseDetPostProcess(nn.Module):
                 b, _, h, w = preds[0].shape
                 k = self.num_anchors * h * w
 
-                if len(preds) == 2:
-                    cls, loc = preds
-                    cls = cls.view(b, -1, self.num_anchors, h, w)
-                    cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
-                    loc = loc.view(b, -1, self.num_anchors, 4, h, w)
-                    loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
-                    preds = [cls, loc]
-                elif len(preds) == 3:
-                    cls, loc, iou = preds
-                    cls = cls.view(b, -1, self.num_anchors, h, w)
-                    cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
-                    loc = loc.view(b, -1, self.num_anchors, 4, h, w)
-                    loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
-                    iou = iou.view(b, -1, self.num_anchors, h, w)
-                    iou = iou.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
-                    preds = [cls, loc, iou]
+                cls, loc = preds
+                cls = cls.view(b, -1, self.num_anchors, h, w)
+                cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
+                loc = loc.view(b, -1, self.num_anchors, 4, h, w)
+                loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
+                preds = [cls, loc]
 
                 mlvl_permuted_preds.append(preds)
                 mlvl_shapes.append((h, w, k))
@@ -276,6 +266,38 @@ class IOUPostProcess(BaseDetPostProcess):
             iou_pred = apply_class_activation(preds[2], 'sigmoid')
             mlvl_activated_preds.append((cls_pred * iou_pred, *preds[1:]))
         return mlvl_activated_preds
+
+    def permute_preds(self, mlvl_preds):
+        if not self.class_first:
+            """Permute preds from [B, A*C, H, W] to [B, H*W*A, C] """
+            mlvl_permuted_preds, mlvl_shapes = [], []
+            for lvl_idx, preds in enumerate(mlvl_preds):
+                b, _, h, w = preds[0].shape
+                k = self.num_anchors * h * w
+                preds = [p.permute(0, 2, 3, 1).contiguous().view(b, k, -1) for p in preds]
+                mlvl_permuted_preds.append(preds)
+                mlvl_shapes.append((h, w, k))
+            return mlvl_permuted_preds, mlvl_shapes
+        else:
+            """Permute preds from [B, C*A, H, W] to [B, H*W*A, C] """
+            """Permute preds from [B, C*A*4, H, W] to [B, H*W*A, C*4]"""
+            mlvl_permuted_preds, mlvl_shapes = [], []
+            for lvl_idx, preds in enumerate(mlvl_preds):
+                b, _, h, w = preds[0].shape
+                k = self.num_anchors * h * w
+
+                cls, loc, iou = preds
+                cls = cls.view(b, -1, self.num_anchors, h, w)
+                cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
+                loc = loc.view(b, -1, self.num_anchors, 4, h, w)
+                loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
+                iou = iou.view(b, -1, self.num_anchors, h, w)
+                iou = iou.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
+                preds = [cls, loc, iou]
+
+                mlvl_permuted_preds.append(preds)
+                mlvl_shapes.append((h, w, k))
+            return mlvl_permuted_preds, mlvl_shapes
 
     def export(self, mlvl_preds):
         output = {}
