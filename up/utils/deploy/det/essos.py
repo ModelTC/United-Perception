@@ -80,7 +80,8 @@ def generate_config(train_cfg):
 def is_score_branch(node):
     typ = node.content.type
     parent_typ = '' if len(node.prev) != 1 else node.prev[0].content.type
-    return typ == 'Sigmoid' or typ == 'Softmax' or parent_typ == 'Sigmoid' or parent_typ == 'Softmax'
+    return typ == 'Sigmoid' or typ == 'Softmax' or parent_typ == 'Sigmoid' or parent_typ == 'Softmax' \
+        or typ == 'Eltwise'
 
 
 def process_net(prototxt, model, anchor_num, cls_channel_num, input_h, input_w, input_channel=3):

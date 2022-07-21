@@ -101,12 +101,22 @@ class BaseDetPostProcess(nn.Module):
                 b, _, h, w = preds[0].shape
                 k = self.num_anchors * h * w
 
-                cls, loc = preds
-                cls = cls.view(b, -1, self.num_anchors, h, w)
-                cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
-                loc = loc.view(b, -1, self.num_anchors, 4, h, w)
-                loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
-                preds = [cls, loc]
+                if len(preds) == 2:
+                    cls, loc = preds
+                    cls = cls.view(b, -1, self.num_anchors, h, w)
+                    cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
+                    loc = loc.view(b, -1, self.num_anchors, 4, h, w)
+                    loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
+                    preds = [cls, loc]
+                elif len(preds) == 3:
+                    cls, loc, iou = preds
+                    cls = cls.view(b, -1, self.num_anchors, h, w)
+                    cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
+                    loc = loc.view(b, -1, self.num_anchors, 4, h, w)
+                    loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
+                    iou = iou.view(b, -1, self.num_anchors, h, w)
+                    iou = iou.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
+                    preds = [cls, loc, iou]
 
                 mlvl_permuted_preds.append(preds)
                 mlvl_shapes.append((h, w, k))
@@ -273,8 +283,9 @@ class IOUPostProcess(BaseDetPostProcess):
             cls_pred, loc_pred, iou_pred = preds[:]
             if self.class_activation == 'sigmoid':
                 _, c, h, w = cls_pred.shape
+                num_classes = int(c / self.num_anchors)
                 iou_pred = F.sigmoid(iou_pred.view(-1, 1, h, w)).view(-1, self.num_anchors * 1, h, w)
-                cls_pred = cls_pred.sigmoid() * torch.cat([iou_pred for _ in range(c)], dim=1)
+                cls_pred = cls_pred.sigmoid() * torch.cat([iou_pred for _ in range(num_classes)], dim=1)
             else:
                 raise NotImplementedError
             output[self.prefix + '.blobs.cls' + str(idx)] = cls_pred
