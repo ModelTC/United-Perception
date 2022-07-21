@@ -168,7 +168,7 @@ def parse_dataset_param(dataset_cfg):
     pixel_means = getdotattr(pixel_cfg, 'kwargs.mean')
     pixel_stds = getdotattr(pixel_cfg, 'kwargs.std')
     color_mode = getdotattr(kwargs_cfg, 'image_reader.kwargs.color_mode')
-    assert color_mode in ['RGB', 'GRAY']
+    # assert color_mode in ['RGB', 'GRAY']
 
     dataset_param = dict()
     dataset_param['short_scale'] = short_scale
