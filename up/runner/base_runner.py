@@ -365,6 +365,7 @@ class BaseRunner(object):
             self.save(auto_save='latest', lns=False)
 
     def train(self):
+        self._hooks('before_train')
         self.model.cuda().train()
         for iter_idx in range(self.start_iter, self.max_iter):
             batch = self.get_batch('train')
@@ -390,6 +391,7 @@ class BaseRunner(object):
                 if self.is_save(iter_idx):
                     self.save()
             self.lr_scheduler.step()
+        self._hooks('after_train')
 
     @torch.no_grad()
     def _inference(self):

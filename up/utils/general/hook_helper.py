@@ -96,6 +96,16 @@ class Hook(object):
         """
         pass
 
+    def before_train(self):
+        """ Make sense before train
+        """
+        pass
+
+    def after_train(self):
+        """ Make sense after train
+        """
+        pass
+
     def before_allreduce(self, cur_iter):
         pass
 
@@ -885,6 +895,145 @@ class MemoryAnalysis(Hook):
             print(f"node memory info after iter {cur_iter}", node_info)
             for k, v in node_info.items():
                 self.summary_writer.add_scalar('val/' + k, v, cur_iter)
+
+
+@HOOK_REGISTRY.register('memory_empty')
+class GPUMemoryEmpty(Hook):
+    """Log time, loss, etc.
+    """
+
+    def __init__(self, runner, freq=100):
+        super(GPUMemoryEmpty, self).__init__(runner)
+        self.freq = freq
+
+    def after_update(self, cur_iter):
+        if cur_iter % self.freq == 0 and cur_iter > 0:
+            torch.cuda.empty_cache()
+            torch.cuda.memory.reset_peak_memory_stats()
+
+
+@HOOK_REGISTRY.register('memory_checkpoint')
+class MemoryCheckpoint(Hook):
+    """Log time, loss, etc.
+    """
+
+    def __init__(self,
+                 runner,
+                 enable=True,
+                 checkpoint_patterns={'backbone': {"patterns_mode": "level",
+                                      "level": {'name': 'default', "num": "all"}}},
+                 dc_cfg=None):
+        super(MemoryCheckpoint, self).__init__(runner)
+        self.enable = enable
+        self.checkpoint_patterns = checkpoint_patterns
+        self.checkpoint_set = set()
+        self.dc_cfg = dc_cfg
+        self.exclude_node = set()
+        self.share_weight_node = {}
+
+    def cast_forward(self):
+        from .dc_manager import DynamicCheckpointManager, dc_cast_forward, common_cast_forward
+        if self.dc_cfg is not None:
+            self.dc_manager = DynamicCheckpointManager(self.dc_cfg.get("warmup_iters", 30),
+                                                       self.checkpoint_set,
+                                                       self.dc_cfg.get('max_memory', 8),
+                                                       self.dc_cfg.get('debug_freq', -1),
+                                                       self.dc_cfg.get('strategy', 'memory_time'),
+                                                       self.share_weight_node)
+        for name, m in self.runner_ref().model.named_modules():
+            if name in self.checkpoint_set:
+                if self.dc_cfg is not None:
+                    dc_cast_forward(m, name, self.dc_manager)
+                else:
+                    common_cast_forward(m)
+
+    def recover_forward(self):
+        for name, m in self.runner_ref().model.named_modules():
+            if name in self.checkpoint_set:
+                if hasattr(m, "old_forward"):
+                    m.forward = m.old_forward
+
+    def before_forward(self, cur_iter, input):
+        if self.enable:
+            input['image'].requires_grad = True
+            if self.dc_cfg is not None:
+                image_shape = input['image'].shape
+                self.dc_manager.input_size = image_shape[-2] * image_shape[-1]
+                self.dc_manager.before_forward()
+
+    def after_update(self, cur_iter):
+        if self.enable and self.dc_cfg is not None:
+            self.dc_manager.after_update()
+
+    def is_leaf_node(self, cur_node, next_nodes):
+        is_leaf = True
+        for next_node in next_nodes:
+            if next_node.startswith(cur_node):
+                if next_node.count('.') > cur_node.count('.'):
+                    is_leaf = False
+        return is_leaf
+
+    def get_bfs_checkpoint_node(self):
+        checkpoint_keys = self.checkpoint_patterns.keys()
+        for name, m in self.runner_ref().model.named_modules():
+            if hasattr(m, "inplace") and m.inplace:
+                self.exclude_node.add(name)
+            for ck in checkpoint_keys:
+                if name == ck or name.startswith(ck + '.'):
+                    level = name.count('.')
+                    max_level = max(self.checkpoint_patterns[ck].get('max_level', 0), level)
+                    if level not in self.checkpoint_patterns[ck]:
+                        self.checkpoint_patterns[ck][level] = []
+                    self.checkpoint_patterns[ck][level].append(name)
+                    self.checkpoint_patterns[ck]['max_level'] = max_level
+
+    def add_leaf_node(self):
+        for _, v in self.checkpoint_patterns.items():
+            if v['patterns_mode'] == 'level':
+                for level in range(1, v['max_level'] - 1):
+                    for cur_node in v[level]:
+                        if self.is_leaf_node(cur_node, v[level + 1]):
+                            v[level + 1].append(cur_node)
+
+    def _parse_node(self):
+        for _, v in self.checkpoint_patterns.items():
+            if v['patterns_mode'] == 'level':
+                if v['level']['num'] == 'default':
+                    level = v['max_level'] // 2
+                else:
+                    level = v['level']['num']
+                assert level > 0, "level must > 0"
+                num = len(v[level])
+                for i in v[level][:num]:
+                    self.checkpoint_set.add(i)
+                    if v.get('share_weight_num', -1) > 0:
+                        self.share_weight_node[i] = v['share_weight_num']
+            elif v['patterns_mode'] == 'name':
+                names = set(v.get('name_list', []))
+                self.checkpoint_set = names
+            else:
+                logger.warning(f"patterns_mode {v['patterns_mode']} is not supported")
+        for item in self.exclude_node:
+            if item in self.checkpoint_set:
+                self.checkpoint_set.remove(item)
+        logger.info("checkpoint module name")
+        logger.info(self.checkpoint_set)
+        logger.info("share weight node: (name, share_num)")
+        logger.info(self.share_weight_node)
+
+    def parse_checkpoint_node(self):
+        self.get_bfs_checkpoint_node()
+        self.add_leaf_node()
+        self._parse_node()
+
+    def before_train(self):
+        if self.enable:
+            self.parse_checkpoint_node()
+            self.cast_forward()
+
+    def after_train(self):
+        if self.enable:
+            self.recover_forward()
 
 
 class ComposeHook(object):
