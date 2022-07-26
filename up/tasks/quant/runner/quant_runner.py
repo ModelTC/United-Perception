@@ -166,21 +166,23 @@ class QuantRunner(BaseRunner):
         fake_quant.bitwidth = bit_width
 
     def calibrate(self):
+        import torch
         logger.info("calibrate model")
         self.model.eval().cuda()
-        enable_calibration_woquantization(self.model, quantizer_type='act_fake_quant')
-        for _ in range(self.config['quant']['cali_batch_size']):
-            batch = self.get_batch('train')
-            self.model(batch)
-        enable_calibration_woquantization(self.model, quantizer_type='weight_fake_quant')
-        for _ in range(1):
-            batch = self.get_batch('train')
-            self.model(batch)
-        enable_quantization(self.model)
-        self.sync_quant_params()
-        logger.info('eval the calib model')
-        self.eval_quant()
-        self.save_calib()
+        with torch.no_grad():
+            enable_calibration_woquantization(self.model, quantizer_type='act_fake_quant')
+            for _ in range(self.config['quant']['cali_batch_size']):
+                batch = self.get_batch('train')
+                self.model(batch)
+            enable_calibration_woquantization(self.model, quantizer_type='weight_fake_quant')
+            for _ in range(1):
+                batch = self.get_batch('train')
+                self.model(batch)
+            enable_quantization(self.model)
+            self.sync_quant_params()
+            logger.info('eval the calib model')
+            self.eval_quant()
+            self.save_calib()
 
     def sync_quant_params(self):
         logger.info('start quant params reduce')
