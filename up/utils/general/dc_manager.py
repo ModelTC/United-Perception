@@ -412,6 +412,8 @@ class DynamicCheckpointManager(object):
         round_input_size = self.round_input(self.input_size)
         predict_model_round_memory = self.model_memory_predict(round_input_size) / (1024 ** 2)
         logger.info("================= schedule begin =================")
+        input_size = np.sqrt(self.input_size)
+        logger.info(f"input size (sqrt): {input_size:.2f}")
         logger.info(f"memory threshold: {self.max_memory / (1024 ** 2):.2f} MB")
         logger.info(f"current memory usage: {torch.cuda.memory_allocated() / (1024 ** 2):.2f} MB")
         logger.info(f"predict model memory: {predict_model_memory:.2f} MB")
