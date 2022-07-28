@@ -928,7 +928,7 @@ class MemoryCheckpoint(Hook):
                  runner,
                  enable=True,
                  checkpoint_patterns={'backbone': {"patterns_mode": "level",
-                                      "level": {'name': 'default', "num": "all"}}},
+                                      "level": {'num': 'default'}}},
                  dc_cfg=None):
         super(MemoryCheckpoint, self).__init__(runner)
         self.enable = enable
