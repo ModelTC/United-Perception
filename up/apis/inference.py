@@ -95,9 +95,14 @@ class BaseInference(object):
         self.image_reader = IMAGE_READER_REGISTRY.build(dataset_cfg['image_reader'])
 
         self.transformer = build_transformer(dataset_cfg['transformer'])
-        pad_type = data_cfg['dataloader']['kwargs'].get('pad_type', 'batch_pad')
-        pad_value = data_cfg['dataloader']['kwargs'].get('pad_value', 0)
-        alignment = data_cfg['dataloader']['kwargs'].get('alignment', 1)
+        try:
+            pad_type = data_cfg['dataloader']['kwargs'].get('pad_type', 'batch_pad')
+            pad_value = data_cfg['dataloader']['kwargs'].get('pad_value', 0)
+            alignment = data_cfg['dataloader']['kwargs'].get('alignment', 1)
+        except BaseException:
+            pad_type = data_cfg['test']['dataloader']['kwargs'].get('pad_type', 'batch_pad')
+            pad_value = data_cfg['test']['dataloader']['kwargs'].get('pad_value', 0)
+            alignment = data_cfg['test']['dataloader']['kwargs'].get('alignment', 1)
         self.batch_pad = BATCHING_REGISTRY.get(pad_type)(alignment, pad_value)
 
     def iterate_image(self, image_dir):
