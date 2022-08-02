@@ -138,13 +138,10 @@ def generate_config(train_cfg):
 
     for mname in ['backbone', 'roi_head', 'bbox_head']:
         assert hasattr(model, mname)
-    # for mname in ['neck']:
-    #     assert not hasattr(model, mname)
+    for mname in ['neck']:
+        assert not hasattr(model, mname)
 
-    if hasattr(model, 'neck'):
-        strides = model.neck.get_outstrides()
-    else:
-        strides = model.backbone.get_outstrides()
+    strides = model.backbone.get_outstrides()
 
     if torch.is_tensor(strides):
         strides = strides.tolist()
