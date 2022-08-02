@@ -162,11 +162,15 @@ net:
   kwargs:
     out_layers: [2, 3, 4]
     out_strides: [8, 16, 32]
+    normalize: {'type': 'solo_bn'}
+    act_fn: {'type': 'ReLU'}
 - name: neck
   prev: backbone
   type: RepPANNeck
   kwargs:
     out_strides: [8, 16, 32]
+    normalize: {'type': 'solo_bn'}
+    act_fn: {'type': 'ReLU'}
 - name: roi_head
   prev: neck
   type: Effidehead
@@ -175,6 +179,8 @@ net:
     anchors: &dense_points 1
     num_layers: 3
     class_activation: 'sigmoid'
+    normalize: {'type': 'solo_bn'}
+    act_fn: {'type': 'Silu'}
 - name: yolox_post
   prev: roi_head
   type: yolox_post

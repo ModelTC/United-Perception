@@ -20,13 +20,15 @@ class Effidehead(nn.Module):
                  anchors=1,
                  num_layers=3,
                  class_activation='sigmoid',
-                 inplace=True):  # detection layer
+                 inplace=True,
+                 normalize={'type': 'solo_bn'},
+                 act_fn={'type': 'Silu'}):  # detection layer
         super().__init__()
 
         assert inplanes is not None
         self.out_channles = inplanes
         num_classes = {'sigmoid': -1, 'softmax': 0}[class_activation] + num_classes
-        head_layers = build_effidehead_layer(self.out_channles, anchors, num_classes)
+        head_layers = build_effidehead_layer(self.out_channles, anchors, num_classes, normalize, act_fn)
         self.nc = num_classes  # number of classes
         self.no = num_classes + 5  # number of outputs per anchor
         self.nl = num_layers  # number of detection layers
@@ -93,28 +95,34 @@ class Effidehead(nn.Module):
         return output
 
 
-def build_effidehead_layer(channels_list, num_anchors, num_classes):
+def build_effidehead_layer(channels_list, num_anchors, num_classes, normalize, act_fn):
     head_layers = nn.Sequential(
         # stem0
         Conv(
             in_channels=channels_list[6],
             out_channels=channels_list[6],
             kernel_size=1,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         ),
         # cls_conv0
         Conv(
             in_channels=channels_list[6],
             out_channels=channels_list[6],
             kernel_size=3,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         ),
         # reg_conv0
         Conv(
             in_channels=channels_list[6],
             out_channels=channels_list[6],
             kernel_size=3,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         ),
         # cls_pred0
         nn.Conv2d(
@@ -139,21 +147,27 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes):
             in_channels=channels_list[8],
             out_channels=channels_list[8],
             kernel_size=1,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         ),
         # cls_conv1
         Conv(
             in_channels=channels_list[8],
             out_channels=channels_list[8],
             kernel_size=3,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         ),
         # reg_conv1
         Conv(
             in_channels=channels_list[8],
             out_channels=channels_list[8],
             kernel_size=3,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         ),
         # cls_pred1
         nn.Conv2d(
@@ -185,14 +199,18 @@ def build_effidehead_layer(channels_list, num_anchors, num_classes):
             in_channels=channels_list[10],
             out_channels=channels_list[10],
             kernel_size=3,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         ),
         # reg_conv2
         Conv(
             in_channels=channels_list[10],
             out_channels=channels_list[10],
             kernel_size=3,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         ),
         # cls_pred2
         nn.Conv2d(

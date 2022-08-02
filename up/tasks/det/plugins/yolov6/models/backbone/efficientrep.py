@@ -22,7 +22,9 @@ class EfficientRep(nn.Module):
         inplanes=None,
         num_repeats=None,
         out_layers=[2, 3, 4],
-        out_strides=[8, 16, 32]
+        out_strides=[8, 16, 32],
+        normalize={'type': 'solo_bn'},
+        act_fn={'type': 'ReLU'}
     ):
         super().__init__()
 
@@ -38,7 +40,9 @@ class EfficientRep(nn.Module):
             in_channels=in_channels,
             out_channels=self.out_channels[0],
             kernel_size=3,
-            stride=2
+            stride=2,
+            normalize=normalize,
+            act_fn=act_fn
         )
 
         self.ERBlock_2 = nn.Sequential(
@@ -46,12 +50,16 @@ class EfficientRep(nn.Module):
                 in_channels=self.out_channels[0],
                 out_channels=self.out_channels[1],
                 kernel_size=3,
-                stride=2
+                stride=2,
+                normalize=normalize,
+                act_fn=act_fn
             ),
             RepBlock(
                 in_channels=self.out_channels[1],
                 out_channels=self.out_channels[1],
-                n=num_repeats[1]
+                n=num_repeats[1],
+                normalize=normalize,
+                act_fn=act_fn
             )
         )
 
@@ -60,12 +68,16 @@ class EfficientRep(nn.Module):
                 in_channels=self.out_channels[1],
                 out_channels=self.out_channels[2],
                 kernel_size=3,
-                stride=2
+                stride=2,
+                normalize=normalize,
+                act_fn=act_fn
             ),
             RepBlock(
                 in_channels=self.out_channels[2],
                 out_channels=self.out_channels[2],
-                n=num_repeats[2]
+                n=num_repeats[2],
+                normalize=normalize,
+                act_fn=act_fn
             )
         )
 
@@ -74,12 +86,16 @@ class EfficientRep(nn.Module):
                 in_channels=self.out_channels[2],
                 out_channels=self.out_channels[3],
                 kernel_size=3,
-                stride=2
+                stride=2,
+                normalize=normalize,
+                act_fn=act_fn
             ),
             RepBlock(
                 in_channels=self.out_channels[3],
                 out_channels=self.out_channels[3],
-                n=num_repeats[3]
+                n=num_repeats[3],
+                normalize=normalize,
+                act_fn=act_fn
             )
         )
 
@@ -89,11 +105,15 @@ class EfficientRep(nn.Module):
                 out_channels=self.out_channels[4],
                 kernel_size=3,
                 stride=2,
+                normalize=normalize,
+                act_fn=act_fn
             ),
             RepBlock(
                 in_channels=self.out_channels[4],
                 out_channels=self.out_channels[4],
-                n=num_repeats[4]
+                n=num_repeats[4],
+                normalize=normalize,
+                act_fn=act_fn
             ),
             SimSPPF(
                 in_channels=self.out_channels[4],

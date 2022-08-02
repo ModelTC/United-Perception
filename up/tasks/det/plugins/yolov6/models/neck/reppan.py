@@ -19,7 +19,9 @@ class RepPANNeck(nn.Module):
         self,
         inplanes=None,
         num_repeats=None,
-        out_strides=[8, 16, 32]
+        out_strides=[8, 16, 32],
+        normalize={'type': 'solo_bn'},
+        act_fn={'type': 'ReLU'}
     ):
         super().__init__()
 
@@ -33,31 +35,41 @@ class RepPANNeck(nn.Module):
             in_channels=self.out_channels[3] + self.out_channels[5],
             out_channels=self.out_channels[5],
             n=num_repeats[5],
+            normalize=normalize,
+            act_fn=act_fn
         )
 
         self.Rep_p3 = RepBlock(
             in_channels=self.out_channels[2] + self.out_channels[6],
             out_channels=self.out_channels[6],
-            n=num_repeats[6]
+            n=num_repeats[6],
+            normalize=normalize,
+            act_fn=act_fn
         )
 
         self.Rep_n3 = RepBlock(
             in_channels=self.out_channels[6] + self.out_channels[7],
             out_channels=self.out_channels[8],
             n=num_repeats[7],
+            normalize=normalize,
+            act_fn=act_fn
         )
 
         self.Rep_n4 = RepBlock(
             in_channels=self.out_channels[5] + self.out_channels[9],
             out_channels=self.out_channels[10],
-            n=num_repeats[8]
+            n=num_repeats[8],
+            normalize=normalize,
+            act_fn=act_fn
         )
 
         self.reduce_layer0 = SimConv(
             in_channels=self.out_channels[4],
             out_channels=self.out_channels[5],
             kernel_size=1,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         )
 
         self.upsample0 = Transpose(
@@ -69,7 +81,9 @@ class RepPANNeck(nn.Module):
             in_channels=self.out_channels[5],
             out_channels=self.out_channels[6],
             kernel_size=1,
-            stride=1
+            stride=1,
+            normalize=normalize,
+            act_fn=act_fn
         )
 
         self.upsample1 = Transpose(
@@ -81,14 +95,18 @@ class RepPANNeck(nn.Module):
             in_channels=self.out_channels[6],
             out_channels=self.out_channels[7],
             kernel_size=3,
-            stride=2
+            stride=2,
+            normalize=normalize,
+            act_fn=act_fn
         )
 
         self.downsample1 = SimConv(
             in_channels=self.out_channels[8],
             out_channels=self.out_channels[9],
             kernel_size=3,
-            stride=2
+            stride=2,
+            normalize=normalize,
+            act_fn=act_fn
         )
 
     def forward(self, input):
