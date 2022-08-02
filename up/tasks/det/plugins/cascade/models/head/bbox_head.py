@@ -12,8 +12,111 @@ from up.tasks.det.models.postprocess.bbox_supervisor import build_bbox_superviso
 from up.tasks.det.models.postprocess.bbox_predictor import build_bbox_predictor
 from up.tasks.det.models.utils.assigner import map_rois_to_level
 from up.tasks.det.models.losses.ohem import ohem_loss
+from up.utils.model.normalize import build_conv_norm
 
-__all__ = ['CascadeBboxNet', 'CascadeFC']
+__all__ = ['CascadeBboxNet', 'CascadeFC', 'ConvFC']
+
+
+class DropBlock(nn.Module):
+    """Randomly drop some regions of feature maps.
+     Please refer to the method proposed in `DropBlock
+     <https://arxiv.org/abs/1810.12890>`_ for details.
+    Args:
+        drop_prob (float): The probability of dropping each block.
+        block_size (int): The size of dropped blocks.
+        warmup_iters (int): The drop probability will linearly increase
+            from `0` to `drop_prob` during the first `warmup_iters` iterations.
+            Default: 2000.
+    """
+
+    def __init__(self, drop_prob, block_size, warmup_iters=2000, **kwargs):
+        super(DropBlock, self).__init__()
+        assert block_size % 2 == 1
+        assert 0 < drop_prob <= 1
+        assert warmup_iters >= 0
+        self.drop_prob = drop_prob
+        self.block_size = block_size
+        self.warmup_iters = warmup_iters
+        self.iter_cnt = 0
+
+    def forward(self, x):
+        """
+        Args:
+            x (Tensor): Input feature map on which some areas will be randomly
+                dropped.
+        Returns:
+            Tensor: The tensor after DropBlock layer.
+        """
+        if not self.training:
+            return x
+        self.iter_cnt += 1
+        N, C, H, W = list(x.shape)
+        gamma = self._compute_gamma((H, W))
+        mask_shape = (N, C, H - self.block_size + 1, W - self.block_size + 1)
+        mask = torch.bernoulli(torch.full(mask_shape, gamma, device=x.device))
+
+        mask = F.pad(mask, [self.block_size // 2] * 4, value=0)
+        mask = F.max_pool2d(
+            input=mask,
+            stride=(1, 1),
+            kernel_size=(self.block_size, self.block_size),
+            padding=self.block_size // 2)
+        mask = 1 - mask
+        mask_sum = mask.sum()
+        x = x * mask * mask.numel() / (1e-6 + mask_sum)
+        return x.half()
+
+    def _compute_gamma(self, feat_size):
+        """Compute the value of gamma according to paper. gamma is the
+        parameter of bernoulli distribution, which controls the number of
+        features to drop.
+        gamma = (drop_prob * fm_area) / (drop_area * keep_area)
+        Args:
+            feat_size (tuple[int, int]): The height and width of feature map.
+        Returns:
+            float: The value of gamma.
+        """
+        gamma = (self.drop_prob * feat_size[0] * feat_size[1])
+        gamma /= ((feat_size[0] - self.block_size + 1)
+                  * (feat_size[1] - self.block_size + 1))
+        gamma /= (self.block_size**2)
+        factor = (1.0 if self.iter_cnt > self.warmup_iters else self.iter_cnt
+                  / self.warmup_iters)
+        return gamma * factor
+
+
+class conv3x3(nn.Module):
+    def __init__(self, inplanes, outplanes, normalize, drop_block=False, coord_conv=False, stride=1):
+        super().__init__()
+        self.drop_block = drop_block
+        self.coord_conv = coord_conv
+        if coord_conv:
+            inplanes += 2
+        self.conv = build_conv_norm(inplanes,
+                                    outplanes,
+                                    kernel_size=3,
+                                    stride=stride,
+                                    padding=1,
+                                    normalize=normalize,
+                                    activation=True)
+        if drop_block:
+            self.drop = DropBlock(drop_prob=0.9, block_size=1)
+
+    def forward(self, x):
+        if self.coord_conv:
+            x_range = torch.linspace(-1, 1, x.shape[-1], device=x.device)
+            y_range = torch.linspace(-1, 1, x.shape[-2], device=x.device)
+            y_range, x_range = torch.meshgrid(y_range, x_range)
+            y_range = y_range.expand([x.shape[0], 1, -1, -1])
+            x_range = x_range.expand([x.shape[0], 1, -1, -1])
+            coord_feat = torch.cat([x_range, y_range], 1)
+            if 'Half' in x.type():
+                coord_feat = coord_feat.half()
+            x = torch.cat([x, coord_feat], 1)
+        x = self.conv(x)
+        if self.drop_block:
+            x = self.drop(x)
+        return x
 
 
 class CascadeBboxNet(nn.Module):
@@ -336,6 +439,83 @@ class CascadeFC(CascadeBboxNet):
         fc_rcnn_cls = self.fc_rcnn_cls_list[stage]
         fc_rcnn_loc = self.fc_rcnn_loc_list[stage]
         x = roipool(rois, x, stride)
+        c = x.numel() // x.shape[0]
+        x = x.view(-1, c)
+        x = self.relu(fc6(x))
+        x = self.relu(fc7(x))
+        cls_pred = fc_rcnn_cls(x)
+        loc_pred = fc_rcnn_loc(x)
+        return cls_pred, loc_pred
+
+
+@MODULE_ZOO_REGISTRY.register('CascadeConvFC')
+class ConvFC(CascadeBboxNet):
+    """
+    Use ConvFC as head
+    """
+
+    def __init__(self, inplanes, feat_planes, num_classes, cfg, initializer=None, normalize=None, num_conv=4,
+                 drop_block=None, coord_conv=None):
+        """
+        Arguments:
+            - inplanes (:obj:`list` or :obj:`int`): input channel,
+              which is a number or list contains a single element
+            - feat_planes (:obj:`int`): channels of intermediate features
+            - num_classes (:obj:`int`): number of classes, including the background class
+            - cfg (:obj:`dict`): config for training or test
+            - initializer (:obj:`dict`): config for module parameters initialization
+
+        """
+        super(ConvFC, self).__init__(inplanes, num_classes, cfg)
+
+        inplanes = self.inplanes
+        self.relu = nn.ReLU(inplace=True)
+
+        self.fc6_list = nn.ModuleList()
+        self.fc7_list = nn.ModuleList()
+        self.fc_rcnn_cls_list = nn.ModuleList()
+        self.fc_rcnn_loc_list = nn.ModuleList()
+        self.conv_list = nn.ModuleList()
+        cls_out_channel = num_classes if self.cls_loss.activation_type == 'softmax' else num_classes - 1
+        for i in range(self.num_stage):
+            convs = nn.Sequential()
+            for j in range(num_conv):
+                convs.add_module(
+                    f'{j}',
+                    conv3x3(inplanes,
+                            inplanes,
+                            normalize=normalize,
+                            drop_block=drop_block,
+                            coord_conv=coord_conv))
+            self.conv_list.append(convs)
+            fc6 = nn.Linear(self.pool_size * self.pool_size * inplanes, feat_planes)
+            self.fc6_list.append(fc6)
+            fc7 = nn.Linear(feat_planes, feat_planes)
+            self.fc7_list.append(fc7)
+
+            # fc_rcnn_cls = nn.Linear(feat_planes, num_classes)
+            fc_rcnn_cls = nn.Linear(feat_planes, cls_out_channel)
+            self.fc_rcnn_cls_list.append(fc_rcnn_cls)
+            if self.cfg.get('share_location', False):
+                fc_rcnn_loc = nn.Linear(feat_planes, 4)
+            else:
+                # fc_rcnn_loc = nn.Linear(feat_planes, num_classes * 4)
+                fc_rcnn_loc = nn.Linear(feat_planes, cls_out_channel * 4)
+            self.fc_rcnn_loc_list.append(fc_rcnn_loc)
+
+        initialize_from_cfg(self, initializer)
+        init_weights_normal(self.fc_rcnn_cls_list, 0.01)
+        init_weights_normal(self.fc_rcnn_loc_list, 0.001)
+
+    def forward_net(self, rois, x, stride, stage):
+        roipool = self.roipool_list[stage]
+        fc6 = self.fc6_list[stage]
+        fc7 = self.fc7_list[stage]
+        fc_rcnn_cls = self.fc_rcnn_cls_list[stage]
+        fc_rcnn_loc = self.fc_rcnn_loc_list[stage]
+        conv = self.conv_list[stage]
+        x = roipool(rois, x, stride)
+        x = conv(x)
         c = x.numel() // x.shape[0]
         x = x.view(-1, c)
         x = self.relu(fc6(x))

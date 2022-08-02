@@ -132,12 +132,14 @@ class BaseOptimizer(object):
 
     def get_optimizer(self, cfg_optim):
         optim_type = cfg_optim['type']
-        if optim_type == 'FusedFP16SGD' or optim_type == 'FusedFP16AdamW':
+        if optim_type == 'FusedFP16SGD' or optim_type == 'FusedFP16AdamW' or optim_type == 'FusedZeroFP16AdamW':
             from spring import linklink
             if optim_type == 'FusedFP16SGD':
                 linklink.optim.FusedFP16SGD.reload = fused_sgd_reload
             if optim_type == 'FusedFP16AdamW':
                 linklink.optim.FusedFP16AdamW.reload = fused_sgd_reload
+            if optim_type == 'FusedZeroFP16AdamW':
+                linklink.optim.FusedZeroFP16AdamW.reload = fused_sgd_reload
             optimizer = build_cls_instance(linklink.optim, cfg_optim)
         elif optim_type == 'LARS' or optim_type == 'LAMB':
             optimizer = build_cls_instance(optim, cfg_optim)

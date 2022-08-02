@@ -794,3 +794,89 @@ class ImageStitchExpand(Augmentation):
             output.image = image_t
             return output
         return output
+
+
+@AUGMENTATION_REGISTRY.register('detr_crop')
+class DETRImageCrop(Augmentation):
+    """ random crop image base gt and crop region (iof)
+    """
+
+    def __init__(self, min_size=100, max_size=100, crop_prob=0.5):
+        self.min_size = min_size
+        self.max_size = max_size
+        self.crop_prob = crop_prob
+
+    def _nobbox_crop(self, width, height, image):
+        h = w = min(width, height)
+        if width == w:
+            left = 0
+        else:
+            left = random.randrange(width - w)
+        if height == h:
+            t = 0
+        else:
+            t = random.randrange(height - h)
+        roi = np.array((left, t, left + w, t + h))
+        image_t = image[roi[1]:roi[3], roi[0]:roi[2]]
+        return image_t
+
+    def _random_crop(self, width, height, image, new_gts):
+        for _ in range(1000):
+            if not coin_tossing(self.crop_prob):
+                w = width
+                h = height
+            else:
+                w = random.randint(min(width, self.min_size), min(width, self.max_size))
+                h = random.randint(min(height, self.min_size), min(height, self.max_size))
+
+            if width == w:
+                left = 0
+            else:
+                left = random.randrange(width - w)
+            if height == h:
+                top = 0
+            else:
+                top = random.randrange(height - h)
+            roi = np.array((left, top, left + w, top + h))
+
+            value = np_bbox_iof_overlaps(new_gts, roi[np.newaxis])
+            flag = (value >= 1)
+            if not flag.any():
+                continue
+
+            centers = (new_gts[:, :2] + new_gts[:, 2:4]) / 2
+            mask = np.logical_and(roi[:2] < centers, centers < roi[2:]).all(axis=1)
+            boxes_t = new_gts[mask].copy()
+            if boxes_t.shape[0] == 0:
+                continue
+
+            image_t = image[roi[1]:roi[3], roi[0]:roi[2]]
+
+            boxes_t[:, :2] = np.maximum(boxes_t[:, :2], roi[:2])
+            boxes_t[:, :2] -= roi[:2]
+            boxes_t[:, 2:4] = np.minimum(boxes_t[:, 2:4], roi[2:])
+            boxes_t[:, 2:4] -= roi[:2]
+            return image_t, boxes_t
+
+        return image, new_gts
+
+    def augment(self, data):
+        assert not has_gt_keyps(data), "key points is not supported !!!"
+        assert not has_gt_masks(data), "masks is not supported !!!"
+
+        output = copy.copy(data)
+        image = output.image
+        new_gts = tensor2numpy(output)
+        height, width = image.shape[:2]
+        # if check_fake_gt(new_gts):
+        #     output.image = self._nobbox_crop(width, height, image)
+        #     return output
+        if check_fake_gt(new_gts):
+            crop_image, boxes_t = image, new_gts
+        else:
+            crop_image, boxes_t = self._random_crop(width, height, image, new_gts)
+        gt_bboxes, ig_bboxes = numpy2tensor(boxes_t)
+        output.gt_bboxes = gt_bboxes
+        output.gt_ignores = ig_bboxes
+        output.image = crop_image
+        return output

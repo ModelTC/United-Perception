@@ -1,0 +1,153 @@
+num_classes: &num_classes 1000
+runtime:
+  task_names: cls
+random_resized_crop: &random_resized_crop
+ type: torch_random_resized_crop
+ kwargs:
+   size: 224
+   scale: [0.08, 1]
+
+auto_augment: &auto_augment
+ type: torch_auto_augmentation
+ kwargs:
+   size: 224
+   scale: [0.08, 1]
+
+center_crop: &center_crop
+  type: torch_center_crop
+  kwargs:
+    size: 224
+
+torch_size: &torch_resize
+  type: torch_resize
+  kwargs:
+    size: 256
+
+to_tensor: &to_tensor
+  type: to_tensor
+
+normalize: &normalize
+ type: normalize
+ kwargs:
+   mean: [0.5, 0.5, 0.5] # ImageNet pretrained statics
+   std: [0.5, 0.5, 0.5]
+
+dataset: # Required.
+  train:
+    dataset:
+      type: cls
+      kwargs:
+        meta_file: /mnt/lustre/share/images/meta/train.txt
+        image_reader:
+          type: fs_pillow
+          kwargs:
+            image_dir: /mnt/lustre/share/images/train
+            color_mode: RGB
+            memcached: True
+        transformer: [*random_resized_crop, *auto_augment, *to_tensor, *normalize]
+    batch_sampler:
+        type: base
+        kwargs:
+          sampler:
+            type: dist
+            kwargs: {}
+          batch_size: 32
+    dataloader:
+        type: cls_base
+        kwargs:
+          num_workers: 4
+          pin_memory: True
+          batch_fn:
+            type: batch_cutmixup
+            kwargs:
+              mixup_alpha: 0.8
+              cutmix_alpha: 1.0
+              switch_prob: 0.5
+              num_classes: *num_classes
+  test:
+    dataset:
+      type: cls
+      kwargs:
+        meta_file: /mnt/lustre/share/images/meta/val.txt
+        image_reader:
+          type: fs_pillow
+          kwargs:
+            image_dir: /mnt/lustre/share/images/val
+            color_mode: RGB
+            memcached: True
+        transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
+        evaluator:
+          type: imagenet               # choices = {'COCO', 'VOC', 'MR'}
+          kwargs:
+             topk: [1, 5]
+    batch_sampler:
+      type: base
+      kwargs:
+        sampler:
+          type: dist
+          kwargs: {}
+        batch_size: 64
+    dataloader:
+      type: cls_base
+      kwargs:
+        num_workers: 4
+        pin_memory: False
+
+trainer: # Required.
+  max_epoch: 300
+  test_freq: 5
+  save_freq: 5
+  only_save_latest: True
+  optimizer:
+    type: AdamW
+    kwargs:
+      lr: 0.00075
+      weight_decay: 0.05
+  lr_scheduler:
+    warmup_iter:  3760
+    warmup_type: linear
+    warmup_register_type: no_scale_lr
+    warmup_ratio: 0.0013333333333333333
+    type: CosineLREpochScheduler
+    kwargs:
+        T_max: 300
+        eta_min: 0.000001
+        warm_epoch: 3
+
+saver: # Required.
+  save_dir: vit_b16_224/checkpoints/cls_std     # dir to save checkpoints
+  results_dir:  vit_b16_224/results_dir/cls_std  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+                     # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+
+hooks:
+  - type: auto_save_best
+
+net: &subnet
+  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+    type: mb4
+    kwargs:
+      frozen_layers: []     # layer0...1 is fixed
+      drop_path_rate: 0.1
+      out_layers: [10, 22, 34]     # layer1...4, commonly named Conv2...5
+      # out_layers: [2, 4, 5]
+      out_strides: [8,16,32]  # tell the strides of output features
+      use_checkpoint: False
+      encoder_turbo: 
+        enabled: False 
+        max_seq_len: 10000
+        batch_size: 1
+  - name: head
+    type: base_cls_head
+    kwargs:
+       num_classes: *num_classes
+       in_plane: &head_out_channel 384
+       input_feature_idx: -1
+  - name: post_process
+    type: base_cls_postprocess
+    kwargs:
+       cls_loss:
+         type: label_smooth_ce
+         kwargs:
+            smooth_ratio: 0.1
+            num_classes: *num_classes
