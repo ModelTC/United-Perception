@@ -53,8 +53,6 @@ class ModelHelper(nn.Module):
                         prev_module = getattr(self, cfg_subnet['prev'])
                         if hasattr(prev_module, "get_outplanes"):
                             kwargs['inplanes'] = prev_module.get_outplanes()
-                        if hasattr(prev_module, "get_repeats"):
-                            kwargs["num_repeats"] = prev_module.get_repeats()
                 module = self.build(mtype, kwargs)
             if 'wrappers' in cfg_subnet:
                 for wrapper_cfg in cfg_subnet['wrappers']:

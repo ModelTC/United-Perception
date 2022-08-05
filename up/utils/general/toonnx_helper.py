@@ -44,6 +44,8 @@ class BaseToOnnx(object):
             self.model = build_model(self.cfg)
         for module in self.model.modules():
             module.tocaffe = True
+            if hasattr(module, "fuse_model"):
+                module.fuse_model()
 
     def run_model(self):
         # disable trace

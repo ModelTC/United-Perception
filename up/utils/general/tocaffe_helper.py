@@ -124,6 +124,8 @@ class BaseToCaffe(object):
             self.model = build_model(self.cfg)
         for module in self.model.modules():
             module.tocaffe = True
+            if hasattr(module, "fuse_model"):
+                module.fuse_model()
 
     def run_model(self):
         # disable trace
@@ -263,6 +265,8 @@ class Point3DToCaffe(object):
         for model in [self.vfe_model, self.backbone_model]:
             for module in model.modules():
                 module.tocaffe = True
+                if hasattr(module, "fuse_model"):
+                    module.fuse_model()
 
     def run_model(self):
         # disable trace

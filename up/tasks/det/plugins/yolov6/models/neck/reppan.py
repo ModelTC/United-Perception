@@ -2,7 +2,7 @@
 
 import torch
 from torch import nn
-from ..components import RepBlock, SimConv, Transpose
+from ..components import RepBlock, SimConv, Transpose, net_info
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 
 __all__ = ["RepPANNeck"]
@@ -17,26 +17,31 @@ class RepPANNeck(nn.Module):
 
     def __init__(
         self,
+        depth_multiple=0.33,
+        width_multiple=0.25,
+        backbone_base_repeats=[1, 6, 12, 18, 6],
+        backbone_base_channels=[64, 128, 256, 512, 1024],
+        neck_base_repeats=[12, 12, 12, 12],
+        neck_base_channels=[256, 128, 128, 256, 256, 512],
         inplanes=None,
-        num_repeats=None,
         out_strides=[8, 16, 32],
         normalize={'type': 'solo_bn'},
-        act_fn={'type': 'ReLU'}
+        act_fn={'type': 'ReLU'},
     ):
         super().__init__()
 
-        self.out_channels = inplanes
+        out_channels, num_repeats = net_info(depth_multiple, width_multiple, backbone_base_repeats,
+                                             backbone_base_channels, neck_base_repeats, neck_base_channels)
+        self.out_channels, self.num_repeats = out_channels, num_repeats
         self.out_strides = out_strides
-
-        assert inplanes is not None
-        assert num_repeats is not None
+        self.out_planes = []
 
         self.Rep_p4 = RepBlock(
             in_channels=self.out_channels[3] + self.out_channels[5],
             out_channels=self.out_channels[5],
             n=num_repeats[5],
             normalize=normalize,
-            act_fn=act_fn
+            act_fn=act_fn,
         )
 
         self.Rep_p3 = RepBlock(
@@ -44,24 +49,27 @@ class RepPANNeck(nn.Module):
             out_channels=self.out_channels[6],
             n=num_repeats[6],
             normalize=normalize,
-            act_fn=act_fn
+            act_fn=act_fn,
         )
+        self.out_planes.append(self.out_channels[6])
 
         self.Rep_n3 = RepBlock(
             in_channels=self.out_channels[6] + self.out_channels[7],
             out_channels=self.out_channels[8],
             n=num_repeats[7],
             normalize=normalize,
-            act_fn=act_fn
+            act_fn=act_fn,
         )
+        self.out_planes.append(self.out_channels[8])
 
         self.Rep_n4 = RepBlock(
             in_channels=self.out_channels[5] + self.out_channels[9],
             out_channels=self.out_channels[10],
             n=num_repeats[8],
             normalize=normalize,
-            act_fn=act_fn
+            act_fn=act_fn,
         )
+        self.out_planes.append(self.out_channels[10])
 
         self.reduce_layer0 = SimConv(
             in_channels=self.out_channels[4],
@@ -136,4 +144,4 @@ class RepPANNeck(nn.Module):
         return {"features": outputs, "strides": torch.tensor(self.out_strides, dtype=torch.int)}
 
     def get_outplanes(self):
-        return self.out_channels
+        return self.out_planes

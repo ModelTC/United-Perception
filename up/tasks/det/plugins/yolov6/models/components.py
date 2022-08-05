@@ -2,13 +2,30 @@
 # -*- coding:utf-8 -*-
 
 # Import from third library
+import math
 import warnings
+import numpy as np
 
 import torch
 import torch.nn as nn
 
 from up.utils.model.normalize import build_norm_layer
 from up.utils.model.act_fn import build_act_fn
+
+
+def net_info(depth_multiple=0.33,
+             width_multiple=0.25,
+             backbone_base_repeats=[1, 6, 12, 18, 6],
+             backbone_base_channels=[64, 128, 256, 512, 1024],
+             neck_base_repeats=[12, 12, 12, 12],
+             neck_base_channels=[256, 128, 128, 256, 256, 512]):
+    num_repeats = [
+        (max(round(i * depth_multiple), 1) if i > 1 else i) for i in (backbone_base_repeats + neck_base_repeats)
+    ]
+    channels_list = [
+        math.ceil(i * width_multiple / 8) * 8 for i in (backbone_base_channels + neck_base_channels)
+    ]
+    return channels_list, num_repeats
 
 
 class Conv(nn.Module):
@@ -34,14 +51,11 @@ class Conv(nn.Module):
             groups=groups,
             bias=bias,
         )
-        _, self.bn = build_norm_layer(out_channels, normalize, 0)
+        _, self.bn = build_norm_layer(out_channels, normalize)
         _, self.act = build_act_fn(act_fn)
 
     def forward(self, x):
         return self.act(self.bn(self.conv(x)))
-
-    def forward_fuse(self, x):
-        return self.act(self.conv(x))
 
 
 class SimConv(nn.Module):
@@ -67,7 +81,7 @@ class SimConv(nn.Module):
             groups=groups,
             bias=bias,
         )
-        _, self.bn = build_norm_layer(out_channels, normalize, 0)
+        _, self.bn = build_norm_layer(out_channels, normalize)
         _, self.act = build_act_fn(act_fn)
 
     def forward(self, x):
@@ -80,11 +94,16 @@ class SimConv(nn.Module):
 class SimSPPF(nn.Module):
     '''Simplified SPPF with ReLU activation'''
 
-    def __init__(self, in_channels, out_channels, kernel_size=5):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_size=5,
+                 normalize={'type': 'solo_bn'},
+                 act_fn={'type': 'ReLU'}):
         super().__init__()
         c_ = in_channels // 2  # hidden channels
-        self.cv1 = SimConv(in_channels, c_, 1, 1)
-        self.cv2 = SimConv(c_ * 4, out_channels, 1, 1)
+        self.cv1 = SimConv(in_channels, c_, 1, 1, normalize=normalize, act_fn=act_fn)
+        self.cv2 = SimConv(c_ * 4, out_channels, 1, 1, normalize=normalize, act_fn=act_fn)
         self.m = nn.MaxPool2d(kernel_size=kernel_size, stride=1, padding=kernel_size // 2)
 
     def forward(self, x):
@@ -138,11 +157,8 @@ def conv_bn(in_channels,
                                         padding=padding,
                                         groups=groups,
                                         bias=False))
-    if normalize['type'] == 'solo_bn':
-        result.add_module('bn', nn.BatchNorm2d(num_features=out_channels))
-    else:
-        name, bn = build_norm_layer(out_channels, normalize, 0)
-        result.add_module(name, bn)
+    name, bn = build_norm_layer(out_channels, normalize)
+    result.add_module(name, bn)
     return result
 
 
@@ -151,11 +167,17 @@ class RepBlock(nn.Module):
         RepBlock is a stage block with rep-style basic block
     '''
 
-    def __init__(self, in_channels, out_channels, n=1, normalize={'type': 'solo_bn'}, act_fn={'type': 'ReLU'}):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 n=1,
+                 normalize={'type': 'solo_bn'},
+                 act_fn={'type': 'ReLU'}):
         super().__init__()
         self.conv1 = RepVGGBlock(in_channels, out_channels, normalize=normalize, act_fn=act_fn)
         self.block = nn.Sequential(
-            *(RepVGGBlock(out_channels, out_channels, normalize=normalize, act_fn=act_fn) for _ in range(n - 1))
+            *(RepVGGBlock(out_channels, out_channels, normalize=normalize, act_fn=act_fn)
+                for _ in range(n - 1))
         ) if n > 1 else None
 
     def forward(self, x):
@@ -179,8 +201,6 @@ class RepVGGBlock(nn.Module):
                  dilation=1,
                  groups=1,
                  padding_mode='zeros',
-                 deploy=False,
-                 use_se=False,
                  normalize={'type': 'solo_bn'},
                  act_fn={'type': 'ReLU'}):
         super(RepVGGBlock, self).__init__()
@@ -195,11 +215,8 @@ class RepVGGBlock(nn.Module):
             dilation (int or tuple, optional): Spacing between kernel elements. Default: 1
             groups (int, optional): Number of blocked connections from input
                 channels to output channels. Default: 1
-            padding_mode (string, optional): Default: 'zeros'
-            deploy: Whether to be deploy status or training status. Default: False
-            use_se: Whether to use se. Default: False
+            padding_mode (string, optional): Default: 'zeros
         """
-        self.deploy = deploy
         self.groups = groups
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -210,10 +227,7 @@ class RepVGGBlock(nn.Module):
         padding_11 = padding - kernel_size // 2
         _, self.nonlinearity = build_act_fn(act_fn)
 
-        if use_se:
-            raise NotImplementedError("se block not supported yet")
-        else:
-            self.se = nn.Identity()
+        self.se = nn.Identity()
 
         if out_channels == in_channels and stride == 1:
             _, self.rbr_identity = build_norm_layer(in_channels, normalize, 0)
@@ -237,9 +251,76 @@ class RepVGGBlock(nn.Module):
 
     def forward(self, inputs):
         '''Forward process'''
+        if hasattr(self, 'rbr_reparam'):
+            return self.nonlinearity(self.se(self.rbr_reparam(inputs)))
+
         if self.rbr_identity is None:
             id_out = 0
         else:
             id_out = self.rbr_identity(inputs)
 
         return self.nonlinearity(self.se(self.rbr_dense(inputs) + self.rbr_1x1(inputs) + id_out))
+
+    def fuse_model(self):
+        if hasattr(self, 'rbr_reparam'):
+            self.__delattr__('rbr_reparam')
+        kernel, bias = self.get_equivalent_kernel_bias()
+        self.rbr_reparam = nn.Conv2d(in_channels=self.rbr_dense.conv.in_channels,
+                                     out_channels=self.rbr_dense.conv.out_channels,
+                                     kernel_size=self.rbr_dense.conv.kernel_size,
+                                     stride=self.rbr_dense.conv.stride,
+                                     padding=self.rbr_dense.conv.padding,
+                                     dilation=self.rbr_dense.conv.dilation,
+                                     groups=self.rbr_dense.conv.groups,
+                                     bias=True)
+        self.rbr_reparam.weight.data = kernel
+        self.rbr_reparam.bias.data = bias
+
+        for para in self.parameters():
+            para.detach_()
+        self.__delattr__('rbr_dense')
+        self.__delattr__('rbr_1x1')
+        if hasattr(self, 'rbr_identity'):
+            self.__delattr__('rbr_identity')
+        if hasattr(self, 'id_tensor'):
+            self.__delattr__('id_tensor')
+
+    def get_equivalent_kernel_bias(self):
+        kernel3x3, bias3x3 = self._fuse_bn_tensor(self.rbr_dense)
+        kernel1x1, bias1x1 = self._fuse_bn_tensor(self.rbr_1x1)
+        kernelid, biasid = self._fuse_bn_tensor(self.rbr_identity)
+        return kernel3x3 + self._pad_1x1_to_3x3_tensor(kernel1x1) + kernelid, bias3x3 + bias1x1 + biasid
+
+    def _pad_1x1_to_3x3_tensor(self, kernel1x1):
+        if kernel1x1 is None:
+            return 0
+        else:
+            return torch.nn.functional.pad(kernel1x1, [1, 1, 1, 1])
+
+    def _fuse_bn_tensor(self, branch):
+        if branch is None:
+            return 0, 0
+        if isinstance(branch, nn.Sequential):
+            kernel = branch.conv.weight
+            running_mean = branch.bn.running_mean
+            running_var = branch.bn.running_var
+            gamma = branch.bn.weight
+            beta = branch.bn.bias
+            eps = branch.bn.eps
+        else:
+            assert isinstance(branch, nn.BatchNorm2d)
+            if not hasattr(self, 'id_tensor'):
+                input_dim = self.in_channels // self.groups
+                kernel_value = np.zeros((self.in_channels, input_dim, 3, 3), dtype=np.float32)
+                for i in range(self.in_channels):
+                    kernel_value[i, i % input_dim, 1, 1] = 1
+                self.id_tensor = torch.from_numpy(kernel_value).to(branch.weight.device)
+            kernel = self.id_tensor
+            running_mean = branch.running_mean
+            running_var = branch.running_var
+            gamma = branch.weight
+            beta = branch.bias
+            eps = branch.eps
+        std = (running_var + eps).sqrt()
+        t = (gamma / std).reshape(-1, 1, 1, 1)
+        return kernel * t, beta - running_mean * gamma / std

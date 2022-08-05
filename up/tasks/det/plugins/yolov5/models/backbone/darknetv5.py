@@ -16,7 +16,7 @@ class DarkNetv5(nn.Module):
     def __init__(self,
                  init_planes,
                  csp1_block_nums,
-                 in_planes=3,
+                 input_channels=3,
                  focus_type='v4_focus',
                  out_layers=[2, 3, 4],
                  out_strides=[8, 16, 32],
@@ -34,14 +34,14 @@ class DarkNetv5(nn.Module):
         self.out_planes = []
 
         if focus_type == 'v5_focus':
-            self.focus = Focus(in_planes, plane, kernel_size=3, normalize=normalize, act_fn=act_fn)
+            self.focus = Focus(input_channels, plane, kernel_size=3, normalize=normalize, act_fn=act_fn)
         elif focus_type == 'v4_focus':
             # for focus replace
-            self.focus = nn.Sequential(ConvBnAct(in_planes, plane // 2, 3, normalize=normalize, act_fn=act_fn),
+            self.focus = nn.Sequential(ConvBnAct(input_channels, plane // 2, 3, normalize=normalize, act_fn=act_fn),
                                        ConvBnAct(plane // 2, plane, 3, 2, normalize=normalize, act_fn=act_fn),
                                        Bottleneck(plane, plane, normalize=normalize, act_fn=act_fn))
         elif focus_type == 'stem_focus':
-            self.focus = nn.Sequential(ConvBnAct(in_planes, plane // 2, 3, 2, normalize=normalize, act_fn=act_fn),
+            self.focus = nn.Sequential(ConvBnAct(input_channels, plane // 2, 3, 2, normalize=normalize, act_fn=act_fn),
                                        ConvBnAct(plane // 2, plane // 2, 3, normalize=normalize, act_fn=act_fn),
                                        nn.Conv2d(plane // 2, plane, kernel_size=3, stride=1, padding=1, bias=False))
         else:

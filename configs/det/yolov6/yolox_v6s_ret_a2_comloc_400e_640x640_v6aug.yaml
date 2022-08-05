@@ -5,22 +5,23 @@ runtime:
     special_bn_init: True
     rank_init: True
     task_names: det
+
 mosaic: &mosaic
   type: mosaic
   kwargs:
-    extra_input: True
+    extra_input: true
     tar_size: 640
-    fill_color: 0
+    fill_color: 114
 
 random_perspective: &random_perspective
-  type: random_perspective_yolox
+  type: random_perspective
   kwargs:
-    degrees: 10.0 # 0.0
+    degrees: 0.0
     translate: 0.1
-    scale: [0.5, 1.5] # 0.5
-    shear: 2.0 # 0.0
+    scale: 0.5
+    shear: 0.0
     perspective: 0.0
-    fill_color: 0  # 0
+    fill_color: 114
     border: [-320, -320]
 
 augment_hsv: &augment_hsv
@@ -29,7 +30,7 @@ augment_hsv: &augment_hsv
     hgain: 0.015
     sgain: 0.7
     vgain: 0.4
-    color_mode: 'BGR'
+    color_mode: BGR
 
 flip: &flip
   type: flip
@@ -38,34 +39,28 @@ flip: &flip
 
 to_tensor: &to_tensor
   type: custom_to_tensor
-
-train_resize: &train_resize
-  type: keep_ar_resize_max
   kwargs:
-    random_size: [10, 20]
-    scale_step: 32
-    padding_type: left_top
-    padding_val: 0
+    norm_image: true
 
 test_resize: &test_resize
   type: keep_ar_resize_max
   kwargs:
-    max_size: 416
+    max_size: 640
     padding_type: left_top
-    padding_val: 0
+    padding_val: 114
 
 dataset:
   train:
     dataset:
       type: coco
       kwargs:
-        meta_file: s3://petreloss_datasets/mscoco2017/annotations/instances_train2017.json 
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json 
         image_reader:
-          type: ceph_opencv
+          type: fs_opencv
           kwargs:
-            image_dir: s3://petreloss_datasets/mscoco2017/train2017
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
             color_mode: BGR
-        transformer: [*mosaic, *random_perspective, *augment_hsv, *flip, *train_resize, *to_tensor]
+        transformer: [*mosaic, *random_perspective, *augment_hsv, *flip, *to_tensor]
     batch_sampler:
       type: base
       kwargs:
@@ -77,11 +72,11 @@ dataset:
     dataset:
       type: coco
       kwargs:
-        meta_file: &gt_file s3://petreloss_datasets/mscoco2017/annotations/instances_val2017.json
+        meta_file: &gt_file /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
         image_reader:
-          type: ceph_opencv
+          type: fs_opencv
           kwargs:
-            image_dir: s3://petreloss_datasets/mscoco2017/val2017
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
             color_mode: BGR
         transformer: [*test_resize, *to_tensor]
         evaluator:
@@ -99,13 +94,13 @@ dataset:
   dataloader:
     type: base
     kwargs:
-      num_workers: 12 # 8
+      num_workers: 8
       alignment: 32
       worker_init: True
       pad_type: batch_pad
 
 trainer: # Required.
-  max_epoch: &max_epoch 300             # total epochs for the training
+  max_epoch: &max_epoch 400 # 300             # total epochs for the training
   save_freq: 5
   test_freq: 5
   only_save_latest: True
@@ -124,12 +119,12 @@ trainer: # Required.
     type: YoloXCosineLR
     kwargs:
       T_max: *max_epoch
-      min_lr_scale: 0.05
-      no_aug_epoch: &no_aug_epoch 15
+      min_lr_scale: 0.01
+      no_aug_epoch: &no_aug_epoch 0
 
 saver:
-  save_dir: checkpoints/yolox_v6t_ret_a2_comloc
-  results_dir: results_dir/yolox_v6t_ret_a2_comloc
+  save_dir: checkpoints/yolox_v6s_ret_a2_comloc_400e_640x640
+  results_dir: results_dir/yolox_v6s_ret_a2_comloc_400e_640x640
   auto_resume: True
 
 hooks:
@@ -137,7 +132,7 @@ hooks:
     kwargs:
       no_aug_epoch: *no_aug_epoch
       max_epoch: *max_epoch
-      transformer: [*augment_hsv, *flip, *train_resize, *to_tensor]
+      transformer: [*augment_hsv, *flip, *to_tensor]
   - type: auto_save_best
 
 ema:
@@ -146,27 +141,39 @@ ema:
   kwargs:
     decay: 0.9998
 
+depth_multiple: &depth_multiple 0.33
+width_multiple: &width_multiple 0.50
+backbone_base_repeats: &backbone_base_repeats [1, 6, 12, 18, 6]
+backbone_base_channels: &backbone_base_channels [64, 128, 256, 512, 1024]
+neck_base_repeats: &neck_base_repeats [12, 12, 12, 12]
+neck_base_channels: &neck_base_channels [256, 128, 128, 256, 256, 512]
 net:
-  - name: prev
-    type: yolov6_pre
-    kwargs:
-      depth_multiple: 0.25
-      width_multiple: 0.50
-      backbone_base_repeats: [1, 6, 12, 18, 6]
-      backbone_base_channels: [64, 128, 256, 512, 1024]
-      neck_base_repeats: [12, 12, 12, 12]
-      neck_base_channels: [256, 128, 128, 256, 256, 512]
   - name: backbone
-    prev: prev
     type: EfficientRep
     kwargs:
+      depth_multiple: *depth_multiple
+      width_multiple: *width_multiple
+      backbone_base_repeats: *backbone_base_repeats
+      backbone_base_channels: *backbone_base_channels
+      neck_base_repeats: *neck_base_repeats
+      neck_base_channels: *neck_base_channels
       out_layers: [2, 3, 4]
       out_strides: [8, 16, 32]
+      normalize: {'type': 'solo_bn'}
+      act_fn: {'type': 'ReLU'}
   - name: neck
     prev: backbone
     type: RepPANNeck
     kwargs:
+      depth_multiple: *depth_multiple
+      width_multiple: *width_multiple
+      backbone_base_repeats: *backbone_base_repeats
+      backbone_base_channels: *backbone_base_channels
+      neck_base_repeats: *neck_base_repeats
+      neck_base_channels: *neck_base_channels
       out_strides: [8, 16, 32]
+      normalize: {'type': 'solo_bn'}
+      act_fn: {'type': 'ReLU'}
   - name: roi_head
     prev: neck
     type: Effidehead
@@ -175,6 +182,8 @@ net:
       anchors: &dense_points 2 # 1
       num_layers: 3
       class_activation: 'sigmoid'
+      normalize: {'type': 'solo_bn'}
+      act_fn: {'type': 'Silu'}
   - name: post_process
     prev: roi_head
     type: retina_post_iou
@@ -185,7 +194,7 @@ net:
           type: quality_focal_loss
           kwargs:
             gamma: 2.0
-        iou_branch_loss:
+        iou_branch_loss: 
           type: sigmoid_cross_entropy
         loc_loss:
            type: compose_loc_loss
@@ -221,4 +230,4 @@ net:
                 top_n: 100
                 nms:
                   type: naive
-                  nms_iou_thresh: 0.65
+                  nms_iou_thresh: 0.65  
