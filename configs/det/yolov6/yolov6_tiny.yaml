@@ -3,7 +3,6 @@ runtime:
   fp16: false
   aligned: true
   async_norm: false
-  loss_backward_scale: true
   special_bn_init: true
   rank_init: true
   task_names: det
@@ -142,7 +141,7 @@ saver:
 
 ema:
   enable: true
-  ema_type: exp_v6
+  ema_type: exp
   kwargs:
     decay: 0.9999
 

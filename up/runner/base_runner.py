@@ -60,7 +60,6 @@ class BaseRunner(object):
         self.iter_base = self.config['runtime']['iter_base']
         self.device = self.config['runtime']['device']
         self.aligned = self.config['runtime']['aligned']
-        self.loss_backward_scale = self.config["runtime"]["loss_backward_scale"]
         self.fp16 = False
         node_info, node_list = get_memory_info(get_total=True)
         if env.rank in node_list:
@@ -94,7 +93,6 @@ class BaseRunner(object):
         self.config['runtime']['device'] = self.config['runtime'].setdefault('device', 'cuda')
         self.config['runtime']['async_norm'] = self.config['runtime'].setdefault('async_norm', False)
         self.config['runtime']['special_bn_init'] = self.config['runtime'].setdefault('special_bn_init', False)
-        self.config['runtime']['loss_backward_scale'] = self.config['runtime'].setdefault('loss_backward_scale', False)
         model_helper_cfg = self.config['runtime'].get('model_helper', {})
         # print("model_helper:  ",model_helper_cfg)
         model_helper_cfg['type'] = model_helper_cfg.get('type', 'base')
@@ -806,15 +804,12 @@ class BaseRunner(object):
     def backward(self, loss):
         self.model.zero_grad()
         if self.backend == 'dist':
-            if self.loss_backward_scale:
-                loss *= env.world_size
             if self.fp16:
                 self.scaler.scale(loss).backward()
             else:
                 loss.backward()
         elif self.backend == 'linklink':
-            if not self.loss_backward_scale:
-                loss = loss / env.world_size
+            loss = loss / env.world_size
             if self.fp16:
                 self.optimizer.backward(loss)
             else:
