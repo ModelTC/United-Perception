@@ -112,12 +112,12 @@ class BaseToAdela(object):
                             self.re_b_times += 1
                             logger.info(f"retry {self.re_b_times} time")
                             adela.benchmark_api.put_benchmark(pid, dids[didx], bid)
-                            status = adela.benchmark(pid, did, bid)["status"]
+                            status = adela.benchmark(pid, dids[didx], bid)["status"]
                             continue
                         logger.warning('benchmark failed')
                         break
                     time.sleep(1)
-                    status = adela.benchmark(pid, did, bid)["status"]
+                    status = adela.benchmark(pid, dids[didx], bid)["status"]
         logger.info("========benchmark done========")
 
         # download
