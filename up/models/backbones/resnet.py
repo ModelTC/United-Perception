@@ -677,6 +677,7 @@ class ResNet(nn.Module):
             }
         """
         x = input['image']
+        size = x.size()[2:]
         outs = []
         for layer_idx in range(0, 5):
             layer = getattr(self, f'layer{layer_idx}', None)
@@ -689,7 +690,7 @@ class ResNet(nn.Module):
                 outs.append(x)
 
         features = [outs[i] for i in self.out_layers]
-        return {'features': features, 'strides': self.get_outstrides()}
+        return {'features': features, 'strides': self.get_outstrides(), 'size': size}
 
     def freeze_layer(self):
         layers = [

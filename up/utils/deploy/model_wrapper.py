@@ -21,7 +21,6 @@ class DetWrapper(torch.nn.Module):
         print(f'before detector forward')
         output = self.detector(input)
         print(f'detector output:{output.keys()}')
-        base_anchors = output['base_anchors']
         blob_names = []
         blob_datas = []
         output_names = sorted(output.keys())
@@ -32,6 +31,7 @@ class DetWrapper(torch.nn.Module):
                 print(f'blobs:{name}')
         assert len(blob_datas) > 0, 'no valid output provided, please set "tocaffe: True" in your config'
         if return_meta:
+            base_anchors = output['base_anchors']
             return blob_names, base_anchors
         else:
             return blob_datas

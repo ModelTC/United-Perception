@@ -338,7 +338,7 @@ class RegNet(AnyNet):
         bms = [1 for _ in range(num_s)]
         # Adjust the compatibility of ws and gws
         ws, gws = adjust_ws_gs_comp(ws, bms, gws)
-        self.out_planes = ws
+        self.out_planes = ws[len(ws) - len(self.out_layers): len(ws)]
         # Use the same stride for each stage, stride set to 2
         ss = [2 for _ in range(num_s)]
         # Use SE for RegNetY

@@ -17,7 +17,7 @@ from up.utils.general.log_helper import default_logger as logger
 from up.commands.subcommand import Subcommand
 from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGISTRY
 from up.utils.general.global_flag import DIST_BACKEND
-from up.tasks.nas.plugins.metax.models.backbones import xmnet_search
+from up.tasks.nas.metax.models.backbones import xmnet_search
 
 try:
     from metax.actor import RestfulActor

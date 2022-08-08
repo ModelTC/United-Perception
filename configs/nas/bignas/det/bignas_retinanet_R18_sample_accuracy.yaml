@@ -1,0 +1,291 @@
+num_classes: &num_classes 81
+
+runtime:
+  rank_init: True
+  runner:
+      type: bignas
+
+flip: &flip
+ type: flip
+ kwargs:
+   flip_p: 0.5
+
+test_resize: &test_resize
+ type: keep_ar_resize
+ kwargs:
+   scales: [800]
+   max_size: 1333
+   separate_wh: True
+
+fix_output_resize: &fix_output_resize
+  type: fix_output_resize
+  kwargs:
+    scales: [800, 800]
+    max_size: 1400
+
+expand: &stitch_expand
+  type: stitch_expand
+  kwargs:
+    expand_ratios: 2.0
+    expand_prob: 0.5
+
+crop: &crop
+  type: crop
+  kwargs:
+    means: [103.530, 116.280, 123.675]
+    scale: 800
+    crop_prob: 0.5
+
+color_jitter: &color_jitter
+  type: color_jitter
+  kwargs:
+    brightness: 32
+    contrast: [0.5, 1.5]
+    saturation: [0.5, 1.5]
+    hue: 18
+
+to_tensor: &to_tensor
+  type: to_tensor
+
+normalize: &normalize
+ type: normalize
+ kwargs:
+   mean: [0.485, 0.456, 0.406] # ImageNet pretrained statics
+   std: [0.229, 0.224, 0.225]
+
+dataset: # Required.
+  data_pool: ['train:train', 'test:test', 'train_calib:train_calib']
+  train:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_train2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+            color_mode: RGB
+        transformer: [*stitch_expand, *crop, *flip, *color_jitter, *fix_output_resize,*to_tensor, *normalize]
+  train_calib:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: /mnt/lustre/share/shenmingzhu/calib_coco/coco_2048_coco_format.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/train2017
+            color_mode: RGB
+        transformer: [*test_resize, *to_tensor, *normalize]
+  test:
+    dataset:
+      type: coco
+      kwargs:
+        meta_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
+        image_reader:
+          type: fs_opencv
+          kwargs:
+            image_dir: /mnt/lustre/share/DSK/datasets/mscoco2017/val2017
+            color_mode: RGB
+        transformer: [*test_resize, *to_tensor, *normalize]
+        evaluator:
+          type: COCO               # choices = {'COCO', 'VOC', 'MR'}
+          kwargs:
+            gt_file: /mnt/lustre/share/DSK/datasets/mscoco2017/annotations/instances_val2017.json
+            iou_types: [bbox]
+  batch_sampler:
+    type: aspect_ratio_group
+    kwargs:
+      sampler:
+        type: dist
+        kwargs: {}
+      batch_size: 8
+      aspect_grouping: [1,]
+  dataloader:
+    type: base
+    kwargs:
+      num_workers: 4
+      alignment: 32
+      pin_memory: True
+
+trainer:  # Required.
+  max_epoch: 500              # total epochs for the training
+  test_freq: 10
+  save_freq: 10
+  optimizer:                 # optimizer = SGD(params,lr=0.001,momentum=0.9,weight_decay=0.0001)
+    type: SGD
+    kwargs:
+      lr: 0.000625
+      momentum: 0.9
+      weight_decay: 0.0001
+  lr_scheduler:              # lr_scheduler = MultStepLR(optimizer, milestones=[9,14],gamma=0.1)
+    warmup_epochs: 1         # set to be 0 to disable warmup. When warmup,  target_lr = init_lr * total_batch_size
+    type: MultiStepLR
+    warmup_type: linear
+    kwargs:
+      milestones: [350, 450]     # epochs to decay lr
+      gamma: 0.1
+
+
+saver: # Required.
+  save_dir: checkpoints/ret18     # dir to save checkpoints
+  pretrain_model: /mnt/lustre/jinxin2/uppush3testdormimic/to_JX/ckpt_e500_ret.pth
+  results_dir: results_dir/ret18  # dir to save detection results. i.e., bboxes, masks, keypoints
+  auto_resume: True  # find last checkpoint from save_dir and resume from it automatically
+                     # this option has the highest priority (auto_resume > opts > resume_model > pretrain_model)
+
+bignas:
+    train:
+        sample_subnet_num: 1
+        sample_strategy: ['max', 'random', 'random', 'min']
+        valid_before_train: False
+    data:
+        share_interpolation: False
+        interpolation_type: bicubic
+        image_size_list: [[1, 3, 768, 1344]]
+        calib_meta_file: /mnt/lustre/share/shenmingzhu/calib_coco/coco_2048_coco_format.json
+        metric1: bbox.AP
+        metric2: top1
+    distiller:
+        distill: False
+        mimic:
+            mimic_job0:
+              loss_weight: 0.5
+              teacher0:
+                mimic_name: ['neck.p6_conv.conv']
+              student:
+                mimic_name: ['neck.p6_conv.conv']
+        teacher0: {}
+    subnet:
+        calib_bn: True
+        image_size: [1, 3, 768, 1344]
+        flops_range: ['200G', '400G']
+        baseline_flops: 50G
+        subnet_count: 5
+    latency:
+        hardware1:
+            hardware_name: 3559A
+            backend_name: hisvp-nnie11
+            data_type: int8
+            batch_size: 8
+            test_latency: True
+
+hooks:
+  - type: auto_checkpoint
+
+net:
+  - name: backbone              # backbone = resnet50(frozen_layers, out_layers, out_strides)
+    type: big_resnet_basic
+    kwargs:
+      task: detection
+      frozen_layers: []     # layer0...1 is fixed
+      out_layers: [2,3,4]       # layer1...4, commonly named Conv2...5
+      out_strides: [8,16,32]    # tell the strides of output features
+      deep_stem: True
+      normalize:
+        type: dynamic_sync_bn
+        kwargs:
+          group_size: 8
+      out_channel:
+          space:
+              min: [32, 48, 96, 192, 384]
+              max: [64, 80, 160, 320, 640]
+              stride: [16, 16, 32, 64, 128]
+          sample_strategy: stage_wise
+      kernel_size: [3, 3, 3, 3, 3]
+      expand_ratio: [0.5, 1, 1, 1, 1]
+      depth:
+          space:
+              min: [1, 1, 2, 2, 4]
+              max: [1, 3, 4, 4, 6]
+              stride: [1, 1, 1, 1, 1]
+          sample_strategy: stage_wise_depth
+  - name: neck
+    prev: backbone
+    type: big_fpn
+    kwargs:
+      start_level: 3
+      num_level: 5                # if num_level>len(backbone.out_layers), additional conv with be stacked.
+      out_strides: [8,16,32,64,128] # strides of output features. aka., anchor strides for roi_head
+      downsample: conv            # method to downsample, for FPN, it's pool, for RetienaNet, it's conv
+      upsample: nearest           # method to interp, nearest or bilinear
+      initializer:
+        method: xavier
+      normalize:
+        type: dynamic_sync_bn
+        kwargs:
+          group_size: 8
+      kernel_size: [1, 3]
+      depth: [3, 5]
+      out_channel:
+          space:
+              min: [128, 128]
+              max: [128, 128]
+              stride: 32
+          sample_strategy: net_wise
+  - name: roi_head
+    prev: neck
+    type: BigRetinaHeadWithBN
+    kwargs:
+      feat_planes: 128
+      kernel_size: [3]
+      depth:
+          space:
+              min: [4]
+              max: [4]
+              stride: 1
+          sample_strategy: stage_wise_depth
+      out_channel:
+          space:
+              min: [64]
+              max: [128]
+              stride: 32
+          sample_strategy: stage_wise
+      num_classes: *num_classes   # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      initializer:
+        method: normal
+        std: 0.01
+      init_prior: 0.01
+      num_anchors: 2
+      num_level: 5
+      class_activation: sigmoid
+      normalize:
+        type: dynamic_solo_bn
+  - name: post_process
+    prev: roi_head
+    type: retina_post
+    kwargs:
+      num_classes: *num_classes   # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
+      cfg:
+        cls_loss:
+          type: quality_focal_loss
+          kwargs:
+            gamma: 2.0
+        loc_loss:
+          type: iou_loss
+          kwargs:
+            loss_type: giou
+            loss_weight: 1.0
+        anchor_generator:
+          type: hand_craft
+          kwargs:
+            anchor_ratios: [1]  # anchor strides are provided as feature strides by feature extractor
+            anchor_scales: [6, 8] # scale of anchors relative to feature map
+        roi_supervisor:
+          type: atss
+          kwargs:
+            top_n: 18
+        roi_predictor:
+          type: base
+          kwargs:
+            pre_nms_score_thresh: 0.05  # to reduce computation
+            pre_nms_top_n: 1000
+            post_nms_top_n: 1000
+            roi_min_size: 0               # minimum scale of a valid roi
+            merger:
+              type: retina
+              kwargs:
+                top_n: 100
+                nms:
+                  type: naive
+                  nms_iou_thresh: 0.5

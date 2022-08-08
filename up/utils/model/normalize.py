@@ -65,7 +65,7 @@ def is_bn(m):
     return False
 
 
-def build_norm_layer(num_features, cfg, postfix=''):
+def build_norm_layer(num_features, cfg, postfix='', layer_instance=True):
     assert isinstance(cfg, dict) and 'type' in cfg
     cfg = cfg.copy()
     layer_type = cfg.pop('type')
@@ -94,6 +94,9 @@ def build_norm_layer(num_features, cfg, postfix=''):
 
     assert isinstance(postfix, (int, str))
     name = abbr + str(postfix)
+
+    if not layer_instance:
+        return norm_layer
 
     layer = norm_layer(num_features, **kwargs)
     return name, layer

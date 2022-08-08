@@ -138,6 +138,18 @@ def main(args):
     runner_cfg['kwargs']['training'] = training
     runner = RUNNER_REGISTRY.get(runner_cfg['type'])(cfg, **runner_cfg['kwargs'])
     train_func = {"train": runner.train, "eval": runner.evaluate}
+    if runner_cfg['type'] == 'bignas':
+        train_func = {
+            "train_supnet": runner.train,
+            "sample_flops": runner.sample_multiple_subnet_flops,
+            "sample_accuracy":
+                runner.sample_multiple_subnet_accuracy,
+            "evaluate_subnet": runner.evaluate_subnet,
+            "finetune_subnet": runner.finetune_subnet,
+            "sample_subnet": runner.sample_subnet_weight
+        }
+        assert train_phase in train_func, f"{train_phase} is not supported"
+
     train_func[train_phase]()
     finalize()
 

@@ -36,6 +36,7 @@ from up.utils.general.global_flag import (
     DIST_BACKEND,
     FP16_FLAG
 )
+
 from up.utils.general.tocaffe_utils import get_model_hash, rewrite_model
 from up.utils.env.analysis_utils import get_memory_info
 
