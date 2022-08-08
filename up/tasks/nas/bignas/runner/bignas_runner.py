@@ -359,10 +359,12 @@ class BignasRunner(BaseRunner):
         for info in self.performance_dict:
             flag = True
             for _ in self.performance_dict:
-                if info['top1'] < _['top1'] and info['flops']['total'] >= _['flops']['total']:
+                if info[self.controller.metric1] < _[self.controller.metric1] \
+                   and info['flops']['total'] >= _['flops']['total']:
                     flag = False
                     break
-                if info['top1'] <= _['top1'] and info['flops']['total'] > _['flops']['total']:
+                if info[self.controller.metric1] <= _[self.controller.metric1] \
+                   and info['flops']['total'] > _['flops']['total']:
                     flag = False
                     break
             if flag:

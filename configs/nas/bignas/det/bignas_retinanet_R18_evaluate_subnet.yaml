@@ -199,7 +199,7 @@ net:
       out_strides: [8,16,32]    # tell the strides of output features
       deep_stem: True
       normalize:
-        type: dynamic_switch_solo_bn
+        type: dynamic_solo_bn
         # type: dynamic_layer_norm
         # kwargs:
         #   group_size: 8
@@ -229,7 +229,7 @@ net:
       initializer:
         method: xavier
       normalize:
-        type: dynamic_switch_solo_bn
+        type: dynamic_solo_bn
         # type: dynamic_layer_norm
         # kwargs:
         #   group_size: 8
@@ -268,7 +268,7 @@ net:
       num_level: 5
       class_activation: sigmoid
       normalize:
-        type: dynamic_switch_solo_bn
+        type: dynamic_solo_bn
         # type: dynamic_layer_norm
   - name: post_process
     prev: roi_head

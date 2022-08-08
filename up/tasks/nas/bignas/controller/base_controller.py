@@ -541,7 +541,7 @@ class BaseController(object):
         return merged_onnx_name
 
     def get_subnet_latency(self, model_name):
-        from spring.models.latency import Latency
+        from latency.latency import Latency
         assert self.latency is not None
         latency_client = Latency()
         latency_dict = {}
