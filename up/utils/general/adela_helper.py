@@ -38,50 +38,52 @@ class BaseToAdela(object):
         logger.info("========release done========")
 
         # deploy & quantity
-        logger.info("Deploying model start...")
-        dep_params = cfg_adela['dep_params']
-        if not isinstance(dep_params, list):
-            dep_params = [dep_params]
-        dids, dep_status = [], [True for _ in range(len(dep_params))]
-        for idx in range(len(dep_params)):
-            logger.info(f"----task {idx}----")
-            self.re_d_times = 0
-            dep_p = dep_params[idx]
-            # add quantity dataset
-            if dep_p.get('dataset_added', None):
-                adela.dataset_add(pid, dep_p['dataset_added'])
-                logger.info(f'quantity dataset add.')
-            # add config json
-            if dep_p.get('config_json', None):
-                file_cfg = dep_p.get('config_json')
-                if isinstance(file_cfg, str) and os.path.exists(file_cfg):
-                    dep_p['config_json'] = json.load(open(file_cfg))
-                else:
-                    logger.warning('config_json should exist and its type should be string')
-                    dep_status[idx] = False
-                    dids.append(-1)
-                    continue
-                dep_p['config_json'] = json.dumps(dep_p['config_json'])
-            dep_rep = adela.deployment_add_by_param(pid=pid, rid=rid, info=dep_p)
-            did = dep_rep.id
-            dids.append(did)
-            logger.info(f'deploy id:{did}')
-            # wait for deployment response
-            status = adela.deployment(pid, did).status
-            while (status != "SUCCESS"):
-                if status == "FAILURE":
-                    if self.re_d_times < self.retry_deploy_times:
-                        self.re_d_times += 1
-                        logger.info(f"retry {self.re_d_times} time")
-                        adela.deployment_api.put_deployment(pid, did)
-                        status = adela.deployment(pid, did).status
+        dep_params = cfg_adela.get('dep_params', None)
+        if dep_params:
+            logger.info("Deploying model start...")
+            if not isinstance(dep_params, list):
+                dep_params = [dep_params]
+            dids, dep_status = [], [True for _ in range(len(dep_params))]
+            for idx in range(len(dep_params)):
+                logger.info(f"----task {idx}----")
+                self.re_d_times = 0
+                dep_p = dep_params[idx]
+                # add quantity dataset
+                if dep_p.get('dataset_added', None):
+                    adela.dataset_add(pid, dep_p['dataset_added'])
+                    logger.info(f'quantity dataset add.')
+                # add config json
+                if dep_p.get('config_json', None):
+                    config_json = dep_p.get('config_json')
+                    try:
+                        assert isinstance(config_json, (str, dict))
+                    except BaseException:
+                        logger.info("Invalid parameter: config_json type should be string or dict.")
                         continue
-                    logger.warning('deploy failed')
-                    dep_status[idx] = False
-                    break
-                time.sleep(1)
+
+                    if isinstance(config_json, str) and os.path.exists(config_json):
+                        dep_p['config_json'] = json.load(open(config_json))
+                    dep_p['config_json'] = json.dumps(dep_p['config_json'])
+                dep_rep = adela.deployment_add_by_param(pid=pid, rid=rid, info=dep_p)
+                did = dep_rep.id
+                dids.append(did)
+                logger.info(f'deploy id:{did}')
+                # wait for deployment response
                 status = adela.deployment(pid, did).status
-        logger.info("========deployment done========")
+                while (status != "SUCCESS"):
+                    if status == "FAILURE":
+                        if self.re_d_times < self.retry_deploy_times:
+                            self.re_d_times += 1
+                            logger.info(f"retry {self.re_d_times} time")
+                            adela.deployment_api.put_deployment(pid, did)
+                            status = adela.deployment(pid, did).status
+                            continue
+                        logger.warning('deploy failed')
+                        dep_status[idx] = False
+                        break
+                    time.sleep(1)
+                    status = adela.deployment(pid, did).status
+            logger.info("========deployment done========")
 
         # benchmark
         precision_params = cfg_adela.get('precision_params', None)
@@ -118,7 +120,7 @@ class BaseToAdela(object):
                         break
                     time.sleep(1)
                     status = adela.benchmark(pid, dids[didx], bid)["status"]
-        logger.info("========benchmark done========")
+            logger.info("========benchmark done========")
 
         # download
         publish_params = cfg_adela.get('publish_params', None)
@@ -136,5 +138,5 @@ class BaseToAdela(object):
                     mid = adela.model_add(pid, dids[didx]).id
                 logger.info(f'model id:{mid}')
                 adela.model_download(pid, mid)
-        logger.info("========publish done========")
+            logger.info("========publish done========")
         logger.info(f'adela done')
