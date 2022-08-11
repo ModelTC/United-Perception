@@ -159,13 +159,23 @@ class BaseInference(object):
         return output_list
 
     def fetch_single(self, filename):
-        img = self.image_reader.read(filename)
-        data = EasyDict({
-            'filename': filename,
-            'origin_image': img,
-            'image': img,
-            'flipped': False
-        })
+        if isinstance(filename, str):
+            img = self.image_reader.read(filename)
+            data = EasyDict({
+                'filename': filename,
+                'origin_image': img,
+                'image': img,
+                'flipped': False
+            })
+        else:
+            origin_img = img = filename
+            data = EasyDict({
+                'filename': 'temp.jpg',
+                'origin_image': origin_img,
+                'image': img,
+                'flipped': False
+            })
+
         if self.task_type == 'seg':
             data['gt_semantic_seg'] = img
         data = self.transformer(data)

@@ -7,3 +7,4 @@ from .to_onnx import ToOnnx # noqa
 from .to_kestrel import ToKestrel # noqa
 from .flops import Flops # noqa
 from .adela_deploy import AdelaDeploy # noqa
+from .inference_video import Inference_video # noqa
