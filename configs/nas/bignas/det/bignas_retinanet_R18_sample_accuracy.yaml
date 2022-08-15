@@ -146,22 +146,12 @@ bignas:
         calib_meta_file: /mnt/lustre/share/shenmingzhu/calib_coco/coco_2048_coco_format.json
         metric1: bbox.AP
         metric2: bbox.AP.5
-    distiller:
-        distill: False
-        mimic:
-            mimic_job0:
-              loss_weight: 0.5
-              teacher0:
-                mimic_name: ['neck.p6_conv.conv']
-              student:
-                mimic_name: ['neck.p6_conv.conv']
-        teacher0: {}
     subnet:
         calib_bn: True
         image_size: [1, 3, 768, 1344]
         flops_range: ['200G', '400G']
-        baseline_flops: 50G
-        subnet_count: 5
+        baseline_flops: 200G
+        subnet_count: 100
     latency:
         hardware1:
             hardware_name: 3559A

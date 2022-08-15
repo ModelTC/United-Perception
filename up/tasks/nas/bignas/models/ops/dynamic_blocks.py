@@ -71,7 +71,7 @@ class DynamicStemBlock(nn.Module):
     def __init__(self, in_channel_list, out_channel_list,
                  kernel_size_list=3, expand_ratio_list=0.5, stride=1, act_func='relu',
                  KERNEL_TRANSFORM_MODE=False, divisor=8,
-                 normalize={'type': 'solo_bn'}):
+                 normalize={'type': 'dynamic_solo_bn'}):
         super(DynamicStemBlock, self).__init__()
 
         self.in_channel_list = int2list(in_channel_list)
@@ -170,7 +170,7 @@ class DynamicBasicBlock(nn.Module):
     def __init__(self, in_channel_list, out_channel_list,
                  kernel_size_list=3, expand_ratio_list=1, stride=1, act_func='relu',
                  KERNEL_TRANSFORM_MODE=False, divisor=8, IS_STAGE_BLOCK=False,
-                 normalize={'type': 'solo_bn'}):
+                 normalize={'type': 'dynamic_solo_bn'}):
         super(DynamicBasicBlock, self).__init__()
 
         self.in_channel_list = int2list(in_channel_list)
@@ -269,7 +269,7 @@ class DynamicConvBlock(nn.Module):
 
     def __init__(self, in_channel_list, out_channel_list, kernel_size_list=3, stride=1, dilation=1,
                  use_bn=True, act_func='relu', KERNEL_TRANSFORM_MODE=False, bias=False,
-                 normalize={'type': 'solo_bn'}):
+                 normalize={'type': 'dynamic_solo_bn'}):
         super(DynamicConvBlock, self).__init__()
 
         self.in_channel_list = int2list(in_channel_list)
@@ -340,7 +340,7 @@ class DynamicRegBottleneckBlock(nn.Module):
                  group_width_list=1, stride=1, expand_input=False,
                  act_func='relu', use_se=False, act_func1='relu', act_func2='sigmoid',
                  KERNEL_TRANSFORM_MODE=False, divisor=8,
-                 normalize={'type': 'solo_bn'}):
+                 normalize={'type': 'dynamic_solo_bn'}):
         super(DynamicRegBottleneckBlock, self).__init__()
 
         self.in_channel_list = int2list(in_channel_list)

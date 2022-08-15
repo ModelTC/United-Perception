@@ -50,7 +50,7 @@ class BigRoiHead(BignasSearchSpace):
         0 is always for the background class.
     """
 
-    def __init__(self, inplanes, num_levels, num_conv, normalize={'type': 'solo_bn'}, **kwargs):
+    def __init__(self, inplanes, num_levels, num_conv, normalize={'type': 'dynamic_solo_bn'}, **kwargs):
         """
         Arguments:
             - inplanes (:obj:`list` or :obj:`int`): input channel
@@ -172,7 +172,7 @@ class BignasRoiHead(nn.Module):
         0 is always for the background class.
     """
 
-    def __init__(self, inplanes, num_levels=5, num_conv=4, normalize={'type': 'solo_bn'},
+    def __init__(self, inplanes, num_levels=5, num_conv=4, normalize={'type': 'dynamic_solo_bn'},
                  depth=[1, 1, 1, 1], kernel_size=[3, 3, 3, 3], out_channel=[256, 256, 256, 256]):
         """
         Arguments:

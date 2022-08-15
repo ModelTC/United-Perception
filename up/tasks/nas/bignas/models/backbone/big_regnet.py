@@ -50,7 +50,7 @@ class BigRegNet(BignasSearchSpace):
                  se_act_func1='relu', se_act_func2='sigmoid',
                  dropout_rate=0.1, divisor=8,
                  # clarify settings for detection task
-                 normalize={'type': 'solo_bn'},
+                 normalize={'type': 'dynamic_solo_bn'},
                  frozen_layers=[],
                  out_layers=[],
                  out_strides=[],
@@ -301,7 +301,7 @@ class BignasRegNet(nn.Module):
                  se_act_func1='relu',
                  se_act_func2='sigmoid',
                  # bn and initializer
-                 normalize={'type': 'solo_bn'},
+                 normalize={'type': 'dynamic_solo_bn'},
                  initializer={'method': 'msra'},
                  # configuration for task
                  frozen_layers=[],

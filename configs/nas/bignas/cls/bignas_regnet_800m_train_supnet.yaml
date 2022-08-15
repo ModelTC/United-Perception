@@ -149,8 +149,6 @@ bignas:
         calib_meta_file: /mnt/lustre/share/shenmingzhu/calib_coco/coco_2048_coco_format.json
         metric1: bbox.AP
         metric2: bbox.AP.5
-    distiller:
-        distill: False
     latency:
         hardware1:
             hardware_name: s100acc

@@ -63,8 +63,9 @@ class BaseController(object):
             'sample_strategy', ['max', 'random', 'random', 'min'])
 
         # distiller
-        self.distiller = self.config.distiller
-        self.distiller_type = self.config.distiller.get('type', 'kd')
+        self.distiller = self.config.get('distiller', None)
+        if self.distiller:
+            self.distiller_type = self.config.distiller.get('type', 'kd')
 
         # subnet
         self.subnet = self.config.get('subnet', None)
@@ -80,7 +81,7 @@ class BaseController(object):
                 break
 
     def init_distiller(self):
-        if not self.config['distiller']['distill']:
+        if not self.config.get('distiller', False):
             return
         self.mimic_configs, self.teacher_configs = self.prepare_mimic_configs(self.config['distiller']['mimic'])
         for tmk in self.teacher_models.keys():
@@ -262,7 +263,7 @@ class BaseController(object):
         return curr_subnet_settings
 
     def adjust_teacher(self, input, curr_subnet_num):
-        if not self.config['distiller']['distill']:
+        if not self.config.get('distiller', False):
             return
         for key in self.mimic_configs.keys():
             self.mimic_jobs[key].prepare()
@@ -275,7 +276,7 @@ class BaseController(object):
 
     def get_distiller_loss(self, sample_mode, output, curr_subnet_num):
         mimic_loss = 0
-        if not self.config['distiller']['distill']:
+        if not self.config.get('distiller', False):
             return 0
 
         for key in self.mimic_configs.keys():
@@ -308,7 +309,7 @@ class BaseController(object):
             self.subnet_str += name + ': ' + ','.join(
                 ['%s_%s' % (key, '%s' % val)
                  for key, val in settings.items()]) + ' || '
-        if self.config['distiller']['distill']:
+        if self.config.get('distiller', False):
             for mimic_job in self.config['distiller']['mimic'].keys():
                 loss_type = ''
                 loss_weight = self.config['distiller']['mimic'][mimic_job]['loss_weight']
@@ -357,7 +358,10 @@ class BaseController(object):
 
         for name, module in self.model.named_children():
             logger.info('use first part of model {} to get fake input'.format(name))
-            input = module.get_fake_input(input_shape=image_size)
+            if hasattr(module, "get_fake_input"):
+                input = module.get_fake_input(input_shape=image_size)
+            else:
+                input = self.get_fake_input(module, image_size)
             break
         flops_dict, params_dict = count_dynamic_flops_and_params(self.model, input, depth=0)
 
@@ -366,6 +370,22 @@ class BaseController(object):
             format(curr_subnet_settings, image_size, clever_format(flops_dict),
                    clever_format(params_dict)))
         return flops_dict, params_dict, image_size, curr_subnet_settings
+
+    def get_fake_input(self, module, image_size):
+        input = torch.randn(image_size)
+        device = next(module.parameters(), torch.tensor([])).device
+        input = input.to(device)
+        for m in module.modules():
+            if isinstance(m, torch.nn.Conv2d) and m.weight.dtype == torch.float16:
+                input = input.half()
+        b, c, height, width = map(int, input.size())
+        input = {
+            'image_info': [[height, width, 1.0, height, width, False]],
+            'image': input,
+            'filename': ['Test.jpg'],
+            'label': torch.LongTensor([[0]]),
+        }
+        return input
 
     def check_flops_range(self, flops):
         self.baseline_flops = parse_flops(self.subnet.get('baseline_flops', None))

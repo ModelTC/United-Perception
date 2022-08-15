@@ -10,8 +10,6 @@ bignas:
       sample_subnet_num: 1
       sample_strategy: ['max', 'random', 'random', 'min']
       valid_before_train: False
-  distiller:
-    distill: false
   data:
       share_interpolation: False
       interpolation_type: bicubic
@@ -22,8 +20,8 @@ bignas:
   subnet:
       image_size: [1, 3, 768, 1344]
       flops_range: ['100G', '400G']
-      baseline_flops: 50G
-      subnet_count: 3
+      baseline_flops: 200G
+      subnet_count: 100
       subnet_settings:
           backbone:
               kernel_size: [3, 3, 3, 3, 3]

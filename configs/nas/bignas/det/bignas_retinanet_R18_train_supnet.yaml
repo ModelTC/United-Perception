@@ -133,8 +133,8 @@ bignas:
         metric1: bbox.AP
         metric2: bbox.AP.5
     distiller:
-        distill: False
         mimic:
+            mimic_as_jobs: True
             mimic_job0:
               loss_weight: 0.5
               teacher0:

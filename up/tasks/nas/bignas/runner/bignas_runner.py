@@ -3,6 +3,7 @@ import json
 import time
 import random
 import torch
+import copy
 from up.runner.base_runner import BaseRunner
 from up.utils.general.registry_factory import MODEL_HELPER_REGISTRY, RUNNER_REGISTRY
 from up.utils.general.log_helper import default_logger as logger
@@ -52,7 +53,7 @@ class BignasRunner(BaseRunner):
 
     def build_teacher(self):
         self.teacher_models = {}
-        if not self.config['bignas']['distiller']['distill']:
+        if not self.config['bignas'].get('distiller', False):
             return
         model_helper_type = self.config['runtime']['model_helper']['type']
         model_helper_kwargs = self.config['runtime']['model_helper']['kwargs']
@@ -330,16 +331,16 @@ class BignasRunner(BaseRunner):
             logger.info(json.dumps(v))
         logger.info('--------------------------------------------')
 
-        self.get_top10_subnets()
-        self.get_pareto_subnets()
+        self.get_top10_subnets(copy.deepcopy(self.performance_dict))
+        self.get_pareto_subnets(copy.deepcopy(self.performance_dict))
 
-    def get_top10_subnets(self):
+    def get_top10_subnets(self, performance_dict):
         self.baseline_flops = parse_flops(self.subnet.get('baseline_flops', None))
         if self.baseline_flops is None:
             return
-        self.performance_dict = sorted(self.performance_dict, key=lambda x: x[self.controller.metric1], reverse=True)
+        performance_dict = sorted(performance_dict, key=lambda x: x[self.controller.metric1], reverse=True)
         candidate_dict = []
-        for info in self.performance_dict:
+        for info in performance_dict:
             flop = info['flops']['total']
             if (flop - self.baseline_flops) / self.baseline_flops < 0.01:
                 candidate_dict.append(info)
@@ -353,12 +354,12 @@ class BignasRunner(BaseRunner):
             logger.info(json.dumps(c))
         logger.info('--------------------------------------------')
 
-    def get_pareto_subnets(self):
+    def get_pareto_subnets(self, performance_dict):
         pareto = []
-        self.performance_dict = sorted(self.performance_dict, key=lambda x: x[self.controller.metric1], reverse=True)
-        for info in self.performance_dict:
+        performance_dict = sorted(performance_dict, key=lambda x: x[self.controller.metric1], reverse=True)
+        for info in performance_dict:
             flag = True
-            for _ in self.performance_dict:
+            for _ in performance_dict:
                 if info[self.controller.metric1] < _[self.controller.metric1] \
                    and info['flops']['total'] >= _['flops']['total']:
                     flag = False

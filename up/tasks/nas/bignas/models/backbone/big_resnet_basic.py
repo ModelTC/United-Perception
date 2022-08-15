@@ -42,7 +42,7 @@ class BigResNetBasic(BignasSearchSpace):
                  use_maxpool=True,
                  dropout_rate=0,
                  divisor=8,
-                 normalize={'type': 'solo_bn'},
+                 normalize={'type': 'dynamic_solo_bn'},
                  # clarify settings for detection task
                  gray=False,
                  frozen_layers=[],
@@ -307,7 +307,7 @@ class BignasResNetBasic(nn.Module):
                  divisor=8,
                  use_maxpool=True,
                  # bn and initializer
-                 normalize={'type': 'solo_bn'},
+                 normalize={'type': 'dynamic_solo_bn'},
                  initializer={'method': 'msra'},
                  # configuration for task
                  frozen_layers=[],
