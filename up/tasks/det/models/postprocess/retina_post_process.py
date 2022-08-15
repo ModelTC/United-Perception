@@ -15,7 +15,7 @@ from .roi_supervisor import build_roi_supervisor
 from .roi_predictor import build_roi_predictor
 
 
-__all__ = ['BaseDetPostProcess', 'IOUPostProcess', 'RPNPostProcess']
+__all__ = ['BaseDetPostProcess', 'SSDPostProcess', 'IOUPostProcess', 'RPNPostProcess']
 
 
 @MODULE_PROCESS_REGISTRY.register('retina_post')
@@ -239,6 +239,44 @@ class BaseDetPostProcess(nn.Module):
         decode_loc_pred = offset2bbox(sample_anchor, loc_pred)
         decode_loc_target = offset2bbox(sample_anchor, loc_target)
         return decode_loc_target, decode_loc_pred
+
+
+
+@MODULE_PROCESS_REGISTRY.register('ssd_post')
+class SSDPostProcess(BaseDetPostProcess):
+    def __init__(self, num_classes, cfg, prefix=None, class_first=True):
+        super(SSDPostProcess, self).__init__(num_classes, cfg, prefix, class_first)
+
+    def permute_preds(self, mlvl_preds):
+        if not self.class_first:
+            """Permute preds from [B, A*C, H, W] to [B, H*W*A, C] """
+            mlvl_permuted_preds, mlvl_shapes = [], []
+            for lvl_idx, preds in enumerate(mlvl_preds):
+                b, _, h, w = preds[0].shape
+                k = self.num_anchors[lvl_idx] * h * w
+                preds = [p.permute(0, 2, 3, 1).contiguous().view(b, k, -1) for p in preds]
+                mlvl_permuted_preds.append(preds)
+                mlvl_shapes.append((h, w, k))
+            return mlvl_permuted_preds, mlvl_shapes
+        else:
+            """Permute preds from [B, C*A, H, W] to [B, H*W*A, C] """
+            """Permute preds from [B, C*A*4, H, W] to [B, H*W*A, C*4]"""
+            mlvl_permuted_preds, mlvl_shapes = [], []
+            for lvl_idx, preds in enumerate(mlvl_preds):
+                b, _, h, w = preds[0].shape
+                k = self.num_anchors[lvl_idx] * h * w
+
+                cls, loc = preds
+                cls = cls.view(b, -1, self.num_anchors[lvl_idx], h, w)
+                cls = cls.permute(0, 3, 4, 2, 1).contiguous().view(b, k, -1)
+                loc = loc.view(b, -1, self.num_anchors[lvl_idx], 4, h, w)
+                loc = loc.permute(0, 4, 5, 2, 1, 3).contiguous().view(b, k, -1)
+                preds = [cls, loc]
+
+                mlvl_permuted_preds.append(preds)
+                mlvl_shapes.append((h, w, k))
+            return mlvl_permuted_preds, mlvl_shapes
+
 
 
 @MODULE_PROCESS_REGISTRY.register('retina_post_iou')

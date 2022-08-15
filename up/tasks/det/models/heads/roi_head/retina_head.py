@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 
 from up.utils.model.normalize import build_conv_norm, build_norm_layer
@@ -6,7 +7,7 @@ from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from up.utils.general.global_flag import FP16_FLAG
 
 
-__all__ = ['BaseNet', 'RetinaSubNet', 'RetinaHeadWithBN', 'RetinaHeadWithBNIOU', 'RetinaHeadWithBNSep', 'NaiveRPN']
+__all__ = ['BaseNet', 'SSDHeader', 'RetinaSubNet', 'RetinaHeadWithBN', 'RetinaHeadWithBNIOU', 'RetinaHeadWithBNSep', 'NaiveRPN']
 
 
 class BaseNet(nn.Module):
@@ -32,18 +33,11 @@ class BaseNet(nn.Module):
         self.prefix = self.__class__.__name__
         self.num_classes = num_classes
         self.num_level = num_level
-
-        if isinstance(inplanes, list):
-            inplanes_length = len(inplanes)
-            for i in range(1, inplanes_length):
-                if inplanes[i] != inplanes[0]:
-                    raise ValueError('list inplanes elements are inconsistent with {}'.format(inplanes[i]))
-            inplanes = inplanes[0]
-        assert isinstance(inplanes, int)
         self.inplanes = inplanes
 
     def forward(self, input):
         features = input['features']
+        assert len(features) == self.num_level
         mlvl_raw_preds = [self.forward_net(features[lvl], lvl) for lvl in range(self.num_level)]
         output = {}
         output['preds'] = mlvl_raw_preds
@@ -52,6 +46,55 @@ class BaseNet(nn.Module):
         output.update({'deploy_output_node': output['preds']})
         return output
 
+@MODULE_ZOO_REGISTRY.register('SSDHeader')
+class SSDHeader(BaseNet):
+    def __init__(self,
+                 inplanes,
+                 num_classes,
+                 num_anchors,
+                 num_level=6,
+                 normalize=None,
+                 initializer=None):
+        super(SSDHeader, self).__init__(inplanes, num_classes, num_level)
+
+        self.num_classes = num_classes
+        #num_anchors = [4, 6, 6, 6, 4, 4]
+        location_extractors = []  # 定位预测器,使用3*3卷积来预测定位
+        confidence_extractors = []  # 置信度预测器, 同样使用3*3卷积来预测
+
+        for nd, oc in zip(num_anchors, inplanes):
+            # nd is number_default_boxes, oc is output_channel
+            location_extractors.append(nn.Conv2d(oc, nd * 4, kernel_size=3, padding=1))
+            confidence_extractors.append(nn.Conv2d(oc, nd * self.num_classes, kernel_size=3, padding=1))
+
+        #self.conv_cls = nn.ModuleList(confidence_extractors)
+        self.conv_cls = nn.Sequential(*confidence_extractors)
+        #self.conv_loc = nn.ModuleList(location_extractors)
+        self.conv_loc = nn.Sequential(*location_extractors)
+
+        initialize_from_cfg(self, initializer)
+
+    def forward_net(self, x, lvl=None):
+        cls_pred = self.conv_cls[lvl](x)
+        loc_pred = self.conv_loc[lvl](x)
+        if FP16_FLAG.fp16:
+            cls_pred = cls_pred.float()
+            loc_pred = loc_pred.float()
+        return cls_pred, loc_pred
+'''
+        features = input['features']
+        locs = []
+        confs = []
+        for f, l, c in zip(features, self.loc, self.conf):
+            # [batch, n*4, feat_size, feat_size] -> [batch, 4, -1]
+            locs.append(l(f).view(f.size(0), 4, -1))  # size([batch_size, 4, -1])
+            # [batch, n*classes, feat_size, feat_size] -> [batch, classes, -1]
+            confs.append(c(f).view(f.size(0), self.num_classes, -1))  # size([batch_size, num_classes, -1])
+
+        # locs:(batch_size, 4, 8732), confs:(batch_size, 21, 8732)
+        cls_pred, loc_pred = torch.cat(confs, 2).contiguous(), torch.cat(locs, 2).contiguous()
+        return cls_pred, loc_pred
+'''
 
 @MODULE_ZOO_REGISTRY.register('NaiveRPN')
 class NaiveRPN(BaseNet):
