@@ -193,7 +193,7 @@ class CustomImageToTensor(Augmentation):
         self.norm_image = norm_image
 
     def augment(self, data):
-        image = data['image']
+        image = np.array(data['image'])
         if image.ndim == 3:
             image = image.transpose(2, 0, 1)
         else:

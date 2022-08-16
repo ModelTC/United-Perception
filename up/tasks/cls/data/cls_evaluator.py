@@ -165,27 +165,18 @@ class ImageNetEvaluator(Evaluator):
                 metric.set_cmp_key(metric_name)
 
             if self.use_prec_rec_f1:
-                if self.prec_rec_f1_avg is None:
-                    num_cls = len(res['head0']['precision'])
-                    res['avg_precision'] = np.zeros(num_cls)
-                    res['avg_recall'] = np.zeros(num_cls)
-                    res['avg_f1'] = np.zeros(num_cls)
-                else:
+                if self.prec_rec_f1_avg:
                     res['avg_precision'], res['avg_recall'], res['avg_f1'] = 0, 0, 0
 
-                for head_num in range(len(attr)):
-                    res['avg_precision'] += res[f'head{head_num}']['precision']
-                    res['avg_recall'] += res[f'head{head_num}']['recall']
-                    res['avg_f1'] += res[f'head{head_num}']['f1']
+                    for head_num in range(len(attr)):
+                        res['avg_precision'] += res[f'head{head_num}']['precision']
+                        res['avg_recall'] += res[f'head{head_num}']['recall']
+                        res['avg_f1'] += res[f'head{head_num}']['f1']
 
-                res['avg_precision'] /= len(attr)
-                res['avg_recall'] /= len(attr)
-                res['avg_f1'] /= len(attr)
+                    res['avg_precision'] /= len(attr)
+                    res['avg_recall'] /= len(attr)
+                    res['avg_f1'] /= len(attr)
 
-                if self.prec_rec_f1_avg is None:
-                    res['avg_precision'] = res['avg_precision'].tolist()
-                    res['avg_recall'] = res['avg_recall'].tolist()
-                    res['avg_f1'] = res['avg_f1'].tolist()
                 metric.update(res)
 
         return metric
