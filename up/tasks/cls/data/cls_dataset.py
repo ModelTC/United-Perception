@@ -341,6 +341,29 @@ class ClsDataset(BaseDataset):
             out_res.append(res)
         return out_res
 
+    @property
+    def images_per_class(self):
+        image_list_per_class = defaultdict(list)
+        for img_idx, meta in enumerate(self.metas):
+            if isinstance(meta['label'], list):
+                label = meta['label'][0]
+            else:
+                label = meta['label']
+            image_list_per_class[label + 1].append(img_idx)
+        return image_list_per_class
+
+    @property
+    def num_images_per_class(self):
+        self._num_images_per_class = defaultdict(int)
+        for meta in self.metas:
+            if isinstance(meta['label'], list):
+                label = meta['label'][0]
+            else:
+                label = meta['label']
+            self._num_images_per_class[label + 1] += 1
+        self.num_classes = len(self._num_images_per_class) + 1
+        return self._num_images_per_class
+
 
 @DATASET_REGISTRY.register('rank_cls')
 class RankClsDataset(ClsDataset):
