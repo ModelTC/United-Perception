@@ -391,7 +391,7 @@ class MREvaluator(CustomEvaluator):
         if vis_mode in ['all', 'fp']:
             self.vis_mistake = True
 
-    def get_miss_rate(self, tp, fp, scores, image_num, gt_num, return_index=False):
+    def get_miss_rate(self, tp, fp, scores, image_num, gt_num, drec, prec, return_index=False):
         """
         input: accumulated tps & fps
         len(tp) == len(fp) == len(scores) == len(box)
@@ -400,6 +400,7 @@ class MREvaluator(CustomEvaluator):
         maxfps = self.fppi * image_num
         mrs = np.zeros(N)
         fppi_scores = np.zeros(N)
+        fppi_ap = np.zeros(N)
 
         indices = []
         for i, f in enumerate(maxfps):
@@ -411,10 +412,11 @@ class MREvaluator(CustomEvaluator):
             indices.append(idx)
             mrs[i] = 1 - tp[idx] / gt_num
             fppi_scores[i] = scores[idx]
+            fppi_ap[i] = np.sum(drec[:idx] * prec[:idx])
         if return_index:
-            return mrs, fppi_scores, indices
+            return mrs, fppi_scores, fppi_ap, indices
         else:
-            return mrs, fppi_scores
+            return mrs, fppi_scores, fppi_ap
 
     def _np_fmt(self, x):
         s = "["
@@ -424,7 +426,7 @@ class MREvaluator(CustomEvaluator):
         return s
 
     def export(self, output, ap, max_recall, fppi_miss, fppi_scores,
-               recalls_at_fppi, precisions_at_fppi):
+               recalls_at_fppi, precisions_at_fppi, fppi_ap):
 
         def compute_f1_score(recall, precision):
             return 2 * recall * precision / np.maximum(1, recall + precision)
@@ -446,11 +448,13 @@ class MREvaluator(CustomEvaluator):
         for idx, fppi in enumerate(self.fppi):
             csv_metrics['Score@FPPI={:.3f}'.format(fppi)] = fppi_scores[1:, idx].tolist()
         for idx, fppi in enumerate(self.fppi):
-            csv_metrics['Recall@FPPI={:.3f}'.format(fppi)] = recalls_at_fppi[1:, idx].tolist()
+            csv_metrics['Rec@FPPI={:.3f}'.format(fppi)] = recalls_at_fppi[1:, idx].tolist()
         for idx, fppi in enumerate(self.fppi):
-            csv_metrics['Precision@FPPI={:.3f}'.format(fppi)] = precisions_at_fppi[1:, idx].tolist()
+            csv_metrics['Prec@FPPI={:.3f}'.format(fppi)] = precisions_at_fppi[1:, idx].tolist()
         for idx, fppi in enumerate(self.fppi):
-            csv_metrics['F1-Score@FPPI={:.3f}'.format(fppi)] = f1_score_at_fppi[1:, idx].tolist()
+            csv_metrics['F1@FPPI={:.3f}'.format(fppi)] = f1_score_at_fppi[1:, idx].tolist()
+        for idx, fppi in enumerate(self.fppi):
+            csv_metrics['Ap@FPPI={:.3f}'.format(fppi)] = fppi_ap[1:, idx].tolist()
 
         # Summary
         mAP = np.mean(ap[1:]).tolist()
@@ -460,6 +464,7 @@ class MREvaluator(CustomEvaluator):
         m_rec_at_fppi = np.mean(recalls_at_fppi[1:], axis=0).tolist()
         m_prec_at_fppi = np.mean(precisions_at_fppi[1:], axis=0).tolist()
         m_f1_score_at_fppi = np.mean(f1_score_at_fppi[1:], axis=0).tolist()
+        m_ap_at_fppi = np.mean(fppi_ap[1:], axis=0).tolist()
         # Summary without ignore
         mAP_no_ign = np.mean(ap[self.eval_without_ignore_class_idxs]).tolist()
         m_rec_ign = np.mean(max_recall[self.eval_without_ignore_class_idxs]).tolist()
@@ -468,30 +473,34 @@ class MREvaluator(CustomEvaluator):
         m_rec_at_fppi_ign = np.mean(recalls_at_fppi[self.eval_without_ignore_class_idxs], axis=0).tolist()
         m_prec_at_fppi_ign = np.mean(precisions_at_fppi[self.eval_without_ignore_class_idxs], axis=0).tolist()
         m_f1_score_at_fppi_ign = np.mean(f1_score_at_fppi[self.eval_without_ignore_class_idxs], axis=0).tolist()
+        m_ap_at_fppi_ign = np.mean(fppi_ap[self.eval_without_ignore_class_idxs], axis=0).tolist()
 
         csv_metrics['Class'].append('Mean')
         csv_metrics['AP'].append(mAP)
         csv_metrics['Recall'].append(m_rec)
-        for fppi, mr, score, recall, precision, f1_score in zip(
-                self.fppi, m_fppi_miss, m_score_at_fppi, m_rec_at_fppi, m_prec_at_fppi, m_f1_score_at_fppi):
+        for fppi, mr, score, recall, precision, f1_score, ap_f in zip(self.fppi, m_fppi_miss, m_score_at_fppi,
+                                                                      m_rec_at_fppi, m_prec_at_fppi,
+                                                                      m_f1_score_at_fppi, m_ap_at_fppi):
 
             csv_metrics['MR@FPPI={:.3f}'.format(fppi)].append(mr)
             csv_metrics['Score@FPPI={:.3f}'.format(fppi)].append(score)
-            csv_metrics['Recall@FPPI={:.3f}'.format(fppi)].append(recall)
-            csv_metrics['Precision@FPPI={:.3f}'.format(fppi)].append(precision)
-            csv_metrics['F1-Score@FPPI={:.3f}'.format(fppi)].append(f1_score)
+            csv_metrics['Rec@FPPI={:.3f}'.format(fppi)].append(recall)
+            csv_metrics['Prec@FPPI={:.3f}'.format(fppi)].append(precision)
+            csv_metrics['F1@FPPI={:.3f}'.format(fppi)].append(f1_score)
+            csv_metrics['Ap@FPPI={:.3f}'.format(fppi)].append(ap_f)
         # add results for without ignore
         csv_metrics['Class'].append('Mean_focus')
         csv_metrics['AP'].append(mAP_no_ign)
         csv_metrics['Recall'].append(m_rec_ign)
-        for fppi, mr, score, recall, precision, f1_score in zip(self.fppi, m_fppi_miss_ign, m_score_at_fppi_ign,
-                                                                m_rec_at_fppi_ign, m_prec_at_fppi_ign,
-                                                                m_f1_score_at_fppi_ign):
+        for fppi, mr, score, recall, precision, f1_score, ap_f in zip(self.fppi, m_fppi_miss_ign, m_score_at_fppi_ign,
+                                                                      m_rec_at_fppi_ign, m_prec_at_fppi_ign,
+                                                                      m_f1_score_at_fppi_ign, m_ap_at_fppi_ign):
             csv_metrics['MR@FPPI={:.3f}'.format(fppi)].append(mr)
             csv_metrics['Score@FPPI={:.3f}'.format(fppi)].append(score)
-            csv_metrics['Recall@FPPI={:.3f}'.format(fppi)].append(recall)
-            csv_metrics['Precision@FPPI={:.3f}'.format(fppi)].append(precision)
-            csv_metrics['F1-Score@FPPI={:.3f}'.format(fppi)].append(f1_score)
+            csv_metrics['Rec@FPPI={:.3f}'.format(fppi)].append(recall)
+            csv_metrics['Prec@FPPI={:.3f}'.format(fppi)].append(precision)
+            csv_metrics['F1@FPPI={:.3f}'.format(fppi)].append(f1_score)
+            csv_metrics['Ap@FPPI={:.3f}'.format(fppi)].append(ap_f)
 
         csv_metrics_table = pandas.DataFrame(csv_metrics)
         csv_metrics_table.to_csv(output, index=False, float_format='%.4f')
@@ -580,11 +589,18 @@ class MREvaluator(CustomEvaluator):
                 if not gt['detected'] or gt['detected_score'] < score_thresh:
                     missing_list.append(gt['local_index'])
 
-    def pretty_print(self, metric_table):
+    def pretty_print(self, metric_table, pr_prec_fppi=False):
         columns = list(metric_table.columns)
-        for col in columns:
-            if col.startswith('Recall@') or col.startswith('Precision@') or col.startswith('F1-Score@'):
-                del metric_table[col]
+
+        if pr_prec_fppi:
+            for col in columns[1:]:
+                if not (col.startswith('Rec@') or col.startswith('Prec@') or col.startswith('F1@')
+                        or col.startswith('Ap@')):
+                    del metric_table[col]
+        else:
+            for col in columns[1:]:
+                if col.startswith('Rec@') or col.startswith('Prec@') or col.startswith('F1@') or col.startswith('Ap@'):
+                    del metric_table[col]
 
         table = PrettyTable()
         table.field_names = list(metric_table.columns)
@@ -663,6 +679,7 @@ class MREvaluator(CustomEvaluator):
             max_recall = np.zeros(self.num_classes)
             fppi_miss = np.zeros([self.num_classes, len(self.fppi)])
             fppi_scores = np.zeros([self.num_classes, len(self.fppi)])
+            fppi_ap = np.zeros([self.num_classes, len(self.fppi)])
             recalls_at_fppi = np.zeros([self.num_classes, len(self.fppi)])
             precisions_at_fppi = np.zeros([self.num_classes, len(self.fppi)])
             for class_i in self.eval_class_idxs:  # range(1, self.num_classes):
@@ -699,17 +716,19 @@ class MREvaluator(CustomEvaluator):
                     prec[v] = max(prec[v], prec[v + 1])
                 scores = [x['score'] for x in results_i]
                 image_num = len(gts_img_id_set)
-                mrs, s_fppi, indices = self.get_miss_rate(tp, fp, scores, image_num, sum_gt, return_index=True)
+                mrs, s_fppi, ap_fppi, indices = self.get_miss_rate(tp, fp, scores, image_num, sum_gt, drec,
+                                                                   prec, return_index=True)
                 watch_scale = self.watch_scale
                 if len(watch_scale) > 0:
                     multi_size_metrics = get_miss_rate_multi_size(tp, fp, scores, self.gts, class_i,
                                                                   matched_gt_minsize, watch_scale, self.fppi)
                     for k, v in multi_size_metrics.items():
-                        logger.info("{}:\t{}*{}".format(self.class_names[class_i], k, v))
+                        logger.info("{}:\t{}*{}".format(self.class_names[class_i - 1], k, v))
                 ap[class_i] = np.sum(drec * prec)
                 max_recall[class_i] = np.max(rec)
                 fppi_miss[class_i] = mrs
                 fppi_scores[class_i] = s_fppi
+                fppi_ap[class_i] = ap_fppi
                 recalls_at_fppi[class_i] = rec[np.array(indices)]
                 precisions_at_fppi[class_i] = prec[np.array(indices)]
 
@@ -719,8 +738,9 @@ class MREvaluator(CustomEvaluator):
             mAP = np.sum(ap[1:]) / num_mean_cls
 
             _, metric_table, csv_metrics = self.export(
-                self.metrics_csv, ap, max_recall, fppi_miss, fppi_scores, recalls_at_fppi, precisions_at_fppi)
-            self.pretty_print(metric_table)
+                self.metrics_csv, ap, max_recall, fppi_miss, fppi_scores, recalls_at_fppi, precisions_at_fppi, fppi_ap)
+            self.pretty_print(copy.deepcopy(metric_table))
+            self.pretty_print(copy.deepcopy(metric_table), pr_prec_fppi=True)
 
             metric_name = '{}_mAP:{}'.format(itype, self.iou_thresh)
             csv_metrics.update({metric_name: mAP})

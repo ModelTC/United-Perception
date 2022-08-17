@@ -30,6 +30,8 @@ class Saver(object):
         if yml_path is not None and 's3://' not in yml_path:  # TODO, save cpeh data
             yml_name = os.path.basename(yml_path)
             dst_path = os.path.join(self.save_dir, yml_name)
+            if os.path.exists(dst_path):
+                os.remove(dst_path)
             shutil.copy(yml_path, dst_path)
 
         Saver.task_type = self.save_cfg.get('task_type', 'det')
