@@ -9,12 +9,13 @@ from up.tasks.det.models.utils.bbox_helper import (
     filter_by_size,
     offset2bbox
 )
-
+from up.utils.general.log_helper import default_logger as logger
 
 __all__ = [
     'RetinaSupervisor',
     'RpnSupervisor',
-    'ATSSSupervisor'
+    'ATSSSupervisor',
+    'RetinaOTASupervisor'
 ]
 
 
@@ -325,6 +326,176 @@ class ATSSSupervisor(object):
         if self.return_gts:
             return cls_target, loc_target, sample_cls_mask, sample_loc_mask, gt_bboxes
         return cls_target, loc_target, sample_cls_mask, sample_loc_mask
+
+
+@ROI_SUPERVISOR_REGISTRY.register('retina_ota')
+class RetinaOTASupervisor(object):
+
+    '''
+    Compuate targets for Adaptive Training Sample Selection
+    '''
+
+    def __init__(self,
+                 num_classes,
+                 matcher,
+                 use_centerness_score=False,
+                 norm_on_bbox=False,
+                 gt_encode=True,
+                 return_gts=False):
+        self.matcher = build_matcher(matcher)
+        self.norm_on_bbox = norm_on_bbox
+        self.return_gts = return_gts
+        self.center_sample = True
+        self.gt_encode = gt_encode
+        self.num_classes = num_classes - 1  # 80
+        self.use_centerness = use_centerness_score
+
+    def compuate_iou_targets(self, loc_target, anchors, loc_pred):
+        decode_loc_pred = offset2bbox(anchors, loc_pred)
+        decode_loc_target = offset2bbox(anchors, loc_target)
+        iou_target = bbox_iou_overlaps(decode_loc_pred, decode_loc_target, aligned=True)
+        return iou_target
+
+    def compuate_centerness_targets(self, loc_target, anchors):
+        gts = offset2bbox(anchors, loc_target)
+        anchors_cx = (anchors[:, 2] + anchors[:, 0]) / 2
+        anchors_cy = (anchors[:, 3] + anchors[:, 1]) / 2
+        _l = anchors_cx - gts[:, 0]
+        t = anchors_cy - gts[:, 1]
+        r = gts[:, 2] - anchors_cx
+        b = gts[:, 3] - anchors_cy
+        left_right = torch.stack([_l, r], dim=1)
+        top_bottom = torch.stack([t, b], dim=1)
+        centerness_target = torch.sqrt((left_right.min(dim=-1)[0] / left_right.max(dim=-1)[0]) * (
+                top_bottom.min(dim=-1)[0] / top_bottom.max(dim=-1)[0]))  # noqa E501
+        centerness_target[torch.isnan(centerness_target)] = 0
+        return centerness_target
+
+    @torch.no_grad()
+    @to_float32
+    def get_targets(self, mlvl_anchors, input, mlvl_preds):
+        r"""Match anchors with gt bboxes and sample batch samples for training
+
+        Arguments:
+           - mlvl_anchors (:obj:`list` of :obj:`FloatTensor`, fp32): [[k_0, 4], ..., [k_n,4]],
+             for layer :math:`i` in FPN, k_i = h_i * w_i * A
+           - input (:obj:`dict`) with:
+               - gt_bboxes (list of FloatTensor): [B, num_gts, 5] (x1, y1, x2, y2, label)
+               - image_info (list of FloatTensor): [B, >=3] (image_h, image_w, scale_factor, ...)
+               - ignore_regions (list of FloatTensor): None or [B, I, 4] (x1, y1, x2, y2)
+
+        Returns:
+            cls_target (LongTensor): [B, K], {-1, 0, 1} for RPN, {-1, 0, 1...C} for retinanet
+            loc_target (FloatTensor): [B, K, 4]
+            centerness_target (FloatTensor): [B, K], only for use_centerness
+            sample_cls_mask (ByteTensor): [B, K], binary mask, 1 for choosed samples, otherwise 0
+            sample_loc_mask (ByteTensor): [B, K], binary mask, 1 for choosed positive samples, otherwise 0
+        """
+        gt_bboxes = input['gt_bboxes']
+        ignore_regions = input.get('gt_ignores', None)
+        all_anchors = torch.cat(mlvl_anchors, dim=0)
+        B = len(gt_bboxes)
+        K = all_anchors.shape[0]
+        neg_targets = input.get('neg_targets', None)
+        if ignore_regions is None:
+            ignore_regions = [None] * B
+        if neg_targets is None:
+            neg_targets = [0] * B
+
+        cls_targets = all_anchors.new_full((B, K), -1, dtype=torch.int64)
+        loc_targets = all_anchors.new_zeros((B, K, 4))
+        sample_cls_mask = all_anchors.new_zeros((B, K), dtype=torch.bool)
+        sample_loc_mask = all_anchors.new_zeros((B, K), dtype=torch.bool)
+
+        mlvl_preds = [torch.cat(preds, dim=-1) for preds in mlvl_preds]
+        mlvl_preds = torch.cat(mlvl_preds, dim=1)
+
+        gt_bboxes = input['gt_bboxes']
+        strides = input['strides']
+        # image_info = input.get('image_info')
+
+        num_anchors_per_level = [len(anchor) for anchor in mlvl_anchors]
+        all_anchors = torch.cat(mlvl_anchors, dim=0)
+        # center point
+        anchors_cx = (all_anchors[:, 2] + all_anchors[:, 0]) / 2.0
+        anchors_cy = (all_anchors[:, 3] + all_anchors[:, 1]) / 2.0
+        anchor_points = torch.stack((anchors_cx, anchors_cy), dim=1)
+
+        B = len(gt_bboxes)
+
+        K = all_anchors.shape[0]
+        neg_targets = input.get('neg_targets', None)
+        num_fgs = 0.0
+        for b_ix in range(B):
+            gts, _ = filter_by_size(gt_bboxes[b_ix], min_size=1)
+            preds = mlvl_preds[b_ix]
+            if gts.shape[0] == 0:
+                cls_targets[b_ix][:] = neg_targets[b_ix]
+                continue
+            else:
+                try:
+                    img_size = input['image_info'][b_ix][:2]
+                    num_fg, gt_matched_classes, matched_gt_inds, fg_mask = \
+                        self.matcher.match(gts, preds, anchor_points, all_anchors,
+                                           num_anchors_per_level, strides, img_size=img_size,
+                                           use_centerness_score=self.use_centerness)
+                except RuntimeError:
+                    logger.info(
+                        "OOM RuntimeError is raised due to the huge memory cost during label assignment. \
+                           CPU mode is applied in this batch. If you want to avoid this issue, \
+                           try to reduce the batch size or image size."
+                    )
+                    torch.cuda.empty_cache()
+                    num_fg, gt_matched_classes, matched_gt_inds, fg_mask = \
+                        self.matcher.match(gts, preds, anchor_points, all_anchors,
+                                           num_anchors_per_level, strides, mode='cpu',
+                                           use_centerness_score=self.use_centerness)
+
+                if num_fg == 0:
+                    cls_targets[b_ix][:] = neg_targets[b_ix]
+                    continue
+                else:
+                    cls_target = gt_matched_classes.to(torch.int64)
+                    matched_gts = gts[matched_gt_inds, :4]
+                    selected_anchors = all_anchors[fg_mask]
+                    if self.gt_encode:
+                        reg_target = bbox2offset(selected_anchors, matched_gts)
+                    else:
+                        reg_target = matched_gts
+                num_fgs += num_fg
+
+            loc_targets[b_ix][fg_mask] = reg_target
+            cls_targets[b_ix][fg_mask] = cls_target
+            cls_targets[b_ix][~fg_mask] = neg_targets[b_ix]
+            sample_cls_mask[b_ix][fg_mask] = True
+            sample_loc_mask[b_ix][fg_mask] = True
+
+            if ignore_regions[b_ix] is not None and ignore_regions[b_ix].shape[0] > 0:
+                ig_bbox = ignore_regions[b_ix]
+                if ig_bbox.sum() > 0:
+                    ig_left = anchors_cx[:, None] - ig_bbox[..., 0]
+                    ig_right = ig_bbox[..., 2] - anchors_cx[:, None]
+                    ig_top = anchors_cy[:, None] - ig_bbox[..., 1]
+                    ig_bottom = ig_bbox[..., 3] - anchors_cy[:, None]
+                    ig_targets = torch.stack((ig_left, ig_top, ig_right, ig_bottom), -1)
+                    ig_inside_bbox_mask = (ig_targets.min(-1)[0] > 0).max(-1)[0]
+                    cls_targets[b_ix][ig_inside_bbox_mask] = -1
+                    sample_cls_mask[b_ix][ig_inside_bbox_mask] = False
+                    sample_loc_mask[b_ix][ig_inside_bbox_mask] = False
+
+        if self.use_centerness:
+            batch_anchor = all_anchors.view(1, -1, 4).expand(
+                (sample_loc_mask.shape[0], sample_loc_mask.shape[1], 4))
+            sample_anchor = batch_anchor[sample_loc_mask].contiguous().view(-1, 4)
+            sample_loc_target = loc_targets[sample_loc_mask].contiguous().view(-1, 4)
+            if sample_loc_target.numel():
+                centerness_target = self.compuate_centerness_targets(
+                    sample_loc_target, sample_anchor)
+            else:
+                centerness_target = sample_loc_target.new_zeros(sample_loc_target.shape[0])
+            return cls_targets, loc_targets, centerness_target, sample_cls_mask, sample_loc_mask
+
+        return cls_targets, loc_targets, sample_cls_mask, sample_loc_mask
 
 
 def build_roi_supervisor(supervisor_cfg):
