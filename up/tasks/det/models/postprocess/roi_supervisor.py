@@ -448,7 +448,7 @@ class RetinaOTASupervisor(object):
                     torch.cuda.empty_cache()
                     num_fg, gt_matched_classes, matched_gt_inds, fg_mask = \
                         self.matcher.match(gts, preds, anchor_points, all_anchors,
-                                           num_anchors_per_level, strides, mode='cpu',
+                                           num_anchors_per_level, strides, img_size=img_size, mode='cpu',
                                            use_centerness_score=self.use_centerness)
 
                 if num_fg == 0:

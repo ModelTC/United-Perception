@@ -75,7 +75,8 @@ class OTASupervisor(object):
                     )
                     torch.cuda.empty_cache()
                     num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds, fg_mask, expanded_strides = \
-                        self.matcher.match(gts, preds, points, num_points_per_level, strides, mode='cpu')
+                        self.matcher.match(gts, preds, points, num_points_per_level, strides,
+                                           img_size=img_size, mode='cpu')
                 if num_fg == 0:
                     fg_mask = preds.new_zeros(preds.shape[0], dtype=torch.bool)
                     cls_target = preds.new_zeros((0, self.num_classes))
