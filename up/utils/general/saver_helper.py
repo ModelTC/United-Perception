@@ -12,6 +12,7 @@ from collections import OrderedDict
 from .log_helper import default_logger as logger
 from .registry_factory import SAVER_REGISTRY
 from up.utils.general.petrel_helper import PetrelHelper
+from up.utils.env.dist_helper import env
 
 
 __all__ = ['Saver']
@@ -26,13 +27,14 @@ class Saver(object):
         self.save_cfg = self.prepend_work_dir(save_cfg, work_dir)
         self.work_dir = work_dir
         self.save_dir = save_cfg['save_dir']
-        os.makedirs(self.save_dir, exist_ok=True)
-        if yml_path is not None and 's3://' not in yml_path:  # TODO, save cpeh data
-            yml_name = os.path.basename(yml_path)
-            dst_path = os.path.join(self.save_dir, yml_name)
-            if os.path.exists(dst_path):
-                os.remove(dst_path)
-            shutil.copy(yml_path, dst_path)
+        if env.is_master():
+            os.makedirs(self.save_dir, exist_ok=True)
+            if yml_path is not None and 's3://' not in yml_path:  # TODO, save cpeh data
+                yml_name = os.path.basename(yml_path)
+                dst_path = os.path.join(self.save_dir, yml_name)
+                if os.path.exists(dst_path):
+                    os.remove(dst_path)
+                shutil.copy(yml_path, dst_path)
 
         Saver.task_type = self.save_cfg.get('task_type', 'det')
         self.auto_resume = self.save_cfg.get('auto_resume', False)
