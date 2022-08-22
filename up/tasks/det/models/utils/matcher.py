@@ -181,6 +181,7 @@ class RetinaOTAMatcher(object):
 
         if mode == 'cpu':
             masked_preds = masked_preds.cpu()
+            masked_all_anchors = masked_all_anchors.cpu()
 
         preds_cls = masked_preds[:, :self.num_classes]
         preds_box = masked_preds[:, self.num_classes:-1]  # [A', 4]
