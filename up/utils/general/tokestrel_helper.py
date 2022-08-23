@@ -128,7 +128,7 @@ class KpToKestrel(object):
         ks_processor.process()
 
         logger.info('save kestrel model to: {}'.format(self.save_to))
-        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
+        return os.path.join(self.save_to, '{}_{}.tar'.format(model_name, version))
 
 
 @TOKESTREL_REGISTRY.register('seg')
@@ -179,7 +179,7 @@ class SegToKestrel(object):
         # nnie=nnie)
         ks_processor.process()
         logger.info('save kestrel model to: {}'.format(self.save_to))
-        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
+        return os.path.join(self.save_to, '{}_{}.tar'.format(model_name, version))
 
 
 @TOKESTREL_REGISTRY.register('det')
@@ -246,7 +246,7 @@ class DetToKestrel(object):
         ks_processor.process()
         # shutil.move(kestrel_model, self.save_to)
         logger.info('save kestrel model to: {}'.format(self.save_to))
-        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
+        return os.path.join(self.save_to, '{}_{}.tar'.format(model_name, version))
 
 
 @TOKESTREL_REGISTRY.register('cls')
@@ -326,7 +326,7 @@ class ClsToKestrel(object):
             self.to_nnie(nnie_cfg, self.config, prototxt, caffemodel, self.save_to)
 
         logger.info('Save kestrel model to: {}'.format(self.save_to))
-        return os.path.join(self.save_to, '{}_{}.tar'.format(self.save_to, version))
+        return os.path.join(self.save_to, '{}_{}.tar'.format(model_name, version))
 
 
 @TOKESTREL_REGISTRY.register('det_3d')

@@ -1,2 +1,2 @@
 from .raven import * # noqa
-from .raven_onnx import * # noqa
+from .raven_caffe import * # noqa

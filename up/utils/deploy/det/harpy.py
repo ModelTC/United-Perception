@@ -1,22 +1,20 @@
 import os
 import json
-import yaml
-import torch
+from onnx import TensorProto
+import shutil
 
 try:
-    import spring.nart.tools.caffe.count as count
-    import spring.nart.tools.caffe.utils.graph as graph
     import spring.nart.tools.kestrel.utils.scaffold as scaffold
-    try:
-        import spring.nart.tools.proto.caffe_pb2 as caffe_pb2
-    except:  # noqa
-        from spring.nart.tools.proto import caffe_pb2
+    from spring.nart.utils.onnx_utils.onnx_builder import OnnxDecoder
 except Exception as err:
     print(err)
 
 from up.utils.deploy import parser as up_parser
 from up.utils.deploy.parser import BaseProcessor
-from up.utils.general.registry_factory import MODEL_HELPER_REGISTRY, KS_PARSER_REGISTRY, KS_PROCESSOR_REGISTRY
+from up.utils.general.registry_factory import KS_PARSER_REGISTRY, KS_PROCESSOR_REGISTRY
+from up.utils.general.latency_helper import merged_bn, convert_onnx_for_mbs
+from up.utils.deploy.onnx_utils import *
+from up.utils.deploy.det.harpy_caffe import generate_common_param, generate_config
 
 
 @KS_PARSER_REGISTRY.register('harpy')
@@ -25,223 +23,122 @@ class HarpyParser(up_parser.Parser):
         return generate_config(self.cfg)
 
 
-def get_subnet(net, root):
-    bottom = root.content.bottom[0]
-    nodes = [root]
-    subnet = []
-    while len(nodes) > 0:
-        node = nodes.pop()
-        if node.content in net.layer:
-            layer = caffe_pb2.LayerParameter()
-            layer.CopyFrom(node.content)
-            net.layer.remove(node.content)
-            subnet.append(layer)
-        for succ in node.succ:
-            insert = True
-            for prev in succ.prev:
-                if prev.content in net.layer:
-                    insert = False
-            if insert:
-                nodes.append(succ)
-    return bottom, subnet
+def split_net(
+        model,
+        anchor_num,
+        cls_channel_num,
+        input_h,
+        input_w,
+        input_channel=3):
+    # load model and remove useless cast layers
+    G = onnx.load(model)
+    G = auto_remove_cast(G)
+    G_nart = OnnxDecoder().decode(G)
+
+    wmap = build_name_dict(G.graph.initializer)
+    vimap = build_name_dict(G.graph.value_info)
+
+    graph_output_names = [out.name for out in G.graph.output]
+    for node in G.graph.node:
+        if 'Roi' in node.name:
+            roi_node = node
+            break
+
+    # rpn
+    rpn_inputs_names = [inp.name for inp in G.graph.input]
+    rpn_outputs_names = [name for name in graph_output_names if 'RPN' in name]
+
+    rpn_nodes = collect_subnet_nodes(G, rpn_inputs_names, rpn_outputs_names)
+    rpn_inits, rpn_values = collect_subnet_inits_values(rpn_nodes, wmap, vimap)
+    # make rpn inputs & outputs
+    rpn_data = onnx.helper.make_tensor_value_info('data', TensorProto.FLOAT, [1, input_channel, input_h, input_w])
+    rpn_inputs = [rpn_data]
+    rpn_outputs = [output for output in G.graph.output if 'RPN' in output.name]
+
+    # find last reshape
+    for idx, node in enumerate(rpn_nodes):
+        if node.op_type == 'Reshape' and 'RPNPostProcess' in node.output[0]:
+            last_reshape_node = node
+            last_idx = idx
+            break
+    rpn_nodes.remove(last_reshape_node)
+
+    last_const_idx = len(rpn_nodes)
+    last_const_node = rpn_nodes[-1]
+
+    # fix cls output
+    new_const_node = make_constant_dims(last_reshape_node.input[1], [1, anchor_num, cls_channel_num, -1])
+    rpn_nodes.remove(last_const_node)
+    rpn_nodes.insert(last_const_idx, new_const_node)
+
+    new_reshape = onnx.helper.make_node(name=last_reshape_node.name,
+                                        op_type=last_reshape_node.op_type,
+                                        inputs=last_reshape_node.input,
+                                        outputs=['last_transpose_inp'])
+    last_transpose = onnx.helper.make_node(name='last_transpose',
+                                           op_type='Transpose',
+                                           inputs=['last_transpose_inp'],
+                                           outputs=last_reshape_node.output)
+    perm = onnx.helper.make_attribute(key='perm', value=[0, 2, 1, 3])
+    last_transpose.attribute.append(perm)
+    rpn_nodes.insert(last_idx, new_reshape)
+    rpn_nodes.insert(last_idx + 1, last_transpose)
+
+    # make rpn graph
+    rpn_graph = onnx.helper.make_graph(rpn_nodes, name='rpn', inputs=rpn_inputs, outputs=rpn_outputs,
+                                       initializer=rpn_inits, value_info=rpn_values)
+    rpn_model = onnx.helper.make_model(rpn_graph)
+    rpn_model_path = model.replace(model.split('/')[-1], 'rpn.onnx')
+    onnx.save(rpn_model, rpn_model_path)
+
+    # det
+    det_input_names = roi_node.input
+    det_output_names = [name for name in graph_output_names if 'Bbox' in name]
+    det_nodes = collect_subnet_nodes(G, det_input_names, det_output_names)
+    det_inits, det_values = collect_subnet_inits_values(det_nodes, wmap, vimap)
+
+    # make det inputs & outputs
+    feat_shape = G_nart.get_tensor_shape(roi_node.input[0])
+    det_feats = onnx.helper.make_tensor_value_info(roi_node.input[0], TensorProto.FLOAT, feat_shape)
+    det_rois = onnx.helper.make_tensor_value_info(roi_node.input[1], TensorProto.FLOAT, [1, 5, 1, 1])
+
+    det_inputs = [det_feats, det_rois]
+    det_outputs = [output for output in G.graph.output if 'Bbox' in output.name]
+    det_outputs_names = [out.name for out in det_outputs]
+    det_graph = onnx.helper.make_graph(det_nodes, name='rpn', inputs=det_inputs, outputs=det_outputs,
+                                       initializer=det_inits, value_info=det_values)
+    det_model = onnx.helper.make_model(det_graph)
+    det_model_path = model.replace(model.split('/')[-1], 'det.onnx')
+    onnx.save(det_model, det_model_path)
+
+    onnx_net_info = {
+        'rpn': {
+            'data': rpn_inputs_names[0],
+            'score': rpn_outputs_names[0],
+            'bbox': rpn_outputs_names[1],
+            'feature': roi_node.input[0],
+        },
+        'det': {
+            'feature': roi_node.input[0],
+            'roi': roi_node.input[1],
+            'score': det_outputs_names[0],
+            'bbox': det_outputs_names[1],
+        }
+    }
+    return rpn_model_path, det_model_path, onnx_net_info
 
 
-def split_net(net, anchor_num, cls_channel_num, bbox_head_type):
-    net_graph = graph.gen_graph(net)
-    net_info = dict()
-    rpn_info = dict()
-    det_info = dict()
-    roi_blob_name = 'roi'  # specify roi input name
-
-    # parse raw net input: 2 dummy input and 1 rpn input
-    det_net_root = []  # save two det net Convolution root layer
-    for node in net_graph.root:
-        rpn_info['data'] = node.content.bottom[0]
-
-    for node in net_graph.nodes():
-        if node.content.type == 'ROIAlignPooling':
-            det_info['roi'] = roi_blob_name
-            node.content.bottom.pop()
-            node.content.bottom.append(roi_blob_name)
-            if 'RFCN' in bbox_head_type:
-                for brother in node.prev:
-                    if brother.content.type != 'DummyData':
-                        det_net_root.append(brother)
-            else:
-                det_net_root.append(node)
-
-    # construct det net
-    det_net = caffe_pb2.NetParameter()
-    det_net.input.append(roi_blob_name)
-    det_net.input_dim.extend([1, 5, 1, 1])
-
-    subnet_bottom = set()
-    assert len(det_net_root) == 2 if 'RFCN' in bbox_head_type else 1
-    for root in det_net_root:
-        bottom, subnet = get_subnet(net, root)
-        subnet_bottom.add(bottom)
-        det_net.layer.extend(subnet)
-
-    # add feature input for det net
-    assert len(subnet_bottom) == 1
-    feature_blob_name = subnet_bottom.pop()
-    det_net.input.append(feature_blob_name)
-    rpn_info['feature'] = feature_blob_name
-
-    # processed net -> rpn_net
-    rpn_net = net
-
-    # process reshape
-    up_parser.process_reshape(rpn_net, anchor_num, 2, anchor_precede=False)
-    up_parser.process_reshape(det_net, 1, cls_channel_num, anchor_precede=False)
-
-    # inference rpn net info
-    _, _, rpn_shape = count.inferNet(rpn_net)
-    det_net.input_dim.extend(rpn_shape[feature_blob_name])
-    rpn_graph = graph.gen_graph(rpn_net)
-    assert len(rpn_graph.leaf) == 3 if 'RFCN' in bbox_head_type else 2
-    for leaf in rpn_graph.leaf:
-        if feature_blob_name != leaf.content.top[0]:
-            shape = rpn_shape[leaf.content.top[0]]
-            if shape[1] == anchor_num * 4:
-                rpn_info['bbox'] = leaf.content.top[0]
-            else:
-                rpn_info['score'] = leaf.content.top[0]
-
-    # inference det net info
-    _, _, det_shape = count.inferNet(det_net)
-    det_graph = graph.gen_graph(det_net)
-    assert len(det_graph.leaf) == 2
-    for leaf in det_graph.leaf:
-        shape = det_shape[leaf.content.top[0]]
-        if shape[1] == cls_channel_num:
-            det_info['score'] = leaf.content.top[0]
-        else:
-            det_info['bbox'] = leaf.content.top[0]
-
-    net_info['rpn'] = rpn_info
-    net_info['det'] = det_info
-    return rpn_net, det_net, net_info
-
-
-def generate_config(train_cfg):
-    if isinstance(train_cfg, str):
-        with open(train_cfg) as f:
-            train_cfg = yaml.load(f)
-
-    kestrel_param = dict()
-
-    # net param
-    assert 'net' in train_cfg, 'config file incomplete: lack net infomation'
-    model_helper_ins = MODEL_HELPER_REGISTRY[train_cfg.get('model_helper_type', 'base')]
-    model = model_helper_ins(train_cfg['net'])
-
-    for mname in ['backbone', 'roi_head', 'bbox_head']:
-        assert hasattr(model, mname)
-    for mname in ['neck']:
-        assert not hasattr(model, mname)
-
-    strides = model.backbone.get_outstrides()
-
-    if torch.is_tensor(strides):
-        strides = strides.tolist()
-    if not hasattr(model, 'post_process') and hasattr(model, 'roi_head'):
-        setattr(model, 'post_process', model.roi_head)
-    if not hasattr(model, 'bbox_head_post_process') and hasattr(model, 'bbox_head'):
-        setattr(model, 'bbox_head_post_process', model.bbox_head)
-
-    kestrel_net_param = dict()
-    # strides = model.backbone.get_outstrides()
-    assert len(strides) == 1, strides
-    model.post_process.anchor_generator.build_base_anchors(strides)
-    kestrel_anchors = model.post_process.anchor_generator.export()
-    kestrel_net_param.update(kestrel_anchors)
-    kestrel_net_param['anchors'] = kestrel_net_param['anchors'][0]
-
-    kestrel_net_param['detection_stride'] = strides[0]
-    kestrel_net_param['num_anchors'] = model.post_process.num_anchors
-    # sphinx only use anchor_ratios and anchor_scale to compute num_anchors
-    # TODO: help sphinx deprecate anchor_ratios && anchor_scales
-    kestrel_net_param['anchor_ratios'] = [-1]
-    kestrel_net_param['anchor_scales'] = [-1] * model.post_process.num_anchors
-
-    kestrel_net_param['pre_top_k'] = model.post_process.test_predictor.pre_nms_top_n
-    kestrel_net_param['aft_top_k'] = model.post_process.test_predictor.post_nms_top_n
-    kestrel_net_param['rpn_nms_thresh'] = model.post_process.test_predictor.nms_cfg['nms_iou_thresh']
-    kestrel_net_param['det_nms_thresh'] = model.bbox_head_post_process.predictor.nms_cfg['nms_iou_thresh']
-
-    kestrel_param.update(kestrel_net_param)
-
-    # dataset param
-    assert 'dataset' in train_cfg, 'config file incomplete: lack dataset'
-    dataset_param = up_parser.parse_dataset_param(train_cfg['dataset'])
-
-    kestrel_param.update(dataset_param)
-
-    # parse parameters for softer nms
-    for temp in train_cfg['net']:
-        if temp['name'] == 'bbox_head_post_process' or (not hasattr(
-                model, 'bbox_head_post_process') and temp['name'] == 'bbox_head'):
-            nms_cfg = temp['kwargs']['cfg']['bbox_predictor']['kwargs']['nms']
-            if nms_cfg['type'] == 'soft':
-                soft_nms_cfg = {}
-                soft_nms_cfg['use_softnms'] = True
-                soft_nms_cfg['softnms_sigma'] = nms_cfg.get("softnms_sigma", 0.5)
-                soft_nms_cfg['softnms_nt'] = nms_cfg.get('nms_isou_thresh')
-                soft_nms_cfg['softnms_thresh'] = nms_cfg.get('softnms_bbox_score_thresh', 0.0001)
-                soft_nms_cfg['softnms_method'] = nms_cfg.get('softnms_method', 'linear')
-                kestrel_net_param.update(soft_nms_cfg)
-                break
-
-    # threshes for each class
-    kestrel_param['class'] = up_parser.get_forground_class_threshes(train_cfg['dataset'], train_cfg['to_kestrel'])
-
-    kestrel_param['bbox_head_type'] = model.bbox_head.__class__.__name__
-
-    return kestrel_param
-
-
-def process_net(prototxt, model, anchor_num, cls_channel_num, input_h, input_w, bbox_head_type, input_channel=3):
-    # get net
-    net, withBinFile = graph.readNetStructure(prototxt, model)
-
-    # update input dim
-    scaffold.update_input_dim(net, 0, [1, input_channel, input_h, input_w])
-
-    # process reshape
-    # pod.process_reshape(net, anchor_num, cls_channel_num, anchor_precede=False)
-
-    # parse and update
-    # split rpn & det and get input/output info
-    rpn_net, det_net, net_info = split_net(net, anchor_num, cls_channel_num, bbox_head_type)
-
+def process_net(model, anchor_num, rpn_cls_channel_num, input_h, input_w, input_channel):
     # merge bn
-    rpn_net = scaffold.merge_bn(rpn_net)
-    det_net = scaffold.merge_bn(det_net)
+    model = merged_bn(model)
+
+    # process reshape
+    model = convert_onnx_for_mbs(model)
+
+    # split rpn & det and get input/output info
+    rpn_net, det_net, net_info = split_net(model, anchor_num, rpn_cls_channel_num, input_h, input_w, input_channel)
 
     return rpn_net, det_net, net_info
-
-
-def generate_common_param(net_info, max_batch_size, aft_top_k):
-    common_param = dict()
-    rpn_param = dict()
-    det_param = dict()
-    rpn_param['net'] = net_info['rpn']['packname']
-    rpn_param['backend'] = net_info['rpn']['backend']
-    rpn_param['max_batch_size'] = max_batch_size
-    rpn_param['input'] = {'data': net_info['rpn']['data']}
-    rpn_param['output'] = {'bbox': net_info['rpn']['bbox'], 'score': net_info['rpn']['score']}
-    rpn_param['marked_output'] = {'shared_rpn_layer': net_info['rpn']['feature']}
-
-    det_param['net'] = net_info['det']['packname']
-    det_param['backend'] = net_info['det']['backend']
-    det_param['max_batch_size'] = max_batch_size * aft_top_k
-    det_param['input'] = {'feature': net_info['rpn']['feature'], 'roi': net_info['det']['roi']}
-    det_param['output'] = {'bbox': net_info['det']['bbox'], 'score': net_info['det']['score']}
-
-    common_param['rpn_net'] = rpn_param
-    common_param['det_net'] = det_param
-    return common_param
 
 
 @KS_PROCESSOR_REGISTRY.register('harpy')
@@ -265,34 +162,34 @@ class HarpyProcessor(BaseProcessor):
             offset = 0
         else:
             offset = 1
-        cls_channel_num = len(kestrel_param['class']) + offset
-        print('cls_channel_num:{}'.format(cls_channel_num))
-        rpn_net, det_net, net_info = process_net(self.prototxt,
-                                                 self.model,
+        rpn_cls_channel_num = 1 + offset
+
+        model = 'tocaffe/model.onnx'
+        rpn_net, det_net, net_info = process_net(model,
                                                  kestrel_param['num_anchors'],
-                                                 cls_channel_num,
+                                                 rpn_cls_channel_num,
                                                  kestrel_param['short_scale'],
                                                  kestrel_param['long_scale'],
-                                                 kestrel_param['bbox_head_type'],
                                                  self.input_channel)
+        net_info['rpn']['packname'] = 'rpn.onnx'
+        net_info['det']['packname'] = 'det.onnx'
+        net_info['rpn']['backend'] = 'kestrel_nart'
+        net_info['det']['backend'] = 'kestrel_nart'
 
-        net_info['rpn']['packname'] = 'proposal'
-        net_info['det']['packname'] = 'detection'
-        net_info['rpn']['backend'] = 'kestrel_caffe'
-        net_info['det']['backend'] = 'kestrel_caffe'
-        rpn_path = scaffold.generate_model(rpn_net, self.save_path, net_info['rpn']['packname'])
-        scaffold.generate_model(det_net, self.save_path, net_info['det']['packname'])
-
-        if self.serialize:
-            net_info['rpn']['packname'] = 'rpn_engine.bin'
-            net_info['rpn']['backend'] = 'kestrel_mixnet'
-            engine_path = os.path.join(self.save_path, net_info['rpn']['packname'])
-            config = {'output_names': [net_info['rpn']['feature']]}
-            scaffold.serialize(rpn_path, self.max_batch_size, engine_path, config)
+        # move onnx
+        if os.path.exists(self.save_path):
+            os.system('rm -rf {}'.format(self.save_path))
+        os.mkdir(self.save_path)
+        shutil.move(rpn_net, self.save_path)
+        shutil.move(det_net, self.save_path)
 
         common_param = generate_common_param(net_info, self.max_batch_size,
                                              kestrel_param['aft_top_k'])
+
         kestrel_param['model_files'] = common_param
+
+        if self.serialize:
+            assert NotImplementedError
 
         scaffold.generate_json_file(
             os.path.join(self.save_path, 'parameters.json'), kestrel_param)
@@ -301,4 +198,4 @@ class HarpyProcessor(BaseProcessor):
             self.save_path, self.name, 'harpy', version, {'class': kestrel_param['class']})
 
         scaffold.compress_model(
-            self.save_path, [net_info['rpn']['packname'], net_info['det']['packname']], self.save_path, version)
+            self.save_path, ['rpn.onnx', 'det.onnx'], self.name, version)

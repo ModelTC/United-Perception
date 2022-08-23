@@ -232,7 +232,7 @@ def main(args):
         else:
             logger.info(f"faild")
 
-        ret = actor.send_result(reward, acc=performance, params={'param': params, 'flops': flops, 'latency': latency}) # noqa
+        ret = actor.send_result(reward, acc=performance, params={'param': params, 'flops': flops, 'latency': latency})  # noqa
 
 
 def _main(args):

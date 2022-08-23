@@ -25,6 +25,33 @@ to_kestrel:
   version: 1.0.0
   resize_hw: 800x1333
 
+adela:
+  pid: 12
+  server: 'adela.sensetime.com'
+  dep_params:
+    # dataset_added: quantity_dataset.json
+    - platform: &platform1 'cuda11.0-nart-fp32'
+      max_batch_size: &max_batch_size1 1
+      quantify: False
+      quantify_dataset_name: 'faces_simple_quant'
+    - platform: &platform2 'cuda11.0-nart-fp32'
+      max_batch_size: &max_batch_size2 4
+      quantify: False
+      quantify_dataset_name: 'faces_simple_quant'
+  precision_params:
+    # dataset_added: benchmark_dataset.json
+    didxs: [0]
+    kwargs:
+      platform: *platform2
+      max_batch_size: *max_batch_size2
+      type: 0 # 0: precsion, 1: performance
+      dataset_name: "coco_100_harpy"
+      kestrel_nar_version: 2.3.0/stable
+      kestrel_version: 2.3.0/stable
+      plugin_version: 2.2.0/dev-bugfix-hjh
+  publish_params:
+    didxs: [0]
+
 flip: &flip
  type: flip
  kwargs:

@@ -1,6 +1,6 @@
 from .essos import EssosParser, EssosProcessor # noqa
 from .harpy import HarpyParser, HarpyProcessor # noqa
 from .sphinx import SphinxParser, SphinxProcessor # noqa
-from .essos_onnx import EssosParser_onnx, EssosProcessor_onnx # noqa
-from .harpy_onnx import HarpyParser_onnx, HarpyProcessor_onnx # noqa
-from .sphinx_onnx import SphinxParser_onnx, SphinxProcessor_onnx # noqa
+from .essos_caffe import EssosParser_caffe, EssosProcessor_caffe # noqa
+from .harpy_caffe import HarpyParser_caffe, HarpyProcessor_caffe # noqa
+from .sphinx_caffe import SphinxParser_caffe, SphinxProcessor_caffe # noqa
