@@ -18,7 +18,6 @@ runtime:
   task_names: det
 to_kestrel:
   toks_type: det
-  save_to: FASTER-RCNN  # saved file
   default_confidence_thresh: 0.0
   plugin: harpy   # choices = [essos, harpy, sphinx]
   model_name: model

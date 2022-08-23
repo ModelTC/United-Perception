@@ -6,7 +6,6 @@ num_kpts: &num_kpts 17
 to_kestrel:
   toks_type: kp
   plugin: raven
-  save_to: ResSb
   model_name: model
   version: 1.0.0
   resize_hw: 256x192 
