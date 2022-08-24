@@ -182,7 +182,7 @@ net:
       num_classes: *num_classes  # number of classes including backgroudn. for rpn, it's 2; for RetinaNet, it's 81
       net_type: retina
       l1_weight: 5.0
-      use_qfl: false
+      use_qfl: true
       cfg:
         cls_loss:
           type: quality_focal_loss
