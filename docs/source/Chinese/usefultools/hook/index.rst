@@ -14,6 +14,7 @@
 * grad_clipper
 * auto_save_best
 * reload
+* memory_checkpoint
 
 TrainValLogger
 --------------
@@ -97,7 +98,76 @@ Gradient Clip
           norm_type: 2
           tolerance: 5.0        # if over average, 2 times clip
 
+MemoryCheckpoint
+-----------------
 
+dynamic checkpoint 是显存优化trick，其可应用于以下情况
 
+    * 模型训练的输入大小可量化
+    * 模型输入大小相同，模型的显存占用也相同（或相近）
+    * 模型输入大小存在变化
 
-    
+1. 修改配置文件中hook字段
+
+  .. code-block:: yaml
+
+    hooks:
+      - type: memory_checkpoint
+        kwargs:
+            enable: True
+            checkpoint_patterns:
+              backbone:
+                  patterns_mode: level
+                  level:
+                    num: 4 #当resnet时设置为2
+              neck:
+                  patterns_mode: level
+                  level:
+                    num: 1
+              roi_head:
+                  patterns_mode: level
+                  level:
+                    num: 1
+                  share_weight_num: 5
+            dc_cfg:
+              warmup_iters: 30 #控制profiling 模型显存占用的 iterations，设置的越多，收集到的显存占用信息也越多，预测模型也越准确
+              max_memory: 8 #控制DC的显存用量(torch.cuda.memory_allocated())(GB)上限
+              debug_freq: 10 #打印信息的频率
+              strategy: greedy # memory_time or greedy
+
+  * warmup_iters
+
+    * 单位 iteration, 控制profiling 模型显存占用的 iterations，设置的越多，收集到的显存占用信息也越多，预测模型也越准确。profiling也会消耗大量的时间，但是overhead 小于 warmup_iters * iter_time
+    * 如果是分类任务，显存占用没有变化，可以将warmup_iters调低，比如10。
+    * 如果是 input size - 显存占用关系比较明显的任务，则可以设为30左右。
+    * 如果是相同 input size 下也有较大的显存变化，那么理论上不适用该任务。如果使用 dynamic checkpoint，则需要将其设置更多的值。
+
+  * max_memory
+
+    * 单位GB, 这部分为控制DC的显存用量(torch.cuda.memory_allocated)(GB)上限
+    * 当任务为输入固定的分类任务时，memory_threshold 可以调的更高。
+    * 如果任务为2 stage的目标检测任务，则需要调低 memory_threshold。因为该类任务显存在相同输入的情况下， 变化较大， 所以需要使用更加保守的设置。
+    * 如果任务执行过程中发生了 OOM，如果是显存碎片的影响，则需要调低 memory_threshold，如 1 GB 或 0.5 GB为单位；如果是backbone本身显存优化空间不足，那么可能需要替换其它方法进行优化。
+
+  * debug_freq
+
+    * 在warmup_iters 后，输出优化schedule的iter频率
+
+  * strategy
+
+    * 可选memory_time或者greedy
+
+2. 主要流程
+
+  在up中通过DynamicCheckpointManager类进行管理，通过before_forward等函数接口来判断当前模型执行状态，并收集相关信息。其具体流程如下：
+
+  * step1 收集显存数据，约10~30 iters
+
+    * before_forward: 记录当前input输入大小、显存占用，并重置pytorch显存统计数据；获得当前应该checkpoint的Module集合（默认是全部的Bottleneck、SwinTransformerBlock、Encoder等）
+    * after_update：记录最大的显存占用，并计算出 model 从 forward 开始到 update 结束所需要的显存大小
+  
+  * step2 优化显存占用
+
+    * before_forward：记录当前 input 输入大小，若 cache 中已有该 input（input 大小会经过进行 round 合并 ） 的优化plan，则直接应用该 plan；反之，则通过 Greedy 或者其它算法生成所需要 checkpoint module set，以此作为优化 plan 进行应用，并保存到 cache 中
+    * dc_cast_forward（不在 manager 中）：查找当前 Module 是否在 checkpoint module set 中，若在，则执行 checkpoint forward；反之，则正常执行 forward。
+

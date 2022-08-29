@@ -1,6 +1,109 @@
 发布历史/Release History
 ========================
 
+v0.3.0
+-------
+
+外部依赖版本
+^^^^^^^^^^^^
+
+* Spring2 0.6.0
+* 集群环境 s0.3.3 / s0.3.4
+
+Highlights
+^^^^^^^^^^
+
+* 算法类型：
+    * 【3D算法】
+        * 支持Mono3d 系列算法 FCOS3D、PGD、GUPNet 等算法
+    * 【车道线检测】
+        * 支持CondlaneNet、GANet 等算法
+    * 【目标检测】
+        * 支持YOLOV6、OneNet （nms-free）、OTA 等算法
+        * 支持重参数化算法RepVgg 版本resnet
+
+* 通用特性
+    * 【大模型训练推理】
+        * 动态Checkpoint 算法支持：动态的选择最优的checkpoint 模块进行更快速的模型训练
+        * MB 系列训练支持
+        * 超大规模训练list 推理支持：解决了内存溢出的问题、支持断点resume 功能
+    * 【神经网络搜索】
+        * 支持BigNas 系列模型搜索功能，配合lantency 测速功能可以选取最优的网络结构
+        * 支持基于强化学习的模型搜索方法 Meta-X
+    * 【SenseData集成】
+        * 集成SenseData公开数据集，当前coco和imagenet直接使用公共ceph仓库，无需依赖lustre
+
+Other Features
+^^^^^^^^^^^^^^
+
+* 支持类别数为1时的3d检测及det_3d 任务的部署
+* 支持检测标注漏标检查 `#80 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/80>`_
+* 公开数据集sensedata ceph 训练支持，目前最常用的coco + imagenet可以直接读取公共ceph仓库
+* 支持group evaluator，更好处理密集目标的数据集问题
+* 支持video inference功能 `#92 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/92>`_
+* 新增inference中分类和分割任务结果可视化的功能 `#75 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/75>`_
+* 支持使用onnx模型上传进行部署
+* 支持key_replace的weapper方式
+* 新增list_balance及class_balance的sampler方式
+* 新增异常排查监控工具inspector相关hook
+* 支持分割任务中segmentor的kestrel部署
+* 新增eval中metric可以指定compare key的功能 `#77 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/77>`_
+* 支持忽略指定类别的情况下进行bad case analysis `#78 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/78>`_
+* RetinaNet添加share_location, class_first字段，支持每个类的独立回归 （仅支持推理） `#69 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/69>`_
+* 新增custom dataset和rank custom dataset的test resume
+* 支持在resnet中指定池化层以及out_channel宽度
+* 新增分类后处理量化功能
+* 支持获取clsdataset中每种类别所包含样本的id及各类别样本数目的方法
+* 在caffe_model及onnx_model的doc_string中添加model_hash
+* 提供build前后内存使用信息
+* 支持计算clseval中平均f1/acc/prec
+* 支持MR eval区分目标size进行评测 `#70 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/70>`_
+* 支持grad_cam及特征图可视化
+* 新增gpu check功能 `#88 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/88>`_
+* 部署生成meta.json添加model_name信息
+* 新增使用ceph读取sensebee数据示例
+* 支持样本标签合理性判断，支持样本漏标可能性的判断
+* 支持内存监测相关hook
+* 支持根据file list及file folder直接进行推理的功能
+* 支持在cfg中指定latest save freq
+
+
+Bug Fixes
+^^^^^^^^^
+
+* 修复了配置文件中data_pool指定为空列表时引起的bug
+* 修改分类任务中存储结果，可以选择性存储所有score `#68 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/68>`_
+* 修复resnet中freeze layer在参数freeze后mode仍为training的bug `#73 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/73>`_
+* 修复typos错误
+* 修复了cfg中pretrain_model加载了错误参数的bug
+* 修复了saver中拷贝文件及存储ckpt时目标路径存在文件而引起的bug `#94 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/94>`_
+* 修复了multitast在eval阶段仍使用sysn bn的bug
+* 修复了ckpt中ema值为空时load失败的bug
+* 修复了swin_trans cfg文件中lr_scheduler层级错误的bug
+* 修复了分类任务中因存储数据变化而引起bad case analysys不适配的bug
+* 修复了vis hook 文档和实际参数不匹配的问题 `#76 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/76>`_
+* 修复了加载pod-style resnet pretrain时未正确处理ema的问题 `#81 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/81>`_
+* 修复了semantic_fpn在inference仍计算loss的bug
+* 修复了test_resume中done_imgs变量调用错误的bug
+* 修复了world_size为1时与linklink不适配产生的bug
+* 修复了retinenet iou分支转模型的bug `#89 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/89>`_
+* 修复了QuantRunner类calibrate方法中错误track梯度的问题
+* 修复了adela部署时deploy id和benchmark id不匹配的bug
+* 修复了inference时读取ckpt时不适配的bug
+* 修复了配置文件中train和test使用不同dataloader引起的inference中不适配bug
+* 修复了ceph reader读取以‘/’开头的文件时join失败的bug `#83 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/issues/83>`_
+* 修复了roi_head中conv前后inplane不适配的bug
+* 修复了multicls与kestrel部署不适配的bug
+* 修复了检测部署任务中因拆分bbox_head而引起不匹配的bug
+* 修复了label_mapping为none时image_source获取错误的bug
+* 修复了部署net_graph.leaf大于1时与net_info['score']不匹配的bug
+* 修复了launch为mpi时报错的bug
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+
+* 修改了custom_evaluator中get_miss_rate方法的参数配置，使得能够在其内部计算不同fppi阈值下的ap值。传入时应增加drec与prec，返回值增加fppi_ap
+
 v0.2.0
 -------
 

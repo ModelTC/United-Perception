@@ -20,3 +20,4 @@
    tasks/sparse
    tasks/3ddet
    tasks/quant
+   tasks/bignas

@@ -137,3 +137,26 @@ The model has the following advantages:
     * Flexible importing: you only need to add the path into 'PLUGINPATH' after developing a plug-in.
     * Conveniently using: you can contrust the calling path through adding alias into configs.
     * Friendly maintaining: Public UP are totally independent with Plugin, and thus you only need to maintain your own codes.
+
+
+Official warehouse
+--------------------
+
+Up provides
+`Official plugin warehouse <https://gitlab.bj.sensetime.com/spring2/up_plugins>`_
+, each branch in the warehouse represents a plugin, which is used as follows
+
+  * clone the branch that you Required
+
+    .. code-block:: bash
+
+        git clone -b branch_that_you_Required https://gitlab.bj.sensetime.com/spring2/up_plugins.git
+
+  * Configure UP
+
+    Add the plugin path to the corresponding script file in UP
+
+    .. code-block:: bash
+  
+        export PLUGINPATH=/mnt/lustre/xxx/up_plugins/xxx # plugin path
+

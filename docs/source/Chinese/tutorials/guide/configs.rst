@@ -140,3 +140,24 @@ package 中的 FaceDataset 和 FaceNet 应当分别由 DATASET_REGISTRY 和 MODU
     * 灵活导入： 在开发了一个插件后，您仅需要将路径加入 PLUGINPATH。
     * 使用方便： 您可以仅通过将别名加入配置文件的方式来构建调用路径。
     * 维护友好： Public UP 是和Plugin完全独立的，您可以仅需要花费少量精力来维护您的代码。
+
+官方仓库
+---------
+
+up提供了
+`官方plugin仓库 <https://gitlab.bj.sensetime.com/spring2/up_plugins>`_
+，仓库中每个分支代表着一个plugin，使用方式如下
+
+    * clone需要的分支
+
+      .. code-block:: bash
+
+        git clone -b 你需要的分支 https://gitlab.bj.sensetime.com/spring2/up_plugins.git
+
+    * 配置UP
+
+      在up中相应的脚本文件中加入plugin路径
+      
+      .. code-block:: bash
+  
+        export PLUGINPATH=/mnt/lustre/xxx/up_plugins/xxx # plugin路径
