@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
 from up.extensions import DeformableConv
+from up.utils.model.block_helper import RepConv
 from up.utils.model.initializer import initialize_from_cfg
 from up.utils.model.normalize import build_norm_layer
 
@@ -113,6 +114,71 @@ class BasicBlock(nn.Module):
 
         out = self.conv2(out)
         out = self.norm2(out)
+
+        if self.drop_path is not None:
+            out = self.drop_path(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
+class RepBasicBlock(BasicBlock):
+    expansion = 1
+    block_type = None
+
+    def __init__(self,
+                 inplanes,
+                 planes,
+                 stride=1,
+                 dilation=1,
+                 downsample=None,
+                 normalize={'type': 'solo_bn'},
+                 stride_in_1x1=False,
+                 drop_path=None):
+        super(RepBasicBlock, self).__init__(inplanes,
+                                            planes,
+                                            stride,
+                                            dilation,
+                                            downsample,
+                                            normalize,
+                                            stride_in_1x1,
+                                            drop_path)
+
+        self.block_type = RepBasicBlock.block_type
+        assert self.block_type is not None, "block_type should not be None!"
+
+        ide = "repn" not in self.block_type
+
+        if "pre" in self.block_type:
+            stride, padding = stride, dilation
+            self.__delattr__('conv1')
+            self.__delattr__('bn1')
+        else:
+            stride, padding = 1, 1
+            inplanes = planes
+            self.__delattr__('conv2')
+            self.__delattr__('bn2')
+
+        self.repconv = RepConv(inplanes, planes, 3, stride, padding=padding, ide=ide)
+
+    def forward(self, x):
+        residual = x
+        if "pre" in self.block_type:
+            out = self.repconv(x)
+            out = self.conv2(out)
+
+            out = self.norm2(out)
+        else:
+            out = self.conv1(x)
+            out = self.norm1(out)
+            out = self.relu(out)
+
+            out = self.repconv(out)
 
         if self.drop_path is not None:
             out = self.drop_path(out)
@@ -677,7 +743,6 @@ class ResNet(nn.Module):
             }
         """
         x = input['image']
-        size = x.size()[2:]
         outs = []
         for layer_idx in range(0, 5):
             layer = getattr(self, f'layer{layer_idx}', None)
@@ -690,7 +755,7 @@ class ResNet(nn.Module):
                 outs.append(x)
 
         features = [outs[i] for i in self.out_layers]
-        return {'features': features, 'strides': self.get_outstrides(), 'size': size}
+        return {'features': features, 'strides': self.get_outstrides()}
 
     def freeze_layer(self):
         layers = [
@@ -725,7 +790,13 @@ def resnet18(pretrained=False, **kwargs):
     Arguments:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    model = ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
+    block_type = kwargs.pop("block_type", "res")
+    Block = BasicBlock
+    if block_type in ["reppre", "repnpre", "repnpost"]:
+        RepBasicBlock.block_type = block_type
+        Block = RepBasicBlock
+
+    model = ResNet(Block, [2, 2, 2, 2], **kwargs)
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
     return model
