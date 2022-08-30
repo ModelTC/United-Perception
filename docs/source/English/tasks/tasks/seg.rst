@@ -41,3 +41,17 @@ Dataset related modules
         transformer: [*seg_rand_resize, *flip, *seg_crop_train, *to_tensor, *normalize]
         num_classes: *num_classes
         ignore_label: 255
+
+Deploying model
+---------------
+
+Kestrel config needs to be set while converting models:
+
+  .. code-block:: yaml
+
+    to_kestrel:
+      toks_type: seg
+      plugin: psyche
+      model_name: model  # prefix of tar-model filename and model_name in meta.json 
+      version: 1.0.0
+      resize_hw: 640x1024

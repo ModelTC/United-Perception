@@ -90,7 +90,7 @@ Deploying models
 
     to_kestrel:
       toks_type: cls   # settinf toks_type
-      model_name: Res50
+      model_name: Res50  # prefix of tar-model filename and model_name in meta.json
       add_softmax: False
       pixel_means: [123.675, 116.28, 103.53]
       pixel_stds: [58.395, 57.12, 57.375]

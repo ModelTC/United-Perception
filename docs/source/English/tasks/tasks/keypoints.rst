@@ -96,3 +96,17 @@ label_trans:
         in_h: 256
         in_w: 192
         num_kpts: 17
+
+Deploying model
+---------------
+
+Kestrel config needs to be set while converting models:
+
+  .. code-block:: yaml
+
+    to_kestrel:
+      toks_type: kp
+      plugin: raven
+      model_name: model  # prefix of tar-model filename and model_name in meta.json
+      version: 1.0.0
+      resize_hw: 256x192

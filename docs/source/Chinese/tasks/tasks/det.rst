@@ -165,8 +165,7 @@ compose_loc_loss:
 
     to_kestrel:
       toks_type: det
-      save_to: kestrel_model  # saved file
-      model_name: model  # 设置meta.json中的model_name
+      model_name: model  # tar模型文件名的前缀以及meta.json中的model_name
       default_confidence_thresh: 0.3
       plugin: harpy   # choices = [essos, harpy, sphinx]
       version: 1.0.0

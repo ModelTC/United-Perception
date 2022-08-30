@@ -206,6 +206,7 @@ Deploy
   .. note::
 
     * 'to_kestrel' needs adding the corresponding parameters in configs;
+    * 'save_to' refers to the save_dir of converted model;
     * The parameters of specific sub-task which need to be added can refer to :ref:`tasksEn`. 
 
 to_adela, UP supports convert, quantify, test and release kestrel models with Adela:

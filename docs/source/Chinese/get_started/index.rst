@@ -205,6 +205,7 @@ to_kestrel, UP 支持将模型转化为kestrel格式
   .. note::
 
     * to kestrel时，需要在配置文件中添加模型转换的相应参数;
+    * save_to为转换后的模型的存储目录;
     * 具体子任务需要添加的参数可参考 :ref:`tasks`.
 
 to_adela, 训练并转换得到kestrel模型后，UP支持调用Adela接口进行便捷的模型转换、量化、测试和发布

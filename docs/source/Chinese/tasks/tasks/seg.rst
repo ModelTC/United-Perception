@@ -39,3 +39,17 @@ UP支持分割任务训练、部署、推理的全部流程;
         transformer: [*seg_rand_resize, *flip, *seg_crop_train, *to_tensor, *normalize]
         num_classes: *num_classes
         ignore_label: 255
+
+部署模块
+--------
+
+转换kestrel模型时，需要设置具体配置如下:
+
+  .. code-block:: yaml
+
+    to_kestrel:
+      toks_type: seg
+      plugin: psyche
+      model_name: model  # tar模型文件名的前缀以及meta.json中的model_name
+      version: 1.0.0
+      resize_hw: 640x1024

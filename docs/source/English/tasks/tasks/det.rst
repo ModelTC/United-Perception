@@ -167,7 +167,7 @@ Deploying modules
 
     to_kestrel:
       detector: FASTER-RCNN  # choices [RETINANET, RFCN, FASTER-RCNN]
-      save_to: kestrel_model  # saved file
+      model_name: model  # prefix of tar-model filename and model_name in meta.json
       default_confidence_thresh: 0.3
       plugin: harpy   # choices = [essos, harpy, sphinx]
       version: 1.0.0

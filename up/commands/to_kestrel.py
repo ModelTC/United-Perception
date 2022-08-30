@@ -63,7 +63,7 @@ class ToKestrel(Subcommand):
                                 help='settings of detection in yaml format')
         sub_parser.add_argument('--save_to',
                                 dest='save_to',
-                                default=None,
+                                default="tokestrel",
                                 type=str,
                                 help='path to save kestrel model')
         sub_parser.add_argument('--serialize',

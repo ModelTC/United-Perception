@@ -94,3 +94,17 @@ label_trans:
         in_h: 256
         in_w: 192
         num_kpts: 17
+
+部署模块
+--------
+
+转换kestrel模型时，需要设置具体配置如下:
+
+  .. code-block:: yaml
+
+    to_kestrel:
+      toks_type: kp
+      plugin: raven
+      model_name: model  # tar模型文件名的前缀以及meta.json中的model_name 
+      version: 1.0.0
+      resize_hw: 256x192 
