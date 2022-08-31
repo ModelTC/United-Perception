@@ -52,11 +52,11 @@ Highlights
 
 * General:
     * 【Training and Inference of Big Model】
-        * Support dynamic checkpoint algorithm: Dynamically select the optimal checkpoint module for faster model training `Instructions of DC <https://confluence.sensetime.com/pages/viewpage.action?pageId=452715805>`
+        * Support dynamic checkpoint algorithm: Dynamically select the optimal checkpoint module for faster model training :ref:`DCAnchorEng`
         * Support MB series training: MB4/7/15
         * Support inference with super training list: Solved the problem of memory overflow, support breakpoint resume function
     * 【NAS】
-        * Support BigNas series model search function, the optimal network structure can be selected with the cooperation of lantency speed measurement function `Instructions of BigNas <https://confluence.sensetime.com/pages/viewpage.action?pageId=452714344>`
+        * Support BigNas series model search function, the optimal network structure can be selected with the cooperation of lantency speed measurement function :ref:`NasAnchorEng`
         * Support Meta-x, a model search method based on Reinforcement Learning
     * 【Sensedata Integration】
         * Integrate sensedata public data set. Coco and Imagenet directly use the public ceph warehouse without relying on lustre currently

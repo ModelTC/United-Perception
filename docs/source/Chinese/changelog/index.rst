@@ -50,11 +50,11 @@ Highlights
 
 * 通用特性
     * 【大模型训练推理】
-        * 动态Checkpoint 算法支持：动态的选择最优的checkpoint 模块进行更快速的模型训练 `DC使用说明 <https://confluence.sensetime.com/pages/viewpage.action?pageId=452715805>`
+        * 动态Checkpoint 算法支持：动态的选择最优的checkpoint 模块进行更快速的模型训练 :ref:`DCAnchor`
         * MB 系列训练支持：MB4/7/15
         * 超大规模训练list 推理支持：解决了内存溢出的问题、支持断点resume 功能
     * 【神经网络搜索】
-        * 支持BigNas 系列模型搜索功能，配合lantency 测速功能可以选取最优的网络结构 `BigNas使用说明 <https://confluence.sensetime.com/pages/viewpage.action?pageId=452714344>`
+        * 支持BigNas 系列模型搜索功能，配合lantency 测速功能可以选取最优的网络结构 :ref:`NasAnchor`
         * 支持基于强化学习的模型搜索方法 Meta-X
     * 【SenseData集成】
         * 集成SenseData公开数据集，当前coco和imagenet直接使用公共ceph仓库，无需依赖lustre
