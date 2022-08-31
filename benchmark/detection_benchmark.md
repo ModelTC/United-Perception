@@ -23,6 +23,8 @@
 | [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/det/yolov6/yolox_v6n_ret_a2_comloc_400e_640x640.yaml) | v6-nano | 2 | yes | 128 | 400 | [640, 640] | 34.0 | [ckpt](http://spring.sensetime.com/dropadmin/$/sk4YX.pth) |
 | [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/det/yolov6/yolox_v6t_ret_a2_comloc_400e_640x640.yaml) | v6-tiny | 2 | yes | 128 | 400 | [640, 640] | 41.2 | [ckpt](http://spring.sensetime.com/dropadmin/$/TSDX5.pth) |
 | [YOLOX-ret](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/det/yolov6/yolox_v6s_ret_a2_comloc_400e_640x640.yaml) | v6-small | 2 | yes | 128 | 400 | [640, 640] | 42.5 | [ckpt](http://spring.sensetime.com/dropadmin/$/pJjG6.pth) |
+| [Onenet-ret18](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/det/onenet/onenet-r18.yaml) | resnet18 | 2 | no | 128 | 100 | [800, 1333] | 37.9 | [ckpt](http://spring.sensetime.com/dropadmin/$/ySK36.pth) |
+| [Onenet-ret50](https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/det/onenet/onenet-r50_3x.yaml) | resnet50 | 9 | no | 16 | 36 | [800, 1333] | 38.5 | [ckpt](http://spring.sensetime.com/dropadmin/$/h84aL.pth) |
 ## 高精度 baseline
 | model                   | backbone            | anchor | ema | bs | epoch | general test size | mAP                     | model |
 | ----------------------- | ------------------- | ------ | --- | -- | ----- | ----------------- | ----------------------- | ----- |
