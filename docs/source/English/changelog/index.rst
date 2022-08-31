@@ -10,6 +10,34 @@ External dependency version
 * Spring2 0.6.0
 * Cluster environment s0.3.3 / s0.3.4
 
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+
+* This update deprecates 'save_to' setting for deployment and sets it by command-line method, taking tokestrel script as an example：
+
+  .. code-block:: bash
+
+    python -m up to_kestrel \
+      --config=xxx.yaml \
+      --save_to=kestrel_model \
+      2>&1 | tee log.tokestrel
+
+  Tokestrel/toadela uses onnx format by default, and instead of caffe. If you want to use caffe, you need to set it manually. Take the detection task as an example:
+
+  .. code-block:: yaml
+
+    to_kestrel:
+      toks_type: det
+      default_confidence_thresh: 0.05
+      plugin: essos   # onnx格式: essos; caffe格式: essos_caffe
+      model_name: model
+      version: 1.0.0
+      resize_hw: 800x1333
+
+* The parameter configuration of method get_miss_rate in custom_evaluator is modified, so that the AP value under different FPPI thresholds can be calculated in it. Drec and prec shall be added when passing in, and FPPI shall be added for the return value
+
+
 Highlights
 ^^^^^^^^^^
 
@@ -25,13 +53,15 @@ Highlights
 * General:
     * 【Training and Inference of Big Model】
         * Support dynamic checkpoint algorithm: Dynamically select the optimal checkpoint module for faster model training
-        * Support MB series training
+        * Support MB series training: MB4/7/15
         * Support inference with super training list: Solved the problem of memory overflow, support breakpoint resume function
     * 【NAS】
         * Support BigNas series model search function, the optimal network structure can be selected with the cooperation of lantency speed measurement function
         * Support Meta-x, a model search method based on Reinforcement Learning
     * 【Sensedata Integration】
         * Integrate sensedata public data set. Coco and Imagenet directly use the public ceph warehouse without relying on lustre currently
+    * 【Kestrel model format normalization】
+        * Tokestrel/toadela uses onnx format by default, and instead of caffe. If you want to use caffe, you need to set it manually
 
 Other Features
 ^^^^^^^^^^^^^^

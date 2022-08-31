@@ -10,6 +10,32 @@ v0.3.0
 * Spring2 0.6.0
 * 集群环境 s0.3.3 / s0.3.4
 
+Breaking Changes
+^^^^^^^^^^^^^^^^
+
+* 本次更新取消了部署配置的save_to参数，改为命令行参数设置方式，以tokestrel为例：
+
+  .. code-block:: bash
+
+    python -m up to_kestrel \
+      --config=xxx.yaml \
+      --save_to=kestrel_model \
+      2>&1 | tee log.tokestrel
+
+  默认tokestrel/toadela使用onnx格式，不再默认使用caffe，若希望使用caffe则需手动设置，以检测任务为例：
+
+  .. code-block:: yaml
+
+    to_kestrel:
+      toks_type: det
+      default_confidence_thresh: 0.05
+      plugin: essos   # onnx格式: essos; caffe格式: essos_caffe
+      model_name: model
+      version: 1.0.0
+      resize_hw: 800x1333
+
+* 修改了custom_evaluator中get_miss_rate方法的参数配置，使得能够在其内部计算不同fppi阈值下的ap值。传入时应增加drec与prec，返回值增加fppi_ap
+
 Highlights
 ^^^^^^^^^^
 
@@ -25,13 +51,15 @@ Highlights
 * 通用特性
     * 【大模型训练推理】
         * 动态Checkpoint 算法支持：动态的选择最优的checkpoint 模块进行更快速的模型训练
-        * MB 系列训练支持
+        * MB 系列训练支持：MB4/7/15
         * 超大规模训练list 推理支持：解决了内存溢出的问题、支持断点resume 功能
     * 【神经网络搜索】
         * 支持BigNas 系列模型搜索功能，配合lantency 测速功能可以选取最优的网络结构
         * 支持基于强化学习的模型搜索方法 Meta-X
     * 【SenseData集成】
         * 集成SenseData公开数据集，当前coco和imagenet直接使用公共ceph仓库，无需依赖lustre
+    * 【模型格式规范化】
+        * tokestrel/toadela默认使用onnx格式，不再默认使用caffe。若希望使用caffe则需手动设置
 
 Other Features
 ^^^^^^^^^^^^^^
@@ -99,10 +127,6 @@ Bug Fixes
 * 修复了部署net_graph.leaf大于1时与net_info['score']不匹配的bug
 * 修复了launch为mpi时报错的bug
 
-Breaking Changes
-^^^^^^^^^^^^^^^^
-
-* 修改了custom_evaluator中get_miss_rate方法的参数配置，使得能够在其内部计算不同fppi阈值下的ap值。传入时应增加drec与prec，返回值增加fppi_ap
 
 v0.2.0
 -------
