@@ -129,11 +129,6 @@ Bug Fixes
 * Fix the mismatch bug between net_info['score'] and net_graph.leaf
 * Fix the bug when the value of launch is mpi
 
-Breaking Changes
-^^^^^^^^^^^^^^^^
-
-* The parameter configuration of method get_miss_rate in custom_evaluator is modified, so that the AP value under different FPPI thresholds can be calculated in it. Drec and prec shall be added when passing in, and FPPI shall be added for the return value
-
 
 v0.2.0
 ------
