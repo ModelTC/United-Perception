@@ -42,11 +42,11 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: sensebee-1424:s3://publicdataset_9/ImageNet/meta/train.txt
+        meta_file: sensebee-1424:s3://spring_datasets/imagenet/meta/train.txt
         image_reader:
            type: ceph_opencv
            kwargs:
-             image_dir: sensebee-1424:s3://publicdataset_9/ImageNet/train/
+             image_dir: sensebee-1424:s3://spring_datasets/imagenet/train/
              color_mode: RGB
         transformer: [*random_resized_crop, *random_horizontal_flip, *pil_color_jitter, *to_tensor, *normalize]
     batch_sampler:
@@ -65,11 +65,11 @@ dataset: # Required.
     dataset:
       type: cls
       kwargs:
-        meta_file: sensebee-1424:s3://publicdataset_9/ImageNet/meta/val.txt
+        meta_file: sensebee-1424:s3://spring_datasets/imagenet/meta/val.txt
         image_reader:
           type: ceph_opencv
           kwargs:
-            image_dir: sensebee-1424:s3://publicdataset_9/ImageNet/val/
+            image_dir: sensebee-1424:s3://spring_datasets/imagenet/val/
             color_mode: RGB
         transformer: [*torch_resize, *center_crop, *to_tensor, *normalize]
         evaluator:

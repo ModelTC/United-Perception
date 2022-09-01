@@ -34,28 +34,28 @@ dataset: # Required.
     dataset:
       type: coco
       kwargs:
-        meta_file: sensebee-1424:s3://PublicDatalist/public_datalist_8_unzip/annotations/instances_train2017.json
+        meta_file: sensebee-1424:s3://spring_datasets/mscoco2017/annotations/instances_train2017.json
         image_reader:
           type: ceph_opencv
           kwargs:
-            image_dir: sensebee-1424:s3://PublicDatalist/public_datalist_8_unzip/train2017
+            image_dir: sensebee-1424:s3://spring_datasets/mscoco2017/train2017
             color_mode: RGB
         transformer: [*flip, *train_resize, *to_tensor, *normalize]
   test:
     dataset:
       type: coco
       kwargs:
-        meta_file: sensebee-1424:s3://PublicDatalist/public_datalist_8_unzip/annotations/instances_val2017.json
+        meta_file: sensebee-1424:s3://spring_datasets/mscoco2017/annotations/instances_val2017.json
         image_reader:
           type: ceph_opencv
           kwargs:
-            image_dir: sensebee-1424:s3://PublicDatalist/public_datalist_8_unzip/val2017
+            image_dir: sensebee-1424:s3://spring_datasets/mscoco2017/val2017
             color_mode: RGB
         transformer: [*test_resize, *to_tensor, *normalize]
         evaluator:
           type: COCO               # choices = {'COCO', 'VOC', 'MR'}
           kwargs:
-            gt_file: sensebee-1424:s3://PublicDatalist/public_datalist_8_unzip/annotations/instances_val2017.json
+            gt_file: sensebee-1424:s3://spring_datasets/mscoco2017/annotations/instances_val2017.json
             iou_types: [bbox]
   batch_sampler:
     type: aspect_ratio_group
