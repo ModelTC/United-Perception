@@ -20,3 +20,4 @@ psutil==5.9.0
 scikit-learn==0.21.3
 http://spring.sensetime.com/pypi/packages/petrel_oss_sdk-2.2.0_19_gac5c680_master-py3-none-any.whl
 open3d==0.9.0
+up_extensions==1.0.0

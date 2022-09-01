@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.autograd import Function
 # from up.tasks.det_3d.data.data_utils import check_numpy_to_torch
 import numpy as np
-from .._C import roiaware_pool3d as roiaware_pool3d_cuda
+from ..ext import roiaware_pool3d as roiaware_pool3d_cuda
 
 
 def check_numpy_to_torch(x):

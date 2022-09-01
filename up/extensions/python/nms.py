@@ -1,8 +1,8 @@
 # Import from third library
 import numpy as np
 import torch
-from .._C import naive_nms as nms
-from .._C import softer_nms as softer_nms_c
+from ..ext import naive_nms as nms
+from ..ext import softer_nms as softer_nms_c
 from up.utils.general.global_flag import ALIGNED_FLAG
 
 

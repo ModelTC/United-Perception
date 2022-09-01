@@ -1,7 +1,7 @@
 import torch
 from torch.autograd import Function
 from up.utils.general.log_helper import default_logger as logger
-from .._C import psroi_align
+from ..ext import psroi_align
 
 
 class PSRoIAlignFunction(Function):

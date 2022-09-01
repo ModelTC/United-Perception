@@ -5,7 +5,7 @@ All Rights Reserved 2019-2020.
 """
 import torch
 from up.tasks.det_3d.data.data_utils import check_numpy_to_torch
-from .._C import iou3d_nms as iou3d_nms_cuda
+from ..ext import iou3d_nms as iou3d_nms_cuda
 
 
 def boxes_bev_iou_cpu(boxes_a, boxes_b):

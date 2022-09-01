@@ -1,5 +1,5 @@
 # Import from local
-from .._C import overlaps
+from ..ext import overlaps
 
 
 def gpu_iou_overlap(b1, b2, mode='IoU'):

@@ -12,7 +12,7 @@ from torch.nn.modules.utils import _pair
 from up.utils.general.log_helper import default_logger as logger
 
 # Import from local
-from .._C import deform_conv_v1
+from ..ext import deform_conv_v1
 
 
 class DeformableConvFunction(Function):

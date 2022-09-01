@@ -3,7 +3,7 @@ import torch
 from torch.autograd import Function
 
 # Import from local
-from .._C import focal_loss
+from ..ext import focal_loss
 
 
 class SigmoidFocalLossFunction(Function):

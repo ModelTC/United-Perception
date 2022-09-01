@@ -3,7 +3,7 @@ import torch
 from torch.autograd import Function
 
 # Import from local
-from .._C import cross_focal_loss
+from ..ext import cross_focal_loss
 
 
 class CrossSigmoidFocalLossFunction(Function):

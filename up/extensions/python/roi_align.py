@@ -7,7 +7,7 @@ from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.global_flag import ALIGNED_FLAG
 
 # Import from local
-from .._C import roi_align
+from ..ext import roi_align
 
 # TODO use save_for_backward instead
 

@@ -6,7 +6,7 @@ from torch.autograd import Function
 from up.utils.general.log_helper import default_logger as logger
 
 # Import from local
-from .._C import psroi_pooling
+from ..ext import psroi_pooling
 
 
 class PSRoIPoolFunction(Function):
