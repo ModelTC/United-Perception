@@ -948,6 +948,7 @@ class MemoryCheckpoint(Hook):
                                                        self.dc_cfg.get('strategy', 'memory_time'),
                                                        self.share_weight_node)
         for name, m in self.runner_ref().model.named_modules():
+            name = name.replace("module.", "")
             if name in self.checkpoint_set:
                 if self.dc_cfg is not None:
                     dc_cast_forward(m, name, self.dc_manager)
@@ -956,6 +957,7 @@ class MemoryCheckpoint(Hook):
 
     def recover_forward(self):
         for name, m in self.runner_ref().model.named_modules():
+            name = name.replace("module.", "")
             if name in self.checkpoint_set:
                 if hasattr(m, "old_forward"):
                     m.forward = m.old_forward
@@ -983,6 +985,7 @@ class MemoryCheckpoint(Hook):
     def get_bfs_checkpoint_node(self):
         checkpoint_keys = self.checkpoint_patterns.keys()
         for name, m in self.runner_ref().model.named_modules():
+            name = name.replace("module.", "")
             if hasattr(m, "inplace") and m.inplace:
                 self.exclude_node.add(name)
             for ck in checkpoint_keys:
