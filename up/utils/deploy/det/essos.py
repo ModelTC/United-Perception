@@ -24,6 +24,10 @@ class EssosParser(up_parser.Parser):
         return generate_config(self.cfg)
 
 
+def isValidOutput(name):
+    return '0' <= name[-1] and name[-1] <= '9'
+
+
 def process_net(model):
     # merge bn
     model_merged = merged_bn(model)
@@ -42,9 +46,9 @@ def process_net(model):
     bbox = list()
     for node in G.graph.node:
         for oup in node.output:
-            if 'cls' in oup:
+            if 'cls' in oup and isValidOutput(oup):
                 score.append(oup)
-            elif 'loc' in oup:
+            elif 'loc' in oup and isValidOutput(oup):
                 bbox.append(oup)
             else:
                 continue
