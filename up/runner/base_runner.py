@@ -320,11 +320,14 @@ class BaseRunner(object):
         self.save_freq = cfg_trainer.get('save_freq', _freq_base)
         logger.info(f"save_freq: {self.save_freq}")
         self.save_start = cfg_trainer.get('save_start', _start_base)
-        self.only_save_latest = cfg_trainer.get('only_save_latest', False)
+        self.only_save_latest = cfg_trainer.get('only_save_latest', self.config['saver'].get('only_save_latest', False))
         if not self.iter_base:
-            save_latest_freq = int(cfg_trainer.get('save_latest_freq', 1) * self.train_epoch_size)
+            _save_latest_freq = cfg_trainer.get('save_latest_freq', self.config['saver'].get('save_latest_freq', 1))
+            save_latest_freq = int(_save_latest_freq) * self.train_epoch_size
         else:
-            save_latest_freq = int(cfg_trainer.get('save_latest_freq', self.train_epoch_size))
+            _save_latest_freq = cfg_trainer.get('save_latest_freq',
+                                                self.config['saver'].get('save_latest_freq', self.train_epoch_size))
+            save_latest_freq = int(_save_latest_freq)
         self.save_latest_freq = cfg_trainer.get('save_latest_freq', save_latest_freq)
         logger.info(f'only save latest: {self.only_save_latest}')
         logger.info(f'save latest freq: {self.save_latest_freq}')
