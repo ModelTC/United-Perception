@@ -207,15 +207,16 @@ class RetinaOTAMatcher(object):
                     preds_cls.float().unsqueeze(0).repeat(G, 1, 1).sigmoid_()
                     * preds_centerness.float().unsqueeze(0).repeat(G, 1, 1).sigmoid_()
                 )
+                cls_preds_ = cls_preds_.sqrt_()
             else:
                 cls_preds_ = preds_cls.float().unsqueeze(0).repeat(G, 1, 1).sigmoid_()
             pair_wise_cls_loss = F.binary_cross_entropy(
-                cls_preds_.sqrt_(),
+                cls_preds_,
                 gt_cls_per_image,
                 reduction="none").sum(-1)
             if not self.use_SimOTA:
                 cls_loss_bg = F.binary_cross_entropy(
-                    cls_preds_.sqrt_(),
+                    cls_preds_,
                     torch.zeros_like(cls_preds_),
                     reduction="none").sum(-1)
 
