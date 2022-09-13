@@ -14,7 +14,7 @@ from up.utils.env.dist_helper import DistModule
 from up.utils.env.gene_env import to_device
 from up.utils.general.latency_helper import merged_bn
 from up.utils.general.log_helper import default_logger as logger
-
+from up.utils.general.global_flag import DIST_BACKEND
 from up.utils.general.saver_helper import Saver
 from up.tasks.distill.mimicker import Base_Mimicker
 
@@ -155,6 +155,10 @@ class BaseController(object):
             loss_weight = self.mimic_configs[key].get('loss_weight', 1.0)
             warm_up_iters = self.mimic_configs[key].get('warm_up_iters', -1)
             cfgs = self.mimic_configs[key].get('cfgs', {})
+            if DIST_BACKEND.backend == 'dist' and env.world_size != 1:
+                self.model = self.model.module
+                for i in range(len(teacher_models)):
+                    teacher_models[i] = teacher_models[i].module
             self.mimic_jobs[key] = Base_Mimicker(teacher_model=teacher_models, student_model=self.model,
                                                  teacher_names=self.mimic_configs[key]['t_names'],
                                                  teacher_mimic_names=teacher_mimic_names,

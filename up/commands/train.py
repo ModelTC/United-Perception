@@ -106,6 +106,7 @@ class Train(Subcommand):
                                 dest='test_gpu',
                                 action='store_true',
                                 help='test if gpus work properly before training')
+
         sub_parser.set_defaults(run=_main)
         return sub_parser
 

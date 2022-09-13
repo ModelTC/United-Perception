@@ -1,5 +1,6 @@
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
+from torch.nn.modules._functions import SyncBatchNorm as sync_batch_norm
 import torch.nn as nn
 import torch
 import copy
@@ -9,9 +10,10 @@ try:
 except:  # noqa
     from up.utils.general.fake_linklink import link
 
-from up.utils.model.bn_helper import GroupSyncBatchNorm
+from up.utils.model.bn_helper import GroupSyncBatchNorm, PyTorchSyncBN
 from up.tasks.nas.bignas.models.ops.dynamic_utils import sub_filter_start_end, get_same_padding, int2list
 from up.tasks.nas.bignas.utils.registry_factory import DYNAMIC_OPS_REGISTRY
+from up.utils.general.global_flag import DIST_BACKEND
 
 
 class Identity(nn.Module):
@@ -433,6 +435,164 @@ class DynamicGroupSyncBatchNorm2d(GroupSyncBatchNorm):
                                         self.async_ar_stats)
 
 
+@DYNAMIC_OPS_REGISTRY.register('DynamicSyncBN_DDP')
+class DynamicSyncBN_DDP(PyTorchSyncBN):
+    def __init__(self, num_features, group_size=None, **kwargs):
+        super(DynamicSyncBN_DDP, self).__init__(
+            num_features,
+            group_size=None,
+            **kwargs
+        )
+
+    def deploy_forward(self, input):
+        active_num_features = input.size(1)
+        self.running_mean.data = self.running_mean[:active_num_features]
+        self.running_var.data = self.running_var[:active_num_features]
+        self.weight.data = self.weight[:active_num_features]
+        self.bias.data = self.bias[:active_num_features]
+
+        if self.momentum is None:
+            exponential_average_factor = 0.0
+        else:
+            exponential_average_factor = self.momentum
+
+        return F.batch_norm(
+            input,
+            self.running_mean,
+            self.running_var,
+            self.weight,
+            self.bias,
+            False,
+            exponential_average_factor,
+            self.eps,
+        )
+
+    def forward(self, input):
+        if getattr(self, '_deploying', False):
+            return self.deploy_forward(input)
+
+        # currently only GPU input is supported
+        if not input.is_cuda:
+            raise ValueError('DynamicSyncBatchNorm expected \
+                 input tensor to be on GPU')
+        self._check_input_dim(input)
+        active_num_features = input.size(1)
+
+        # exponential_average_factor is set to self.momentum
+        # (when it is available) only so that it gets updated
+        # in ONNX graph when this node is exported to ONNX.
+        if self.momentum is None:
+            exponential_average_factor = 0.0
+        else:
+            exponential_average_factor = self.momentum
+
+        # currently tracking running stats with dynamic input sizes
+        # is meaningless.
+        if self.training and self.track_running_stats:
+            assert self.num_batches_tracked is not None
+            self.num_batches_tracked = self.num_batches_tracked + 1
+            if self.momentum is None:
+                exponential_average_factor = 1.0 / self.num_batches_tracked.item()
+            else:
+                exponential_average_factor = self.momentum
+
+        r"""
+        This decides whether the mini-batch stats should be used for
+        normalization rather than the buffers. Mini-batch stats
+        are used in training mode, and in eval mode when buffers
+        are None.
+        """
+        need_sync = self.training or not self.track_running_stats
+        if need_sync:
+            process_group = torch.distributed.group.WORLD
+            if self.process_group:
+                process_group = self.process_group
+            world_size = torch.distributed.get_world_size(process_group)
+            need_sync = world_size > 1
+
+        # fallback to vanilla BN when synchronization is not necessary
+        if not need_sync:
+            if self.running_mean is not None and self.running_var is not None:
+                return F.batch_norm(
+                    input,
+                    self.running_mean[:active_num_features],
+                    self.running_var[:active_num_features],
+                    self.weight[:active_num_features],
+                    self.bias[:active_num_features],
+                    self.training or not self.track_running_stats,
+                    exponential_average_factor,
+                    self.eps,
+                )
+            else:
+                return F.batch_norm(
+                    input,
+                    None,
+                    None,
+                    self.weight[:active_num_features],
+                    self.bias[:active_num_features],
+                    self.training or not self.track_running_stats,
+                    exponential_average_factor,
+                    self.eps,
+                )
+        else:
+            if not self.ddp_gpu_size:
+                raise AttributeError('DynamicSyncBatchNorm is only supported \
+                     torch.nn.parallel.DistributedDataParallel')
+
+            if self.track_running_stats:
+                return sync_batch_norm.apply(
+                    input,
+                    self.weight[:active_num_features],
+                    self.bias[:active_num_features],
+                    self.running_mean[:active_num_features],
+                    self.running_var[:active_num_features],
+                    self.eps,
+                    exponential_average_factor,
+                    process_group,
+                    world_size)
+            else:
+                return sync_batch_norm.apply(
+                    input,
+                    self.weight[:active_num_features],
+                    self.bias[:active_num_features],
+                    None,
+                    None,
+                    self.eps,
+                    exponential_average_factor,
+                    process_group,
+                    world_size)
+
+    @classmethod
+    def convert_sync_batchnorm(cls, module, process_group=None):
+        module_output = module
+        if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+            module_output = DynamicSyncBN_DDP(
+                module.num_features,
+                module.eps, module.momentum,
+                module.affine,
+                module.track_running_stats,
+                process_group)
+
+            if module.affine:
+                with torch.no_grad():
+                    module_output.weight = module.weight
+                    module_output.bias = module.bias
+
+            if module.track_running_stats:
+                module_output.running_mean = module.running_mean
+                module_output.running_var = module.running_var
+                module_output.num_batches_tracked = module.num_batches_tracked
+
+            if hasattr(module, "qconfig"):
+                module_output.qconfig = module.qconfig
+
+        for name, child in module.named_children():
+            module_output.add_module(name, cls.convert_sync_batchnorm(child, process_group))
+
+        del module
+        return module_output
+
+
 _norm_cfg = {
     'dynamic_solo_bn': DynamicBatchNorm2d,
     'dynamic_switch_solo_bn': SwitchableBatchNorm2d,
@@ -455,6 +615,9 @@ def build_dynamic_norm_layer(config):
     config = copy.deepcopy(config)
     norm_type = config.pop('type')
     config_kwargs = config.get('kwargs', {})
+
+    if DIST_BACKEND.backend == 'dist':
+        _norm_cfg['dynamic_sync_bn'] = DynamicSyncBN_DDP
 
     def NormLayer(*args, **kwargs):
         return _norm_cfg[norm_type](*args, **kwargs, **config_kwargs)

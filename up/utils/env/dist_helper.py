@@ -652,11 +652,11 @@ def broadcast_object(obj, group=None):
 
     serialized_tensor = _serialize_to_tensor(obj, group=None).cuda()
     numel = torch.IntTensor([serialized_tensor.numel()]).cuda()
-    link.broadcast(numel, MASTER_RANK)
+    broadcast(numel, MASTER_RANK)
     # serialized_tensor from storage is not resizable
     serialized_tensor = serialized_tensor.clone()
     serialized_tensor.resize_(numel)
-    link.broadcast(serialized_tensor, MASTER_RANK)
+    broadcast(serialized_tensor, MASTER_RANK)
     serialized_bytes = serialized_tensor.cpu().numpy().tobytes()
     deserialized_obj = pickle.loads(serialized_bytes)
     return deserialized_obj

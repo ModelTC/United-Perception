@@ -139,9 +139,14 @@ class BignasRunner(BaseRunner):
                 self.adjust_model(batch)
                 task_loss, output = self.forward_train(batch)
                 output.update({'cur_iter': iter_idx})
-                mimic_loss = self.controller.get_distiller_loss(self.sample_mode, output, curr_subnet_num)
                 self._hooks('after_forward', self.cur_iter, output)
+                mimic_loss = self.controller.get_distiller_loss(self.sample_mode, output, curr_subnet_num)
                 loss = mimic_loss + task_loss
+                if self.backend == 'dist':
+                    fake_loss = 0.0
+                    for param in self.model.parameters():
+                        fake_loss += param.sum() * 0
+                    loss += fake_loss
                 self.backward(loss)
             if iter_idx % self.display == 0:
                 self.controller.show_subnet_log()
