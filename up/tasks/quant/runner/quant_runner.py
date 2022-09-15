@@ -190,13 +190,15 @@ class QuantRunner(BaseRunner):
             for rd in reduce_list:
                 if n.endswith(rd):
                     tensor.data = tensor.data / get_world_size()
-                    allreduce(tensor.data)
+                    if env.world_size > 1:
+                        allreduce(tensor.data)
                     reduced.append(n)
         for n, tensor in self.model.named_parameters():
             for rd in reduce_list:
                 if n.endswith(rd):
                     tensor.data = tensor.data / get_world_size()
-                    allreduce(tensor.data)
+                    if env.world_size > 1:
+                        allreduce(tensor.data)
                     reduced.append(n)
         logger.info(f'sync quant params: {reduced}.')
 
