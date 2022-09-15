@@ -159,6 +159,7 @@ class YoloXHead(nn.Module):
         mlvl_raw_preds = self.forward_net(features)
         output = {}
         output['preds'] = mlvl_raw_preds
+        output.update({'deploy_output_node': output['preds']})
         return output
 
 
