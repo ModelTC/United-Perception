@@ -41,4 +41,4 @@
 | retinanet-improve(resnet18,bs=32,epoch=7*12)              | 40.7  |  40.3 |
 | retinanet-improve-cos-iou(resnet18,bs=32,epoch=7*12)      | 41.3  |  40.8 |
 
-More sparse benchmark can be seen at [sparse benchmark](https://github.com/ModelTC/EOD/tree/main/docs/source/Chinese/benchmark).
+More sparse benchmark can be seen at [sparse benchmark](https://github.com/ModelTC/United-Perception/tree/main/docs/source/Chinese/benchmark).

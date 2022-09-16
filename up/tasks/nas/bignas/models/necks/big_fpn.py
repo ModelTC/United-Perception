@@ -75,9 +75,6 @@ class BigFPN(BignasSearchSpace):
             - kernel_size (dict or list): stage-wise kernel size search space settings
             - out_channel (dict or list): stage-wise out channel search space settings
 
-
-        `FPN example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/blob/
-        master/configs/baselines/faster-rcnn-R50-FPN-1x.yaml#L75-82>`_
         """
 
         super(BigFPN, self).__init__(**kwargs)
@@ -338,9 +335,6 @@ class BignasFPN(nn.Module):
             - kernel_size (list): stage-wise kernel size search space settings
             - out_channel (list): stage-wise out channel search space settings
 
-
-        `FPN example <http://gitlab.bj.sensetime.com/project-spring/pytorch-object-detection/blob/
-        master/configs/baselines/faster-rcnn-R50-FPN-1x.yaml#L75-82>`_
         """
 
         super(BignasFPN, self).__init__()

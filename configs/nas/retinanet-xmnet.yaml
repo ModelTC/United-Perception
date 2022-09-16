@@ -1,12 +1,5 @@
 num_classes: &num_classes 81
 
-gdbp:
-    hardware_name: T4
-    backend_name: cuda11.0-trt7.1
-    data_type: int8
-    batch_size: 1
-    res_json: 'retina_latency.json'
-
 flip: &flip
  type: flip
  kwargs:

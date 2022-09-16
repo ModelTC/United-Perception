@@ -17,7 +17,6 @@ from up.utils.general.log_helper import default_logger as logger
 from up.commands.subcommand import Subcommand
 from up.utils.general.registry_factory import SUBCOMMAND_REGISTRY, RUNNER_REGISTRY
 from up.utils.general.global_flag import DIST_BACKEND
-from up.tasks.nas.metax.models.backbones import xmnet_search
 
 try:
     from metax.actor import RestfulActor
@@ -192,47 +191,6 @@ def main(args):
             performance = float(line.split('val: ')[1])
             logger.info(f'========get performance: {performance}')
             break
-
-    if env.is_master():
-        # latency
-        model_search = xmnet_search(cells=cells)
-        model_search.eval()
-        model_conv = ClsWrapper(model_search)
-
-        import spring.nart.tools.pytorch as pytorch
-        from up.utils.general.registry_factory import LATENCY_REGISTRY
-
-        with pytorch.convert_mode():
-            pytorch.convert_v2(model_conv, [(3, 224, 224)],
-                               args.save_prefix,
-                               use_external_data_format=False)
-
-        cfg_gdbp = cfg.get('gdbp', None)
-        assert cfg_gdbp is not None, "gdbp config should be supported."
-        latency_type = cfg_gdbp.pop('latency_type', 'base')
-        latency_ins = LATENCY_REGISTRY[latency_type](cfg_gdbp, args.save_prefix + '.onnx')
-        latency_ins.process()
-
-        res_json = cfg_gdbp.get('res_json', 'latency_test.json')
-        f_res = open(res_json, 'r')
-        ret_val = f_res.readlines()[0]
-        ret_val = json.loads(ret_val.strip())
-        f_res.close()
-
-        if ret_val['ret']['status'] == 'success':
-            latency = ret_val['cost_time']  # unit of return cost time is ms
-            target_latency = 1.18254
-            params = ret_val['params'] / 1e6
-            flops = ret_val['flops'] / 1e9
-            reward = performance - 0.05 * abs(latency / target_latency - 1)
-            logger.info(f"latency: {latency}")
-            logger.info(f"param: {params}")
-            logger.info(f"flops: {flops}")
-            logger.info(f"reward: {reward}")
-        else:
-            logger.info(f"faild")
-
-        ret = actor.send_result(reward, acc=performance, params={'param': params, 'flops': flops, 'latency': latency})  # noqa
 
 
 def _main(args):

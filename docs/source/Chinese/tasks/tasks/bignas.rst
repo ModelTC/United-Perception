@@ -17,12 +17,12 @@ up中bignas特性
 配置文件
 --------
 
-    * `超网训练 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_train_supnet.yaml>`_
-    * `子网测试 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_evaluate_subnet.yaml>`_
-    * `子网finetune <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_finetune_subnet.yaml>`_
-    * `子网采样测Flops <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_sample_flops.yaml>`_
-    * `子网采样测试精度 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_sample_accuracy.yaml>`_
-    * `load超网pretrain权重 <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_subnet.yaml>`_
+    * `超网训练 <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_train_supnet.yaml>`_
+    * `子网测试 <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_evaluate_subnet.yaml>`_
+    * `子网finetune <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_finetune_subnet.yaml>`_
+    * `子网采样测Flops <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_sample_flops.yaml>`_
+    * `子网采样测试精度 <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_sample_accuracy.yaml>`_
+    * `load超网pretrain权重 <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_subnet.yaml>`_
 
 Get Started
 --------------
@@ -55,13 +55,6 @@ Get Started
                     student:
                         mimic_name: ['neck.p6_conv.conv']
                 teacher0: {} # 若教师网络为超网，此处给{}。也可自定义教师网络，具体使用方法可参照up/distill部分
-            latency: # 如果需要子网测速，就需要填下面的信息
-                hardware1:
-                    hardware_name: T4
-                    backend_name: cuda11.0-trt7.1
-                    data_type: int8
-                    batch_size: 8
-                    test_latency: True
             subnet: # 训练超网时不要加该字段，该字段只在evaluate，finetune，sample flops&acc的时候需要
                 calib_bn: True 
                 image_size: [1, 3, 768, 1344]
@@ -87,7 +80,6 @@ Get Started
                         out_channel: [64]
                         kernel_size: [3]
                 save_subnet_prototxt: False # 从超网中crop出子网的权重
-                test_subnet_latency: False # 是否在测试精度的时候也测试latency
 
 2. 调整网络及其搜索空间
 
@@ -155,10 +147,8 @@ Get Started
     * Sample_FLOPs
         随机采样网络中的子网，可以指定sample子网的FLOPs的range, 对采样得到子网的Flops,para以及速度进行测量并打印，在超网的所有的FLOPs范围内随机采样1w左右子网可视化可以得到当前超网的FLOPs的分布图，确保我们搜索的网络是在分布图的尖峰附近
     * Sample_Accuracy
-        随机采样网络中的子网，可以指定sample子网的FLOPs的range，一般来说可以选2k个左右，选出latency-accuracy的pareto front上的模型来进行最后的选择和测试
+        随机采样网络中的子网，可以指定sample子网的FLOPs的range，一般来说可以选2k个左右。
 
-5. 子网测速
+5. 子网测试
 
-    * 在超网训练之前，我们可以对超网的FLOPs和Latency进行一些测试，比如说，我们可以测试这个超网中FLOPs的分布情况，是否在baseline_flops附近有非常多的子网。
-    * 可以在粗筛的FLOPs range内，采样1k个子网进行真实的测速，在target device下可以直接得到latency的分布，就可以粗筛出一些FLOPs比较大，latency比较小的模型。
-    * 在超网训练后，通过真实的子网测速可以更好地得到Latency-Acc的曲线，可以得到更靠近target latency的最好的模型。
+    * 在超网训练之前，我们可以对超网的FLOPs进行测试，比如说，我们可以测试这个超网中FLOPs的分布情况，是否在baseline_flops附近有非常多的子网。

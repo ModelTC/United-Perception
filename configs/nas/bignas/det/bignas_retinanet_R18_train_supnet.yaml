@@ -132,23 +132,6 @@ bignas:
         calib_meta_file: /mnt/lustre/share/shenmingzhu/calib_coco/coco_2048_coco_format.json
         metric1: bbox.AP
         metric2: bbox.AP.5
-    distiller:
-        mimic:
-            mimic_as_jobs: True
-            mimic_job0:
-              loss_weight: 0.5
-              teacher0:
-                mimic_name: ['neck.p6_conv.conv']
-              student:
-                mimic_name: ['neck.p6_conv.conv']
-        teacher0: {}
-    latency:
-        hardware1:
-            hardware_name: 3559A
-            backend_name: hisvp-nnie11
-            data_type: int8
-            batch_size: 8
-            test_latency: True
 
 hooks:
   - type: auto_checkpoint

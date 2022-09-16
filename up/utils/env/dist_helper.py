@@ -22,6 +22,8 @@ _LOCAL_PROCESS_GROUP = None
 
 
 def allreduce(*args, **kwargs):
+    if get_world_size() <= 1:
+        return
     if DIST_BACKEND.backend == 'linklink':
         return link.allreduce(*args, **kwargs)
     elif DIST_BACKEND.backend == 'dist':
@@ -31,6 +33,8 @@ def allreduce(*args, **kwargs):
 
 
 def broadcast(*args, **kwargs):
+    if get_world_size() <= 1:
+        return
     if DIST_BACKEND.backend == 'linklink':
         return link.broadcast(*args, **kwargs)
     elif DIST_BACKEND.backend == 'dist':
@@ -40,6 +44,8 @@ def broadcast(*args, **kwargs):
 
 
 def allgather(*args, **kwargs):
+    if get_world_size() <= 1:
+        return
     if DIST_BACKEND.backend == 'linklink':
         return link.allgather(*args, **kwargs)
     elif DIST_BACKEND.backend == 'dist':
@@ -49,6 +55,8 @@ def allgather(*args, **kwargs):
 
 
 def gather(*args, **kwargs):
+    if get_world_size() <= 1:
+        return
     if DIST_BACKEND.backend == 'linklink':
         return link.gather(*args, **kwargs)
     elif DIST_BACKEND.backend == 'dist':
@@ -123,6 +131,8 @@ def link_barrier(*args, **kwargs):
 
 
 def barrier(*args, **kwargs):
+    if get_world_size() <= 1:
+        return
     if DIST_BACKEND.backend == 'linklink':
         link_barrier(*args, **kwargs)
     elif DIST_BACKEND.backend == 'dist':
@@ -591,6 +601,8 @@ def all_reduce_norm(module):
     """
     All reduce norm statistics in different devices.
     """
+    if get_world_size() <= 1:
+        return
     states = get_async_norm_states(module)
     states = all_reduce_dict(states, op="mean")
     module.load_state_dict(states, strict=False)
@@ -647,7 +659,7 @@ def gpu_check():
 def broadcast_object(obj, group=None):
     """make suare obj is picklable
     """
-    if get_world_size() == 1:
+    if get_world_size() <= 1:
         return obj
 
     serialized_tensor = _serialize_to_tensor(obj, group=None).cuda()

@@ -15,7 +15,6 @@ This section introduces the supported sub-tasks and related special modules of U
    tasks/distill
    tasks/ssl
    tasks/seg
-   tasks/keypoints
    tasks/multitask
    tasks/sparse
    tasks/3ddet

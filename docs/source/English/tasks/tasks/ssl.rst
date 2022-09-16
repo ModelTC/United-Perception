@@ -3,13 +3,13 @@ self-supervision
 
 UP supports self-supervision to train pretrained model and finetune downstream task;
 
-`Codes <https://github.com/ModelTC/EOD/tree/main/up/tasks/ssl>`_
+`Codes <https://github.com/ModelTC/United-Perception/tree/main/up/tasks/ssl>`_
 
 Config
 ------
 
-* `pretrain <https://github.com/ModelTC/EOD/blob/main/configs/ssl/mocov1/moco_v1.yaml>`_
-* `finetune <https://github.com/ModelTC/EOD/blob/main/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
+* `pretrain <https://github.com/ModelTC/United-Perception/blob/main/configs/ssl/mocov1/moco_v1.yaml>`_
+* `finetune <https://github.com/ModelTC/United-Perception/blob/main/configs/ssl/mocov1/moco_v1_imagenet_linear.yaml>`_
 
 pretrain module
 ---------------

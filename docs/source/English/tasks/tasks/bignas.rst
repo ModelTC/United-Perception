@@ -7,7 +7,7 @@ NAS is a common method to adjust the network structure in deep learning. It can 
 Bignas in up supports the whole process of model training, search and finetune subnet of classification and detection tasks.
 
 Bignas characteristics in up
---------------
+-----------------------------
 
 * Support a variety of searches that affect the performance of the network structure, such as depth, out_channel, kernel_size, group number, expand_ratio
 * A variety of dynamic block implementations, including DynamicBasicBlock, DynamicConvBlock, DynamicRegBottleneckBlock, DynamicLinearBlock, etc 
@@ -15,14 +15,14 @@ Bignas characteristics in up
 * Support model search for classification and detection. Corresponding examples are provided in up, which can be run with one click
 
 Configuration File
---------
+-------------------
 
-    * `Train_supnet <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_train_supnet.yaml>`_
-    * `Evaluate_subnet <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_evaluate_subnet.yaml>`_
-    * `Finetune_subnet <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_finetune_subnet.yaml>`_
-    * `Sample_flops <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_sample_flops.yaml>`_
-    * `Sample_accuracy <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_sample_accuracy.yaml>`_
-    * `Load the weight of pretrained supnet <https://gitlab.bj.sensetime.com/spring2/united-perception/-/blob/dev/configs/nas/bignas/det/bignas_retinanet_R18_subnet.yaml>`_
+    * `Train_supnet <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_train_supnet.yaml>`_
+    * `Evaluate_subnet <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_evaluate_subnet.yaml>`_
+    * `Finetune_subnet <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_finetune_subnet.yaml>`_
+    * `Sample_flops <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_sample_flops.yaml>`_
+    * `Sample_accuracy <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_sample_accuracy.yaml>`_
+    * `Load the weight of pretrained supnet <https://github.com/ModelTC/United-Perception/blob/main/configs/nas/bignas/det/bignas_retinanet_R18_subnet.yaml>`_
 
 Get Started
 --------------
@@ -55,13 +55,6 @@ Get Started
                     student:
                         mimic_name: ['neck.p6_conv.conv']
                 teacher0: {} # If the teacher model is supnet, give {} here. You can also customize the teacher model. Please refer to the up/distill section for specific usage
-            latency: # If you need to measure the speed of the subnet, you need to fill in the following information
-                hardware1:
-                    hardware_name: T4
-                    backend_name: cuda11.0-trt7.1
-                    data_type: int8
-                    batch_size: 8
-                    test_latency: True
             subnet: # Do not add this field when training supnet. This field is only required when evaluating, finetune, sample flops & acc
                 calib_bn: True 
                 image_size: [1, 3, 768, 1344]
@@ -87,7 +80,6 @@ Get Started
                         out_channel: [64]
                         kernel_size: [3]
                 save_subnet_prototxt: False # Whether to crop the weight of the subnet from the supnet
-                test_subnet_latency: False # Whether to test latency when testing accuracy
 
 2. Adjust the network and its search_space
 
@@ -154,10 +146,8 @@ Get Started
     * Sample_FLOPs
         Random sampling subnet in the net, you can specify the range of flops of the sample subnet. Measure and print the flops, para and speed of the sampled subnet. In the range of all flops in the supnet, about 1W subnets are randomly sampled for visualization, and the distribution map of flops in the current supnet can be obtained
     * Sample_Accuracy
-        Random sampling subnet in the net, you can specify the range of flops of the sample subnet. About 2K models can be selected, and the models on the pareto front of latency-accuracy can be selected for final selection and testing
+        Random sampling subnet in the net, you can specify the range of flops of the sample subnet. About 2K models can be selected.
 
-5. Test latency of subnet
+5. Test subnet
 
-    * Before training supnet, we can test the flops and latency of the supnet. For example, we can test the distribution of flops in the supernet and whether there are many subnets near the baseline_flops
-    * Sample 1K sub networks in the flops range of the coarse screen for latency test, we can directly get the latency distribution under target device, and we can roughly screen out some models with large flops and small latency.
-    * After training supnet, the Latency-Acc curve can be better obtained through real subnet latency test, and the better model closer to target latency can be obtained.
+    * Before training supnet, we can test the flops of the supnet. For example, we can test the distribution of flops in the supernet and whether there are many subnets near the baseline_flops

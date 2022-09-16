@@ -2,12 +2,12 @@
 ========
 
 UP支持稀疏训练;
-`具体代码 <https://github.com/ModelTC/EOD/tree/main/up/tasks/sparse>`_
+`具体代码 <https://github.com/ModelTC/United-Perception/tree/main/up/tasks/sparse>`_
 
 配置文件
 --------
 
-`代码仓库 <https://github.com/ModelTC/EOD/tree/main/configs/sparse>`_
+`代码仓库 <https://github.com/ModelTC/United-Perception/tree/main/configs/sparse>`_
 其中包括常用算法配置文件
 
 数据集相关模块

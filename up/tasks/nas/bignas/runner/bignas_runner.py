@@ -214,19 +214,7 @@ class BignasRunner(BaseRunner):
         return self.model(batch)
 
     def get_subnet_latency(self, image_size, subnet_settings, flops, onnx_name=None):
-        if not onnx_name:
-            model = self.model if self.ema is None else self.model_load_ema_state_dict()
-            onnx_name = self.controller.get_subnet_prototxt(
-                image_size=image_size, subnet_settings=subnet_settings,
-                flops=flops, model=model)
-            if self.ema:
-                self.model_recover_old_state_dict()
-        latency = self.controller.get_subnet_latency(onnx_name)
-        while not latency:
-            time.sleep(1)
-            latency = self.controller.get_subnet_latency(onnx_name)
-
-        return latency
+        raise NotImplementedError
 
     # build finetune subnet
     def build_subnet_finetune_dataset(self, image_size, max_iter=None):
@@ -299,7 +287,7 @@ class BignasRunner(BaseRunner):
         return flops, params, acc1, acc2
 
     def sample_multiple_subnet_flops(self):
-        self.lut_table, _ = self.controller.sample_subnet_lut(test_latency=True)
+        self.lut_table, _ = self.controller.sample_subnet_lut(test_latency=False)
 
     def sample_multiple_subnet_accuracy(self):
         self.subnet = self.controller.subnet
@@ -325,9 +313,6 @@ class BignasRunner(BaseRunner):
             v[self.controller.metric1] = acc1
             v[self.controller.metric2] = acc2
 
-            if 'latency' not in v.keys() and self.test_subnet_latency:
-                latency = self.get_subnet_latency(v['image_size'], v['subnet_settings'], v['flops'])
-                v['latency'] = latency
             logger.info('Sample_subnet_({}):\t{}'.format(k, json.dumps(v)))
             self.performance_dict.append(v)
 

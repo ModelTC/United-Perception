@@ -2,12 +2,12 @@
 ======
 
 UP支持3D检测任务训练、推理的全部流程;
-`具体代码 <https://github.com/ModelTC/EOD/tree/main/up/tasks/det_3d>`_
+`具体代码 <https://github.com/ModelTC/United-Perception/tree/main/up/tasks/det_3d>`_
 
 配置文件
 --------
 
-`代码仓库 <https://github.com/ModelTC/EOD/tree/main/configs/det_3d>`_
+`代码仓库 <https://github.com/ModelTC/United-Perception/tree/main/configs/det_3d>`_
 其中包括常用算法配置文件
 
 数据集相关模块

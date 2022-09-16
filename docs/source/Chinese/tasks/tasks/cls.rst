@@ -2,12 +2,12 @@
 ====
 
 UP支持分类任务训练、部署、推理的全部流程;
-`具体代码 <https://github.com/ModelTC/EOD/tree/main/up/tasks/cls>`_
+`具体代码 <https://github.com/ModelTC/United-Perception/tree/main/up/tasks/cls>`_
 
 配置文件
 --------
 
-`代码仓库 <https://github.com/ModelTC/EOD/tree/main/configs/cls>`_
+`代码仓库 <https://github.com/ModelTC/United-Perception/tree/main/configs/cls>`_
 其中包括常用算法配置文件与部署示例
 
 数据集相关模块

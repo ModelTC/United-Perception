@@ -149,20 +149,6 @@ bignas:
         calib_meta_file: /mnt/lustre/share/shenmingzhu/calib_coco/coco_2048_coco_format.json
         metric1: bbox.AP
         metric2: bbox.AP.5
-    latency:
-        hardware1:
-            hardware_name: s100acc
-            backend_name: halnn0.4-stpu
-            data_type: int8
-            batch_size: 1
-            test_latency: True
-    latency:
-        hardware1:
-            hardware_name: s100acc
-            backend_name: halnn0.4-stpu
-            data_type: int8
-            batch_size: 1
-            test_latency: True
 
 hooks:
   - type: auto_checkpoint

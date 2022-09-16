@@ -7,7 +7,7 @@ This repo is about the Equalized Focal Loss (EFL)  and the Equalized Quality Foc
 - Python 3.6+
 - Pytorch 1.5.0+
 - CUDA 9.0+
-- [EOD](https://github.com/ModelTC/EOD)
+- [United-Perception](https://github.com/ModelTC/United-Perception)
 
 ## Prepare Dataset (LVIS v1)
 ### images and annotations
@@ -83,17 +83,17 @@ All models are trained with the repeat factor sampler (RFS) with 16 GPUs setting
 
 |config  | loss | pretrain | scheduler | AP | APr | APc | APf | weights |
 |------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---:|
-|[Res50](https://github.com/ModelTC/EOD/tree/main/configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml)| EFL | imagenet | 24e | 27.5 | 20.2 | 26.1 | 32.4 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_improved_baseline_r50.pth) |
-|[Res101](https://github.com/ModelTC/EOD/tree/main/configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml) | EFL | imagenet | 24e | 29.2 | 23.5 | 27.4 | 33.8 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_improved_baseline_r101.pth) |
+|[Res50](https://github.com/ModelTC/United-Perception/tree/main/configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml)| EFL | imagenet | 24e | 27.5 | 20.2 | 26.1 | 32.4 | [model](https://github.com/ModelTC/United-Perception/releases/download/0.1.0/efl_improved_baseline_r50.pth) |
+|[Res101](https://github.com/ModelTC/United-Perception/tree/main/configs/det/efl/efl_improved_baseline_r50_2x_rfs.yaml) | EFL | imagenet | 24e | 29.2 | 23.5 | 27.4 | 33.8 | [model](https://github.com/ModelTC/United-Perception/releases/download/0.1.0/efl_improved_baseline_r101.pth) |
 
 **YOLOX-IP Series**
 
 |config  | loss | pretrain | scheduler | AP | APr | APc | APf | weights |
 |------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---:|
-|[YOLOX-IP-S](https://github.com/ModelTC/EOD/tree/main/configs/det/efl/efl_yolox_small.yaml)| EFL | None | 300e | 23.3 | 18.1 | 21.2 | 28.0 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_yolox_small.pth) |
-|[YOLOX-IP-S](https://github.com/ModelTC/EOD/tree/main/configs/det/efl/eqfl_yolox_small.yaml)| EQFL | None | 300e | 24.2 | 16.3 | 22.7 | 29.4 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/eqfl_yolox_small.pth) |
-|[YOLOX-IP-M](https://github.com/ModelTC/EOD/tree/main/configs/det/efl/efl_yolox_medium.yaml)| EFL | None | 300e | 30.0 | 23.8 | 28.2 | 34.7 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/efl_yolox_medium.pth) |
-|[YOLOX-IP-M](https://github.com/ModelTC/EOD/tree/main/configs/det/efl/eqfl_yolox_medium.yaml)| EQFL | None | 300e | 31.0 | 24.0 | 29.1 | 36.2 | [model](https://github.com/ModelTC/EOD/releases/download/0.1.0/eqfl_yolox_medium.pth) |
+|[YOLOX-IP-S](https://github.com/ModelTC/United-Perception/tree/main/configs/det/efl/efl_yolox_small.yaml)| EFL | None | 300e | 23.3 | 18.1 | 21.2 | 28.0 | [model](https://github.com/ModelTC/United-Perception/releases/download/0.1.0/efl_yolox_small.pth) |
+|[YOLOX-IP-S](https://github.com/ModelTC/United-Perception/tree/main/configs/det/efl/eqfl_yolox_small.yaml)| EQFL | None | 300e | 24.2 | 16.3 | 22.7 | 29.4 | [model](https://github.com/ModelTC/United-Perception/releases/download/0.1.0/eqfl_yolox_small.pth) |
+|[YOLOX-IP-M](https://github.com/ModelTC/United-Perception/tree/main/configs/det/efl/efl_yolox_medium.yaml)| EFL | None | 300e | 30.0 | 23.8 | 28.2 | 34.7 | [model](https://github.com/ModelTC/United-Perception/releases/download/0.1.0/efl_yolox_medium.pth) |
+|[YOLOX-IP-M](https://github.com/ModelTC/United-Perception/tree/main/configs/det/efl/eqfl_yolox_medium.yaml)| EQFL | None | 300e | 31.0 | 24.0 | 29.1 | 36.2 | [model](https://github.com/ModelTC/United-Perception/releases/download/0.1.0/eqfl_yolox_medium.pth) |
 
 ## Testing with Pretrained Models
 
@@ -138,7 +138,7 @@ hooks:
 
 ## How to Train EFL on OpenImages
 
-Our EOD framework support the training and inference of OIDs (but can not evaluate the results directly). Most of our steps are following the guide in [EQLv2](https://github.com/tztztztztz/eqlv2#how-to-train-eqlv2-on-openimages). 
+Our United-Perception framework support the training and inference of OIDs (but can not evaluate the results directly). Most of our steps are following the guide in [EQLv2](https://github.com/tztztztztz/eqlv2#how-to-train-eqlv2-on-openimages). 
 
 Here are the steps to get a result of OIDs (the bold steps are the operations that need to be noticed, other steps are same as them in EQLv2):
 - Download the data.

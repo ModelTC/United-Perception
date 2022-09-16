@@ -3,14 +3,14 @@ Quant
 
 UP supports the whole pipline of training and interfering;
 
-`Codes <https://github.com/ModelTC/EOD/tree/main/up/tasks/quant>`_
+`Codes <https://github.com/ModelTC/United-Perception/tree/main/up/tasks/quant>`_
 
 Configs
 -------
 
 It contains the illustration of common configs.
 
-`Repos <https://github.com/ModelTC/EOD/tree/main/configs/quant>`_
+`Repos <https://github.com/ModelTC/United-Perception/tree/main/configs/quant>`_
 
 Dataset related modules
 -----------------------

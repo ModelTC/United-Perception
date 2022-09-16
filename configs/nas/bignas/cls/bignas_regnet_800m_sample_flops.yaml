@@ -154,13 +154,6 @@ bignas:
         flops_range: ['600M', '1000M']
         baseline_flops: 800M
         subnet_count: 50
-    latency:
-        hardware1:
-            hardware_name: s100acc
-            backend_name: halnn0.4-stpu
-            data_type: int8
-            batch_size: 1
-            test_latency: True
 
 hooks:
   - type: auto_checkpoint

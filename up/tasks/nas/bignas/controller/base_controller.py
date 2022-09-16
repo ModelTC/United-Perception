@@ -12,7 +12,6 @@ from easydict import EasyDict
 from up.utils.env.dist_helper import get_rank, broadcast, barrier, env
 from up.utils.env.dist_helper import DistModule
 from up.utils.env.gene_env import to_device
-from up.utils.general.latency_helper import merged_bn
 from up.utils.general.log_helper import default_logger as logger
 from up.utils.general.global_flag import DIST_BACKEND
 from up.utils.general.saver_helper import Saver
@@ -22,7 +21,6 @@ from up.tasks.nas.bignas.controller.utils.misc import count_dynamic_flops_and_pa
     get_kwargs_itertools, clever_format, parse_flops, clever_dump_table, get_image_size_with_shape, \
     reset_model_bn_forward, copy_bn_statistics, rewrite_batch_norm_bias, adapt_settings
 
-from up.tasks.nas.bignas.controller.utils.tocaffe_helper import tocaffe
 from up.tasks.nas.bignas.models.search_space import BignasSearchSpace
 
 
@@ -455,7 +453,7 @@ class BaseController(object):
             count += 1
         return subnet_table
 
-    def sample_subnet_lut(self, test_latency=True):
+    def sample_subnet_lut(self, test_latency=False):
         """
         Args:
             test_latency (bool): if test latency or not
@@ -507,108 +505,12 @@ class BaseController(object):
 
         # test latency for every subnet in the table
         if self.latency is not None and test_latency:
-            for count, v in subnet_table.items():
-                image_size = v['image_size']
-                flops = v['flops']
-                subnet_settings = v['subnet_settings']
-                onnx_name = self.get_subnet_prototxt(image_size,
-                                                     subnet_settings,
-                                                     flops, self.model)
-                latency = self.get_subnet_latency(onnx_name)
-                v['latency'] = latency
-                logger.info('current subnet count {} with latency {}'.format(count, json.dumps(v)))
+           raise NotImplementedError
 
         subnet_table_float = copy.deepcopy(subnet_table)
         logger.info('--------------subnet table--------------')
         logger.info(clever_dump_table(subnet_table, ['flops', 'params']))
         return subnet_table, subnet_table_float
-
-    def get_subnet_prototxt(self,
-                            image_size=None,
-                            subnet_settings=None,
-                            flops=None,
-                            model=None):
-        """
-        Args:
-            image_size(tuple): configuration input size with 4 dimension
-            subnet_settings(dict): configuration for subnet settings
-            flops(float): flops
-            onnx_only: whether to produce prototxt and others
-        """
-        if image_size is None:
-            image_size = self.sample_image_size()
-        else:
-            image_size = get_image_size_with_shape(image_size)
-        if subnet_settings is None:
-            subnet_settings = self.sample_subnet_settings(sample_mode='random')
-        else:
-            self.sample_subnet_settings('subnet', subnet_settings)
-        if flops is None:
-            flops, params, image_size, subnet_settings = self.get_subnet_flops(
-                image_size=image_size, subnet_settings=subnet_settings)
-
-        logger.info("convert model...")
-        save_prefix = '_'.join([str(i) for i in image_size]) + '_' + clever_format(flops['total'])
-
-        model = copy.deepcopy(model)
-
-        onnx_name = os.path.join('tocaffe', save_prefix + '.onnx')
-        merged_onnx_name = os.path.join('tocaffe', save_prefix + '_merged.onnx')
-        if env.is_master():
-            tocaffe(self.cfg,
-                    save_prefix=save_prefix,
-                    input_size=image_size[1:],
-                    model=model)
-            merged_bn(onnx_name)
-        barrier()
-
-        return merged_onnx_name
-
-    def get_subnet_latency(self, model_name):
-        from latency.latency import Latency
-        assert self.latency is not None
-        latency_client = Latency()
-        latency_dict = {}
-
-        for name, hardware in self.latency.items():
-            if not hardware['test_latency']:
-                continue
-            hardware_name = hardware['hardware_name']
-            backend_name = hardware['backend_name']
-            data_type = hardware['data_type']
-            batch_size = hardware['batch_size']
-            name = hardware_name + '_' + backend_name + '_' + data_type + '_' + str(
-                batch_size)
-            logger.info(name)
-
-            latency = torch.Tensor([0])
-            if get_rank() == 0:
-                ret = latency_client.call(hardware_name, backend_name,
-                                          data_type, batch_size, model_name)
-                logger.info(ret)
-                if not ret or 'ret' not in ret.keys() or 'status' not in ret['ret'].keys() or \
-                        ret['ret']['status'] != 'success':
-                    logger.info('subnet {} test latency failed'.format(
-                        os.path.basename(model_name)))
-                    cnt = 0
-                    while not ret or 'ret' not in ret.keys() or 'status' not in ret['ret'].keys() or \
-                            ret['ret']['status'] != 'success':
-                        time.sleep(1)
-                        ret = latency_client.call(hardware_name, backend_name,
-                                                  data_type, batch_size,
-                                                  model_name)
-                        cnt += 1
-                        logger.info('retry {} times'.format(cnt))
-                        if cnt > 10:
-                            raise ValueError('latency failed more than 10 times')
-                latency = torch.Tensor([ret['cost_time']])
-                logger.info('subnet {} with latency {} ms'.format(
-                    os.path.basename(model_name), round(float(latency.data[0]), 3)))
-
-            barrier()
-            broadcast(latency, root=0)
-            latency_dict[name] = round(float(latency.data[0]), 3)
-        return latency_dict
 
     def get_subnet_weight(self, subnet_settings=None):
         new_settings = adapt_settings(subnet_settings)

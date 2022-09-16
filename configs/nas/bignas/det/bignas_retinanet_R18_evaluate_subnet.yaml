@@ -167,14 +167,7 @@ bignas:
                 out_channel: [64]
                 kernel_size: [3]
         save_subnet_prototxt: True
-        test_subnet_latency: True
-    latency:
-        hardware1:
-            hardware_name: 3559A
-            backend_name: hisvp-nnie11
-            data_type: int8
-            batch_size: 8
-            test_latency: True
+
 
 hooks:
   - type: auto_checkpoint
