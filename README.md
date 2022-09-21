@@ -5,4 +5,4 @@
 
 ## 文档
 
-[up 官方文档](https://eod.readthedocs.io/en/latest/index.html)
+[up 官方文档](https://modeltc-up.readthedocs.io/en/latest/index.html)
