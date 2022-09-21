@@ -85,7 +85,8 @@ class QuantRunner(BaseRunner):
         return {'tensorrt': BackendType.Tensorrt,
                 'snpe': BackendType.SNPE,
                 'vitis': BackendType.Vitis,
-                'academic': BackendType.Academic}
+                'academic': BackendType.Academic,
+                'tengine': BackendType.Tengine_u8}
 
     @property
     def quant_type(self):
