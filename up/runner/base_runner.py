@@ -22,7 +22,8 @@ from up.utils.general.registry_factory import (
     DATA_BUILDER_REGISTY,
     OPTIMIZER_REGISTRY,
     LR_SCHEDULER_REGISTY,
-    MODEL_HELPER_REGISTRY
+    MODEL_HELPER_REGISTRY,
+    TOONNX_REGISTRY
 )
 from up.utils.general.global_flag import (
     ALIGNED_FLAG,
@@ -507,6 +508,17 @@ class BaseRunner(object):
             logger.warning('metrics type is incompatible for hook')
         self.set_cur_eval_iter()
         return metrics
+
+    @torch.no_grad()
+    def to_onnx(self, save_prefix='model', input_size=None, input_channel=3):
+        model = self.ema.model if self.ema is not None else self.model
+        toonnx_type = self.config.pop('toonnx_type', 'base')
+        toonnx_ins = TOONNX_REGISTRY[toonnx_type](self.config,
+                                                  save_prefix,
+                                                  input_size,
+                                                  model,
+                                                  input_channel)
+        toonnx_ins.process()
 
     def batch2device(self, batch):
         model_dtype = torch.float32

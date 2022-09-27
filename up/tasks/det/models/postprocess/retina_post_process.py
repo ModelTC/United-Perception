@@ -54,6 +54,9 @@ class BaseDetPostProcess(nn.Module):
         self.cls_use_ghm = 'ghm' in self.cls_loss.name
         self.loc_use_ghm = 'ghm' in self.loc_loss.name
         self.cls_use_qfl = 'quality_focal_loss' in self.cls_loss.name
+        
+        # for deploy
+        self.deploy = False
 
     @property
     def num_anchors(self):
@@ -126,7 +129,6 @@ class BaseDetPostProcess(nn.Module):
                 cls_pred = cls_pred.permute(0, 3, 1, 2).contiguous().view(-1, self.num_anchors * c, h, w)
             output[self.prefix + '.blobs.cls' + str(idx)] = cls_pred
             output[self.prefix + '.blobs.loc' + str(idx)] = loc_pred
-        output['base_anchors'] = self.anchor_generator.export()
         return output
 
     def forward(self, input):
@@ -138,6 +140,10 @@ class BaseDetPostProcess(nn.Module):
         # [B, hi*wi*A, :]
         mlvl_preds, mlvl_shapes = self.permute_preds(mlvl_raw_preds)
         mlvl_shapes = [(*shp, s) for shp, s in zip(mlvl_shapes, strides)]
+
+        if self.deploy:
+            output = self.export(mlvl_raw_preds)
+            return output
 
         # [hi*wi*A, 4], for C4 there is only one layer, for FPN generate anchors for each layer
         mlvl_anchors = self.anchor_generator.get_anchors(mlvl_shapes, device=device)

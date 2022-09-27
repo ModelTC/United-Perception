@@ -85,6 +85,7 @@ MODEL_HELPER_REGISTRY = Registry()
 
 # deploy
 DEPLOY_REGISTRY = Registry()
+TOONNX_REGISTRY = Registry()
 
 # distill
 MIMIC_REGISTRY = Registry()
