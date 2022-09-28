@@ -257,9 +257,10 @@ class IOUPostProcess(BaseDetPostProcess):
         0 is always for the background class.
     """
 
-    def __init__(self, num_classes, cfg, prefix=None, class_first=True):
+    def __init__(self, num_classes, cfg, prefix=None, class_first=True, export_iou=True):
         super(IOUPostProcess, self).__init__(num_classes, cfg, prefix, class_first)
         self.iou_branch_loss = build_loss(cfg['iou_branch_loss'])
+        self.export_iou = export_iou
 
     def apply_activation(self, mlvl_preds, remove_background_channel_if_any):
         mlvl_activated_preds = []
@@ -309,12 +310,14 @@ class IOUPostProcess(BaseDetPostProcess):
                 _, c, h, w = cls_pred.shape
                 num_classes = int(c / self.num_anchors)
                 iou_pred = F.sigmoid(iou_pred.view(-1, 1, h, w)).view(-1, self.num_anchors * 1, h, w)
-                cls_pred = cls_pred.sigmoid() * torch.cat([iou_pred for _ in range(num_classes)], dim=1)
+                if not self.export_iou:
+                    cls_pred = cls_pred.sigmoid() * torch.cat([iou_pred for _ in range(num_classes)], dim=1)
             else:
                 raise NotImplementedError
             output[self.prefix + '.blobs.cls' + str(idx)] = cls_pred
             output[self.prefix + '.blobs.loc' + str(idx)] = loc_pred
-        output['base_anchors'] = self.anchor_generator.export()
+            if self.export_iou:
+                output[self.prefix + '.blobs.iou' + str(idx)] = iou_pred
         return output
 
     def get_loss(self, targets, mlvl_preds, mlvl_shapes=None):
