@@ -564,6 +564,42 @@ class Grad_CAM(Hook):
             self.feature = None
 
 
+@HOOK_REGISTRY.register('gradient_collector')
+class GradientCollector(Hook):
+    def __init__(self,
+                 runner,
+                 hook_module=["roi_head.cls_subnet_pred"],
+                 collect_func_module="post_process.cls_loss",
+                 grad_type='output'):
+        """
+        Arguments:
+            - runner (:obj:`Runner`): used as to accecss other variables
+        """
+        super(GradientCollector, self).__init__(runner)
+        self.grad_type = grad_type
+
+        grad_collect_func_module = self.get_tar_module(runner.model, collect_func_module)
+        collect_func = getattr(grad_collect_func_module, 'collect_grad')
+        hook_target_modules = [self.get_tar_module(runner.model, t) for t in hook_module]
+
+        def _backward_fn_hook(module, grad_in, grad_out):
+            if self.grad_type == 'input':
+                collect_func(grad_in[0])
+            elif self.grad_type == 'output':
+                collect_func(grad_out[0])
+            else:
+                raise NotImplementedError
+        for m in hook_target_modules:
+            m.register_full_backward_hook(_backward_fn_hook)
+
+    def get_tar_module(self, model, targets):
+        targets = targets.split('.')
+        targets_module = model
+        for t in targets:
+            targets_module = getattr(targets_module, t)
+        return targets_module
+
+
 @HOOK_REGISTRY.register('auto_checkpoint')
 class AutoCheckpoint(Hook):
     """Hook that used to take a snapshot automatically when killed

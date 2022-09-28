@@ -284,3 +284,61 @@ class ImageNetEvaluator(Evaluator):
         subparser = subparsers.add_parser(name, help='subcommand for Imagenet evaluation')
         subparser.add_argument('--res_file', required=True, help='results file of detection')
         return subparser
+
+
+@EVALUATOR_REGISTRY.register('imagenet_lt')
+class ImageNetLTEvaluator(ImageNetEvaluator):
+    def __init__(self,
+                 topk=[1, 5],
+                 bad_case_analyse=False,
+                 analysis_json=None,
+                 image_reader=None,
+                 class_names=None,
+                 eval_class_idxs=[],
+                 cls_freq='',
+                 many_shot_thr=100,
+                 low_shot_thr=20):
+        super(ImageNetLTEvaluator, self).__init__(topk,
+                                                  bad_case_analyse,
+                                                  analysis_json,
+                                                  image_reader,
+                                                  class_names,
+                                                  eval_class_idxs)
+        with open(cls_freq, 'r') as f:
+            self.cls_freq = torch.tensor(np.array(json.load(f)))
+        self.many_shot_thr = many_shot_thr
+        self.low_shot_thr = low_shot_thr
+
+    def eval(self, res_file, res=None):
+        res_dict = self.load_res(res_file, res)
+        pred = torch.from_numpy(np.array(res_dict['score']))
+        label = torch.from_numpy(np.array(res_dict['label']))
+        num = pred.size(0)
+        maxk = max(self.topk)
+        cls_acc = [[] for _ in range(len(self.topk))]
+        for il in torch.unique(label):
+            for idx, k in enumerate(self.topk):
+                _, cls_pred = pred[label == il].topk(k, 1, True, True)
+                cls_correct = (cls_pred == il).sum()
+                cls_acc[idx].append(cls_correct * 100.0 / cls_pred.shape[0])
+        _, pred = pred.topk(maxk, 1, True, True)
+        pred = pred.t()
+        correct = pred.eq(label.reshape(1, -1).expand_as(pred))
+        res = {}
+        for k in self.topk:
+            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
+            acc = correct_k.mul_(100.0 / num)
+            res.update({f'top{k}': acc.item()})
+
+        for idx, k in enumerate(self.topk):
+            acc = torch.tensor(cls_acc[idx])
+            many_shot = acc[self.cls_freq > self.many_shot_thr]
+            low_shot = acc[self.cls_freq < self.low_shot_thr]
+            median_shot = acc[(self.cls_freq >= self.low_shot_thr) & (self.cls_freq <= self.many_shot_thr)]
+            res.update({f'many_shot_acc_top{k}': many_shot.mean().item(),
+                        f'median_shot_acc_top{k}': median_shot.mean().item(),
+                        f'low_shot_acc_top{k}': low_shot.mean().item()})
+        metric = Metric(res)
+        metric.set_cmp_key(f'top{self.topk[0]}')
+
+        return metric

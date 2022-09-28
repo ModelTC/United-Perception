@@ -37,6 +37,7 @@ class ConvBnRelu(nn.Module):
             x = self.relu(x)
         return x
 
+
 class Aux_Module(nn.Module):
     def __init__(self, in_planes, num_classes=19, normalize={'type': 'solo_bn'}):
         super(Aux_Module, self).__init__()
@@ -50,6 +51,7 @@ class Aux_Module(nn.Module):
     def forward(self, x):
         res = self.aux(x)
         return res
+
 
 class ASPP(nn.Module):
     """

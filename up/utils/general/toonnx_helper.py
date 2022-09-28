@@ -2,25 +2,25 @@ from __future__ import division
 
 # Standard Library
 import copy
-import json
+import math
 import os
 import time
+import warnings
+
 
 # Import from third library
 import torch
 
 # Import from pod
 from up.utils.general.log_helper import default_logger as logger
-from up.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY, TOONNX_REGISTRY
+from up.utils.general.registry_factory import MODEL_WRAPPER_REGISTRY, TOONNX_REGISTRY, MODEL_HELPER_REGISTRY
+from up.utils.general.saver_helper import Saver
 from .user_analysis_helper import get_task_from_cfg
 
 __all__ = ['BaseToOnnx']
 
 
 def build_model(cfg):
-    import warnings
-    from up.utils.general.saver_helper import Saver
-    from up.utils.general.registry_factory import MODEL_HELPER_REGISTR
     model_helper_ins = MODEL_HELPER_REGISTRY[cfg.get('model_helper_type', 'base')]
     model = model_helper_ins(cfg['net'])
     saver = Saver(cfg['saver'])

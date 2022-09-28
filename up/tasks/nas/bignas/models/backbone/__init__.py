@@ -1,9 +1,7 @@
-from .big_resnet_basic import (  # noqa: F401
-     big_resnet_basic, bignas_resnet_basic
-)
-from .big_regnet import (  # noqa
-     big_regnet, bignas_regnet
-)
+from .big_resnet_basic import (big_resnet_basic,  # noqa: F401
+                               bignas_resnet_basic)
+from .big_regnet import (big_regnet,  # noqa: F401
+                         bignas_regnet)
 
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 

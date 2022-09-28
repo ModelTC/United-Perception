@@ -54,7 +54,7 @@ class BaseDetPostProcess(nn.Module):
         self.cls_use_ghm = 'ghm' in self.cls_loss.name
         self.loc_use_ghm = 'ghm' in self.loc_loss.name
         self.cls_use_qfl = 'quality_focal_loss' in self.cls_loss.name
-        
+
         # for deploy
         self.deploy = False
 

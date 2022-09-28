@@ -146,16 +146,16 @@ saver:
   auto_resume: true
 
 hooks:
-- type: yolox_noaug
-  kwargs:
-    no_aug_epoch: *no_aug_epoch
-    max_epoch: *max_epoch
-    transformer: [*augment_hsv, *flip, *train_resize, *to_tensor]
-- type: auto_save_best
-- type: gradient_collector
-  kwargs:
-    hook_head: roi_head
-    hook_cls_head: cls_preds
+  - type: yolox_noaug
+    kwargs:
+      no_aug_epoch: *no_aug_epoch
+      max_epoch: *max_epoch
+      transformer: [*augment_hsv, *flip, *train_resize, *to_tensor]
+  - type: auto_save_best
+  - type: gradient_collector
+    kwargs:
+      hook_module: [roi_head.cls_preds.0, roi_head.cls_preds.1, roi_head.cls_preds.2]
+      collect_func_module: post_process.cls_loss
 
 ema:
   enable: true

@@ -1,14 +1,28 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
 from up.utils.model.initializer import trunc_normal_
 
 __all__ = ['BaseClsHead', 'ConvNeXtHead', 'ViTHead']
 
 
+@MODULE_ZOO_REGISTRY.register('norm_linear')
+class NormedLinear(nn.Module):
+    def __init__(self, in_features, out_features, tempearture=30):
+        super(NormedLinear, self).__init__()
+        self.tempearture = tempearture
+        self.weight = nn.Parameter(torch.Tensor(in_features, out_features))
+        self.weight.data.uniform_(-1, 1).renorm_(2, 1, 1e-5).mul_(1e5)
+
+    def forward(self, x):
+        out = F.normalize(x, dim=1).mm(F.normalize(self.weight, dim=0))
+        return out * self.tempearture
+
+
 @MODULE_ZOO_REGISTRY.register('base_cls_head')
 class BaseClsHead(nn.Module):
-    def __init__(self, num_classes, in_plane, input_feature_idx=-1, use_pool=True, dropout=None):
+    def __init__(self, num_classes, in_plane, input_feature_idx=-1, use_pool=True, dropout=None, classifier_cfg=None):
         super(BaseClsHead, self).__init__()
         self.num_classes = num_classes
         self.in_plane = in_plane
@@ -16,7 +30,7 @@ class BaseClsHead(nn.Module):
         self.prefix = self.__class__.__name__
         self.use_pool = use_pool
         self.dropout = dropout
-        self.build_classifier(in_plane)
+        self.build_classifier(in_plane, classifier_cfg)
         self._init_weights()
         if self.use_pool:
             self.pool = nn.AdaptiveAvgPool2d((1, 1))
@@ -30,15 +44,32 @@ class BaseClsHead(nn.Module):
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
 
-    def build_classifier(self, in_plane):
+    def build_single_classifier(self, in_plane, out_plane, cfg):
+        if cfg is None:
+            return nn.Linear(in_plane, out_plane)
+        else:
+            if 'in_features' not in cfg['kwargs']:
+                cfg['kwargs'].update({'in_features': in_plane})
+            if 'out_features' not in cfg['kwargs']:
+                cfg['kwargs'].update({'out_features': out_plane})
+            if cfg['type'] == 'linear':
+                return nn.Linear(**cfg['kwargs'])
+            else:
+                linear_ins = MODULE_ZOO_REGISTRY[cfg['type']]
+                return linear_ins(**cfg['kwargs'])
+
+    def build_classifier(self, in_plane, cfgs):
         if isinstance(self.num_classes, list) or isinstance(self.num_classes, tuple):
             self.classifier = nn.ModuleList()
-            for cls in self.num_classes:
-                self.classifier.append(nn.Linear(in_plane, cls))
+            for i, cls in enumerate(self.num_classes):
+                if isinstance(cfgs, list):
+                    self.classifier.append(self.build_single_classifier(in_plane, cls, cfgs[i]))
+                else:
+                    self.classifier.append(self.build_single_classifier(in_plane, cls, cfgs))
             self.multicls = True
         else:
             self.multicls = False
-            self.classifier = nn.Linear(in_plane, self.num_classes)
+            self.classifier = self.build_single_classifier(in_plane, self.num_classes, cfgs)
 
     def get_pool_output(self, x):
         if self.use_pool:

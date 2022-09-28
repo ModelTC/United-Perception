@@ -3,13 +3,12 @@ import time
 import json
 import itertools
 import random
-import os
 
 import torch
 import torch.nn.functional as F
 from easydict import EasyDict
 
-from up.utils.env.dist_helper import get_rank, broadcast, barrier, env
+from up.utils.env.dist_helper import broadcast, env
 from up.utils.env.dist_helper import DistModule
 from up.utils.env.gene_env import to_device
 from up.utils.general.log_helper import default_logger as logger
@@ -505,7 +504,7 @@ class BaseController(object):
 
         # test latency for every subnet in the table
         if self.latency is not None and test_latency:
-           raise NotImplementedError
+            raise NotImplementedError
 
         subnet_table_float = copy.deepcopy(subnet_table)
         logger.info('--------------subnet table--------------')

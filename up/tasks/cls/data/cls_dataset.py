@@ -160,6 +160,10 @@ class ClsDataset(BaseDataset):
         if self.label_mapping is not None:
             assert len(self.label_mapping) == len(self.meta_file)
 
+        self.labels = np.array([m['label'] for m in self.metas])
+        self.classes, self.class_nums = np.unique(self.labels, return_counts=True)
+        self.img_ids = np.arange(len(self.metas))
+
     def _list_check(self):
         if not isinstance(self.meta_file, list):
             self.meta_file = [self.meta_file]

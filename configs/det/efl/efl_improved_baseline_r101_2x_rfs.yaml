@@ -110,16 +110,13 @@ saver: # Required.
   auto_resume: true
 
 hooks:
-- type: auto_checkpoint
-- type: gradient_collector
-  kwargs:
-    hook_head: roi_head
-    hook_cls_head: cls_subnet_pred
-- type: grad_clipper
-  kwargs:
-    mode: pre_defined
-    norm_type: 2
-    max_norm: 35
+  - type: auto_checkpoint
+  - type: gradient_collector
+  - type: grad_clipper
+    kwargs:
+      mode: pre_defined
+      norm_type: 2
+      max_norm: 35
 
 net:
 - name: backbone                # backbone = resnet50(frozen_layers, out_layers, out_strides)

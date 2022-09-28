@@ -3,7 +3,6 @@ from __future__ import division
 # Standard Library
 import argparse
 import sys
-import json
 
 # Import from third library
 import torch.nn as nn

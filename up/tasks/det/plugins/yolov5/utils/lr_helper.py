@@ -28,6 +28,21 @@ class YoloV5CosineLR(CosineAnnealingLR):
         return [base_lr * cal_cos_lines(cur_epoch, self.T_max, self.min_lr_scale) for base_lr in self.base_lrs]
 
 
+@LR_REGISTRY.register('EpochBasedCosineAnnealingLR')
+class EpochBasedCosineAnnealingLR(CosineAnnealingLR):
+    def __init__(self, **kwargs):
+        self.T_max = kwargs['T_max']
+        self.data_size = kwargs["data_size"]
+        self.eta_min = kwargs["eta_min"]
+        self.offset_epoch = kwargs.pop('offset_epoch', 0)
+        kwargs.pop('data_size')
+        super(EpochBasedCosineAnnealingLR, self).__init__(**kwargs)
+
+    def get_lr(self):
+        cur_epoch = self.last_epoch // self.data_size + self.offset_epoch
+        return [base_lr * cal_cos_lines(cur_epoch, self.T_max, self.eta_min) for base_lr in self.base_lrs]
+
+
 @WARM_LR_REGISTRY.register('yolov5linear')
 class YoloV5LinearWarmUpLR(object):
     def __init__(self, warmup_iter, init_lr, target_lr,

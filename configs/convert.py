@@ -101,7 +101,7 @@ def revise_det(data):
         if 'cache' in test_k.keys():
             test_k['cache']['cache_dir'] = 'coco_cache'
             test_k['cache']['cache_name'] = 'coco2017_val.pkl'
-        if 'evaluator'in test_k.keys():
+        if 'evaluator' in test_k.keys():
             test_k['evaluator']['kwargs']['gt_file'] = test_k['meta_file']
 
     if 'saver' in data.keys():
@@ -130,7 +130,7 @@ def revise_det3d(data):
         test_k['meta_file'] = 'kitti/kitti_infos/kitti_infos_val.pkl'
         train_k['image_reader']['kwargs']['image_dir'] = 'kitti/training'
         test_k['image_reader']['kwargs']['image_dir'] = 'kitti/training'
-        if 'evaluator'in test_k.keys():
+        if 'evaluator' in test_k.keys():
             test_k['evaluator']['kwargs']['gt_file'] = test_k['meta_file']
 
     if 'saver' in data.keys():
