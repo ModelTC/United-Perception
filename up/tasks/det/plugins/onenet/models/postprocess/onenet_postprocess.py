@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 
 from up.utils.env.dist_helper import allreduce, env
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from up.utils.general.registry_factory import MODULE_PROCESS_REGISTRY
 from up.utils.model import accuracy as A  # noqa F401
 from up.tasks.det.models.utils.anchor_generator import build_anchor_generator
 from up.models.losses import build_loss
@@ -18,7 +18,7 @@ from .onenet_predictor import build_onenet_predictor
 __all__ = ['OnenetPostProcess']
 
 
-@MODULE_ZOO_REGISTRY.register('onenet_post')
+@MODULE_PROCESS_REGISTRY.register('onenet_post')
 class OnenetPostProcess(nn.Module):
     def __init__(self,
                  num_classes,

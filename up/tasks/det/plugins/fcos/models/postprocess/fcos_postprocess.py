@@ -8,7 +8,7 @@ from up.utils.model import accuracy as A
 from up.tasks.det.models.utils.anchor_generator import build_anchor_generator
 from up.models.losses import build_loss
 from up.tasks.det.models.losses.entropy_loss import apply_class_activation
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from up.utils.general.registry_factory import MODULE_PROCESS_REGISTRY
 from up.utils.general.context import config
 from up.utils.general.hook_helper import allreduce
 from up.utils.env.dist_helper import env
@@ -67,7 +67,7 @@ def compute_centerness_targets(reg_targets):
     return torch.sqrt(centerness)
 
 
-@MODULE_ZOO_REGISTRY.register('fcos_post')
+@MODULE_PROCESS_REGISTRY.register('fcos_post')
 class FcosPostProcess(nn.Module):
     def __init__(self, num_classes, dense_points, loc_ranges, cfg, has_mask, prefix=None):
         super(FcosPostProcess, self).__init__()

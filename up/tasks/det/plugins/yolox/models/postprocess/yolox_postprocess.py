@@ -6,7 +6,7 @@ import torch.distributed as dist
 from up.utils.model import accuracy as A  # noqa F401
 from up.tasks.det.models.utils.anchor_generator import build_anchor_generator
 from up.models.losses import build_loss
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from up.utils.general.registry_factory import MODULE_PROCESS_REGISTRY
 
 from up.utils.env.dist_helper import allreduce, env
 from up.tasks.det.models.postprocess.roi_supervisor import build_roi_supervisor
@@ -16,7 +16,7 @@ from up.tasks.det.models.postprocess.roi_predictor import build_roi_predictor
 __all__ = ['YoloxPostProcess']
 
 
-@MODULE_ZOO_REGISTRY.register('yolox_post')
+@MODULE_PROCESS_REGISTRY.register('yolox_post')
 class YoloxPostProcess(nn.Module):
     def __init__(self,
                  num_classes,

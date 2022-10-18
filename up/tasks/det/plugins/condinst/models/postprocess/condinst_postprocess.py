@@ -7,7 +7,7 @@ from pycocotools import mask as mask_utils
 from up.utils.general.context import config
 from up.tasks.det.plugins.condinst.models.head.condinst_head import aligned_bilinear
 from up.tasks.det.models.utils.anchor_generator import build_anchor_generator
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from up.utils.general.registry_factory import MODULE_PROCESS_REGISTRY
 from .condinst_supervisor import build_mask_supervisor
 from .condinst_predictor import build_mask_predictor
 
@@ -159,7 +159,7 @@ def build_condinst_dynamic_mask_head(cfg):
     return DynamicMaskHead(cfg)
 
 
-@MODULE_ZOO_REGISTRY.register('condinst_post')
+@MODULE_PROCESS_REGISTRY.register('condinst_post')
 class CondinstPostProcess(nn.Module):
     def __init__(
             self,

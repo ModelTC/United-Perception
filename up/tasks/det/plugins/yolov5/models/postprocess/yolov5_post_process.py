@@ -4,7 +4,7 @@ import torch.nn as nn
 from up.tasks.det.models.utils.anchor_generator import build_anchor_generator
 from up.models.losses import build_loss
 from up.utils.env.dist_helper import get_world_size
-from up.utils.general.registry_factory import MODULE_ZOO_REGISTRY
+from up.utils.general.registry_factory import MODULE_PROCESS_REGISTRY
 from up.tasks.det.models.postprocess.roi_supervisor import build_roi_supervisor
 from up.tasks.det.models.postprocess.roi_predictor import build_roi_predictor
 from up.tasks.det.models.utils.bbox_helper import xywh2xyxy
@@ -13,7 +13,7 @@ from up.tasks.det.models.utils.bbox_helper import xywh2xyxy
 __all__ = ['YoloV5PostProcess']
 
 
-@MODULE_ZOO_REGISTRY.register('yolov5_post')
+@MODULE_PROCESS_REGISTRY.register('yolov5_post')
 class YoloV5PostProcess(nn.Module):
     def __init__(self,
                  num_classes,
