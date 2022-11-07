@@ -1,6 +1,5 @@
 import importlib
 import os
-from .nas.bignas.utils.saver_helper import * # noqa
 
 
 def is_package(dirname):
