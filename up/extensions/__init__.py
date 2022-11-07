@@ -1,17 +1,20 @@
 # flake8: noqa
-
-from .python.roi_align import RoIAlignPool
-from .python.psroi_align import PSRoIAlign 
-from .python.psroi_pool import PSRoIPool
-from .python.nms import naive_nms,softer_nms
-from .python.deformable_conv import DeformableConv
-from .python.focal_loss import (
-    SigmoidFocalLossFunction,
-    SoftmaxFocalLossFunction
-)
-from .python.cross_focal_loss import CrossSigmoidFocalLossFunction
-from .python.iou_overlap import gpu_iou_overlap
+try:
+    from .python.roi_align import RoIAlignPool
+    from .python.psroi_align import PSRoIAlign 
+    from .python.psroi_pool import PSRoIPool
+    from .python.nms import naive_nms,softer_nms
+    from .python.deformable_conv import DeformableConv
+    from .python.focal_loss import (
+        SigmoidFocalLossFunction,
+        SoftmaxFocalLossFunction
+    )
+    from .python.cross_focal_loss import CrossSigmoidFocalLossFunction
+    from .python.iou_overlap import gpu_iou_overlap
+except:
+    pass # noqa
 import torch
+import numpy as np
 
 def build_generic_roipool(pool_cfg):
     """

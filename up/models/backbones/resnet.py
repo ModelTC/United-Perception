@@ -6,7 +6,10 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
-from up.extensions import DeformableConv
+try:
+    from up.extensions import DeformableConv
+except: # noqa
+    DeformableConv = None
 from up.utils.model.block_helper import RepConv
 from up.utils.model.initializer import initialize_from_cfg
 from up.utils.model.normalize import build_norm_layer
