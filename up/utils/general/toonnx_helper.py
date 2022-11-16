@@ -104,7 +104,7 @@ class BaseToOnnx(object):
         elif self.task_type == 'cls':
             add_softmax = self.cfg.get('to_kestrel', {}).get('add_softmax', False)
             self.model = MODEL_WRAPPER_REGISTRY['cls'](self.model, add_softmax)
-            output_names = self.model(image)
+            output_names = self.model(image, return_metas=True)
         elif self.task_type == 'seg':
             self.model = MODEL_WRAPPER_REGISTRY['seg'](self.model)
             output_names = self.model(image)

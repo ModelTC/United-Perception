@@ -74,7 +74,7 @@ class BaseClsHead(nn.Module):
     def get_pool_output(self, x):
         if self.use_pool:
             x = self.pool(x)
-            x = x.view(x.size(0), -1)
+            x = x.flatten(1, -1)
         return x
 
     def get_logits(self, x):
