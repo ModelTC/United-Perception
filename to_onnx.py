@@ -3,6 +3,8 @@ from __future__ import division
 # Standard Library
 import argparse
 import sys
+import os
+os.environ['DEFAULT_TASKS']="cls"
 
 # Import from third library
 import torch.multiprocessing as mp
