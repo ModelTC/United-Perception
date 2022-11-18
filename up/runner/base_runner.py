@@ -518,7 +518,7 @@ class BaseRunner(object):
                                                   input_size,
                                                   model,
                                                   input_channel)
-        toonnx_ins.process()
+        toonnx_ins.process(self.work_dir)
 
     def batch2device(self, batch):
         model_dtype = torch.float32

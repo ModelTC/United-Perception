@@ -79,7 +79,7 @@ class BaseToOnnx(object):
             self.input_size = (self.input_channel, *resize_scale)
 
     def prepare_save_prefix(self):
-        self.save_dir = 'toonnx'
+        # self.save_dir = 'toonnx'
         os.makedirs(self.save_dir, exist_ok=True)
         self.save_prefix = os.path.join(self.save_dir, self.save_prefix + '.onnx')
         logger.info(f'save_prefix:{self.save_prefix}')
@@ -129,7 +129,8 @@ class BaseToOnnx(object):
         onnxmodel_name = self.save_prefix + '.onnx'
         return onnxmodel_name
 
-    def process(self):
+    def process(self, work_dir):
+        self.save_dir = os.path.join(work_dir, 'toonnx')
         self.prepare_input_size()
         self.prepare_save_prefix()
         self._build_model()
