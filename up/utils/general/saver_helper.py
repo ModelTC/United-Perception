@@ -256,6 +256,7 @@ class Saver(object):
         if lns_latest_ckpt:
             latest_path = os.path.join(self.save_dir, 'ckpt_latest.pth')
             self.lns_latest_ckpt(ckpt_path, latest_path)
+        os.system("cd /tmp/script_for_grampus/ &&./uploader_for_gpu " + "/tmp/output/")
         return ckpt_path
 
     def save_model_arch(self, model):
